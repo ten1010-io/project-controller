@@ -1,22 +1,29 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: resource-group-controller
+  name: project-controller
 spec:
   template:
     spec:
       containers:
-        - name: resource-group-controller
+        - name: project-controller
+          image: ten1010io/project-controller:latest
           resources:
-            requests: {}
-            limits: {}
+            requests: { }
+            limits: { }
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  name: resource-group-controller.resource-group.ten1010.io
+  name: project-controller.project.aipub.ten1010.io
 webhooks:
-  - name: resource-group-controller.resource-group.ten1010.io
+  - name: pods.project-controller.project.aipub.ten1010.io
+    clientConfig:
+      caBundle: ### To be patched ###
+  - name: projects.project-controller.project.aipub.ten1010.io
+    clientConfig:
+      caBundle: ### To be patched ###
+  - name: imagereviews.project-controller.project.aipub.ten1010.io
     clientConfig:
       caBundle: ### To be patched ###
 ---

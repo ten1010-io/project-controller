@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: project-controller
+  profiles:
+    active: "production"
+  web:
+    resources:
+      add-mappings: false
+
+server:
+  forward-headers-strategy: framework
+
+app:
+  k8s:
+    verify-ssl: true
+    kube-config:
+      mode: in_cluster
+  aipub:
+    enabled: false
+    server-url: ""
+    verifying-ssl: true
+    username: ""
+    password: ""

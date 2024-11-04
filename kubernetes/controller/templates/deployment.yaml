@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: resource-group-controller
+  name: project-controller
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: resource-group-controller
+      app: project-controller
   template:
     metadata:
       labels:
-        app: resource-group-controller
+        app: project-controller
     spec:
       affinity:
         nodeAffinity:
@@ -24,26 +24,27 @@ spec:
         - key: "node-role.kubernetes.io/control-plane"
           operator: "Exists"
           effect: "NoSchedule"
-      serviceAccountName: resource-group-controller
+      serviceAccountName: project-controller
       automountServiceAccountToken: true
       containers:
-        - name: resource-group-controller
-          image: ten1010io/resource-group-controller:1.1.0-SNAPSHOT
+        - name: project-controller
+          image: ten1010io/project-controller:latest
+          imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
-                name: resource-group-controller-envs
+                name: project-controller-envs
             - secretRef:
-                name: resource-group-controller-envs
+                name: project-controller-envs
           volumeMounts:
             - name: tls
               readOnly: true
-              mountPath: /etc/resource-group-controller/tls
+              mountPath: /etc/project-controller/tls
       volumes:
         - name: tls
           projected:
             sources:
               - secret:
-                  name: resource-group-controller-tls
+                  name: project-controller-tls
                   items:
                     - key: tls.p12
                       path: "tls.p12"

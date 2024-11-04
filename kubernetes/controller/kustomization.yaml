@@ -1,16 +1,14 @@
-namespace: resource-group-controller
+namespace: project-controller
 configMapGenerator:
-  - name: resource-group-controller-envs
+  - name: project-controller-envs
     literals:
       - TZ=Asia/Seoul
-      - SPRING_PROFILES_ACTIVE=production
-      - LOGGING_LEVEL_IO_TEN1010_COASTER_GROUPCONTROLLER=info
-      - SERVER_SSL_KEY_STORE=/etc/resource-group-controller/tls/tls.p12
+      - SERVER_SSL_KEY_STORE=/etc/project-controller/tls/tls.p12
 secretGenerator:
-  - name: resource-group-controller-envs
+  - name: project-controller-envs
     literals:
       - SERVER_SSL_KEY_STORE_PASSWORD=""
-  - name: resource-group-controller-tls
+  - name: project-controller-tls
     files:
       - tls.p12
 generatorOptions:
