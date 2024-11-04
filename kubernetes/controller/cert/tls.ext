@@ -4,4 +4,4 @@ basicConstraints = critical, CA:FALSE
 subjectAltName = @alt_names
 
 [alt_names]
-DNS.1 = resource-group-controller.resource-group-controller.svc
+DNS.1 = project-controller.project-controller.svc

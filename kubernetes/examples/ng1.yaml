@@ -1,0 +1,15 @@
+apiVersion: project.aipub.ten1010.io/v1alpha1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  policy:
+    daemonSet:
+      allowAllDaemonSets: false
+      allowedNamespaces: [ ]
+      allowedDaemonSets: [ ]
+  enableNodeSelector: false
+  nodeSelector: { }
+  nodes:
+    - node2
+---

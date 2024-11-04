@@ -1,37 +1,93 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  name: resource-group-controller.resource-group.ten1010.io
+  name: project-controller.project.aipub.ten1010.io
 webhooks:
-  - name: resource-group-controller.resource-group.ten1010.io
-    admissionReviewVersions: ["v1"]
+  - name: pods.project-controller.project.aipub.ten1010.io
+    admissionReviewVersions: [ "v1" ]
     clientConfig:
       caBundle: <CA_BUNDLE>
       service:
-        namespace: resource-group-controller
-        name: resource-group-controller
-        path: /admissionreviews
+        namespace: project-controller
+        name: project-controller
+        path: /api/v1/admissionreviews
         port: 8080
     failurePolicy: Ignore
     matchPolicy: Equivalent
-    namespaceSelector: {}
-    objectSelector: {}
+    namespaceSelector: { }
+    objectSelector: { }
     reinvocationPolicy: IfNeeded
     rules:
-      - apiGroups:   [""]
-        apiVersions: ["v1"]
-        operations:  [ "CREATE", "UPDATE" ]
-        resources:   ["pods", "replicationcontrollers"]
-        scope: "*"
-      - apiGroups: [ "batch" ]
+      - apiGroups: [ "" ]
         apiVersions: [ "v1" ]
-        operations: [ "CREATE", "UPDATE" ]
-        resources: [ "cronjobs", "jobs" ]
+        operations: [ "CREATE" ]
+        resources: [ "pods" ]
         scope: "*"
+    sideEffects: None
+    timeoutSeconds: 10
+  - name: deployments.project-controller.project.aipub.ten1010.io
+    admissionReviewVersions: [ "v1" ]
+    clientConfig:
+      caBundle: <CA_BUNDLE>
+      service:
+        namespace: project-controller
+        name: project-controller
+        path: /api/v1/admissionreviews
+        port: 8080
+    failurePolicy: Ignore
+    matchPolicy: Equivalent
+    namespaceSelector: { }
+    objectSelector: { }
+    reinvocationPolicy: IfNeeded
+    rules:
       - apiGroups: [ "apps" ]
         apiVersions: [ "v1" ]
-        operations: [ "CREATE", "UPDATE" ]
-        resources: [ "daemonsets", "deployments", "replicasets", "statefulsets" ]
+        operations: [ "CREATE" ]
+        resources: [ "deployments" ]
+        scope: "*"
+    sideEffects: None
+    timeoutSeconds: 10
+  - name: projects.project-controller.project.aipub.ten1010.io
+    admissionReviewVersions: [ "v1" ]
+    clientConfig:
+      caBundle: <CA_BUNDLE>
+      service:
+        namespace: project-controller
+        name: project-controller
+        path: /api/v1/admissionreviews
+        port: 8080
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    namespaceSelector: { }
+    objectSelector: { }
+    reinvocationPolicy: IfNeeded
+    rules:
+      - apiGroups: [ "project.aipub.ten1010.io" ]
+        apiVersions: [ "v1alpha1" ]
+        operations: [ "UPDATE" ]
+        resources: [ "projects" ]
+        scope: "*"
+    sideEffects: None
+    timeoutSeconds: 10
+  - name: imagereviews.project-controller.project.aipub.ten1010.io
+    admissionReviewVersions: [ "v1" ]
+    clientConfig:
+      caBundle: <CA_BUNDLE>
+      service:
+        namespace: project-controller
+        name: project-controller
+        path: /api/v1/admissionreviews
+        port: 8080
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    namespaceSelector: { }
+    objectSelector: { }
+    reinvocationPolicy: IfNeeded
+    rules:
+      - apiGroups: [ "project.aipub.ten1010.io" ]
+        apiVersions: [ "v1alpha1" ]
+        operations: [ "CREATE" ]
+        resources: [ "imagereviews" ]
         scope: "*"
     sideEffects: None
     timeoutSeconds: 10

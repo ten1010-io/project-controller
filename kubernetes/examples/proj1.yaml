@@ -1,0 +1,20 @@
+apiVersion: project.aipub.ten1010.io/v1alpha1
+kind: Project
+metadata:
+  name: proj1
+spec:
+  members:
+    - aipubUser: au1
+      role: project-admin
+    - aipubUser: au2
+      role: project-developer
+  quota:
+    pvcStorage: 500Gi
+  binding:
+    nodes:
+      - node1
+    nodeGroups:
+      - ng1
+    imageNamespaces:
+      - img-ns1
+---
