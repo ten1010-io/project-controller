@@ -7,7 +7,7 @@ spec:
     spec:
       containers:
         - name: project-controller
-          image: ten1010io/project-controller:latest
+          image: project-controller:0.1.0-SNAPSHOT
           resources:
             requests: { }
             limits: { }
@@ -18,6 +18,9 @@ metadata:
   name: project-controller.project.aipub.ten1010.io
 webhooks:
   - name: pods.project-controller.project.aipub.ten1010.io
+    clientConfig:
+      caBundle: ### To be patched ###
+  - name: deployments.project-controller.project.aipub.ten1010.io
     clientConfig:
       caBundle: ### To be patched ###
   - name: projects.project-controller.project.aipub.ten1010.io

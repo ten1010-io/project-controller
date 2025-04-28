@@ -311,7 +311,7 @@ public class ReconciliationService {
         //todo --
         V1PolicyRule aipubResourceTypeApiRule = new V1PolicyRuleBuilder()
                 .withApiGroups("aipub.ten1010.io")
-                .withResources("resourcetypes")
+                .withResources("resourcesets")
                 .withVerbs("get")
                 .build();
         //todo --
@@ -327,7 +327,16 @@ public class ReconciliationService {
                 .withVerbs("get")
                 .build();
 
-        return List.of(aipubUserApiRule);
+        // todo --
+        V1PolicyRule gpuQuotasApiRule = new V1PolicyRuleBuilder()
+                .withApiGroups("aipub.ten1010.io")
+                .withResources("gpuquotas")
+                .withResourceNames(K8sObjectUtils.getName(aipubUser))
+                .withVerbs("get")
+                .build();
+        // todo --
+
+        return List.of(aipubUserApiRule, gpuQuotasApiRule);
     }
 
     @Nullable
@@ -392,6 +401,10 @@ public class ReconciliationService {
                         .withResources("ftpservers")
                         .withVerbs("*")
                         .build();
+                V1PolicyRule aipubVolumesApiRule = new V1PolicyRuleBuilder().withApiGroups("aipub.ten1010.io")
+                        .withResources("aipubvolumes")
+                        .withVerbs("*")
+                        .build();
                 //todo --
 
                 yield List.of(
@@ -403,7 +416,9 @@ public class ReconciliationService {
                         poddisruptionbudgetApiRule,
                         aipubOperationApiRule,
                         aipubOperationRevisionApiRule,
-                        aipubFtpServerApiRule);
+                        aipubFtpServerApiRule,
+                        aipubVolumesApiRule
+                );
             }
         };
     }

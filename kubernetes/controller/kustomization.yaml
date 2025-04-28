@@ -1,25 +1,6 @@
-namespace: project-controller
-configMapGenerator:
-  - name: project-controller-envs
-    literals:
-      - TZ=Asia/Seoul
-      - SERVER_SSL_KEY_STORE=/etc/project-controller/tls/tls.p12
-secretGenerator:
-  - name: project-controller-envs
-    literals:
-      - SERVER_SSL_KEY_STORE_PASSWORD=""
-  - name: project-controller-tls
-    files:
-      - tls.p12
 generatorOptions:
   disableNameSuffixHash: true
 resources:
-  - templates/namespace.yaml
-  - templates/service-account.yaml
-  - templates/cluster-role.yaml
-  - templates/crd.yaml
-  - templates/deployment.yaml
-  - templates/service.yaml
-  - templates/mutating-webhook-configuration.yaml
-patchesStrategicMerge:
-  - patches.yaml
+  - project-controller
+  - dashboard
+

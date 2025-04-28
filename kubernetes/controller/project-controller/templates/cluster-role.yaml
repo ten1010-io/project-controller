@@ -40,6 +40,9 @@ rules:
   - apiGroups: [ "project.aipub.ten1010.io" ]
     resources: [ "imagereviews" ]
     verbs: [ "create" ]
+  - apiGroups: ["project.aipub.ten1010.io"]
+    resources: ["aipubuserauthoritystatuses"]
+    verbs: ["create"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
