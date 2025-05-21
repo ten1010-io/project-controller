@@ -5,10 +5,7 @@ import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.models.V1Node;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.*;
-import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
-import io.ten1010.aipub.projectcontroller.domain.k8s.util.LabelUtils;
-import io.ten1010.aipub.projectcontroller.domain.k8s.util.NodeGroupUtils;
-import io.ten1010.aipub.projectcontroller.domain.k8s.util.ProjectUtils;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.*;
 import io.ten1010.aipub.projectcontroller.informer.IndexerConstants;
 
 import java.util.*;
@@ -28,6 +25,7 @@ public class BoundObjectResolver {
     private final Indexer<V1alpha1NodeGroup> nodeGroupIndexer;
     private final Indexer<V1alpha1ImageNamespace> imageNamespaceIndexer;
     private final Indexer<V1Node> nodeIndexer;
+    private final Indexer<V1alpha1ResourceSet> resourceSetIndexer;
 
     public BoundObjectResolver(SharedInformerFactory sharedInformerFactory) {
         this.keyResolver = new KeyResolver();
@@ -45,6 +43,9 @@ public class BoundObjectResolver {
                 .getIndexer();
         this.nodeIndexer = sharedInformerFactory
                 .getExistingSharedIndexInformer(V1Node.class)
+                .getIndexer();
+        this.resourceSetIndexer = sharedInformerFactory
+                .getExistingSharedIndexInformer(V1alpha1ResourceSet.class)
                 .getIndexer();
     }
 
@@ -97,6 +98,14 @@ public class BoundObjectResolver {
         return K8sObjectUtils.distinctByKey(this.keyResolver, allBoundNodes);
     }
 
+    public List<V1Node> getAllBoundNodes(V1alpha1ResourceSet resourceSet) {
+        return ResourceSetUtils.getSpecNodeNames(resourceSet).stream()
+                .map(this.nodeIndexer::getByKey)
+                .distinct()
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
     public List<V1alpha1Project> getAllBoundProjects(V1alpha1ImageNamespace imageNamespace) {
         return getDirectlyBoundProjects(imageNamespace);
     }
@@ -122,6 +131,14 @@ public class BoundObjectResolver {
         List<V1alpha1NodeGroup> allBoundNodeGroups = new ArrayList<>(getDirectlyBoundNodeGroups(node));
         allBoundNodeGroups.addAll(getBoundNodeGroupsByNodeSelector(node));
         return K8sObjectUtils.distinctByKey(this.keyResolver, allBoundNodeGroups);
+    }
+
+    public List<V1alpha1ResourceSet> getAllBoundResourceSets(V1alpha1Project project) {
+        List<V1Node> allBoundNodes = new ArrayList<>(getDirectlyBoundNodes(project));
+        List<V1alpha1ResourceSet> allBoundResourceSets = new ArrayList<>();
+        allBoundNodes.forEach(node ->
+                allBoundResourceSets.addAll(getDirectlyBoundResourceSets(node)));
+        return K8sObjectUtils.distinctByKey(this.keyResolver, allBoundResourceSets);
     }
 
     private List<V1Node> getDirectlyBoundNodes(V1alpha1Project project) {
@@ -230,6 +247,12 @@ public class BoundObjectResolver {
             }
         }
         return nodeGroupsBoundToNodeByNodeSelector;
+    }
+
+    private List<V1alpha1ResourceSet> getDirectlyBoundResourceSets(V1Node node) {
+        return this.resourceSetIndexer.byIndex(
+                IndexerConstants.NODE_NAME_TO_RESOURCE_SETS_INDEXER_NAME,
+                K8sObjectUtils.getName(node));
     }
 
 }

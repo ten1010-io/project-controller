@@ -7,16 +7,14 @@ import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.models.*;
 import io.ten1010.aipub.projectcontroller.controller.BoundObjectResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.*;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageNamespace;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeGroup;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.*;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.informer.IndexerConstants;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class RequestBuilderFactory {
 
@@ -199,6 +197,30 @@ public class RequestBuilderFactory {
                 .map(e -> new Request(K8sObjectUtils.getNamespace(e), K8sObjectUtils.getName(e)))
                 .toList();
     }
+
+    public Function<V1alpha1ResourceSet, List<Request>> resourceSetToRoles() {
+        Function<V1alpha1Project, List<Request>> projectToRoles = projectToRoles(false);
+        return resourceSet -> {
+            List<V1Node> allBoundNodes = this.boundObjectResolver.getAllBoundNodes(resourceSet);
+            return allBoundNodes.stream()
+                    .flatMap(node ->
+                            this.boundObjectResolver.getAllBoundProjects(node).stream()
+                                    .flatMap(project -> projectToRoles.apply(project).stream())
+                    )
+                    .collect(Collectors.toList());
+        };
+    }
+
+    public Function<V1alpha1NodeResourceStatus, List<Request>> nodeResourceStatusToRoles() {
+        Function<V1alpha1Project, List<Request>> projectToRoles = projectToRoles(false);
+        return nodeResourceStatus -> {
+            V1Node node = this.sharedInformerFactory.getExistingSharedIndexInformer(V1Node.class).getIndexer().getByKey(K8sObjectUtils.getName(nodeResourceStatus));
+            return this.boundObjectResolver.getAllBoundProjects(node).stream()
+                    .flatMap(project -> projectToRoles.apply(project).stream())
+                    .toList();
+        };
+    }
+
 
     public Function<V1alpha1ImageNamespace, List<Request>> imageNamespaceToBoundProjects() {
         return imgNs -> this.boundObjectResolver.getAllBoundProjects(imgNs).stream()

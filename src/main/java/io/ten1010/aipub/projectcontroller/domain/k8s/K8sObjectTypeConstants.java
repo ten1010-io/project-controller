@@ -7,31 +7,31 @@ public final class K8sObjectTypeConstants {
 
     public static final K8sObjectType<V1alpha1Project> PROJECT_V1ALPHA1 = new K8sObjectType<>(
             new K8sObjectTypeKey(
-                    ProjectApiConstants.GROUP,
+                    ProjectApiConstants.PROJECT_GROUP,
                     ProjectApiConstants.VERSION,
                     ProjectApiConstants.PROJECT_RESOURCE_KIND),
             V1alpha1Project.class);
     public static final K8sObjectType<V1alpha1NodeGroup> NODE_GROUP_V1ALPHA1 = new K8sObjectType<>(
             new K8sObjectTypeKey(
-                    ProjectApiConstants.GROUP,
+                    ProjectApiConstants.PROJECT_GROUP,
                     ProjectApiConstants.VERSION,
                     ProjectApiConstants.NODE_GROUP_RESOURCE_KIND),
             V1alpha1NodeGroup.class);
     public static final K8sObjectType<V1alpha1AipubUser> AIPUB_USER_V1ALPHA1 = new K8sObjectType<V1alpha1AipubUser>(
             new K8sObjectTypeKey(
-                    ProjectApiConstants.GROUP,
+                    ProjectApiConstants.PROJECT_GROUP,
                     ProjectApiConstants.VERSION,
                     ProjectApiConstants.AIPUB_USER_RESOURCE_KIND),
             V1alpha1AipubUser.class);
     public static final K8sObjectType<V1alpha1ImageNamespace> IMAGE_NAMESPACE_V1ALPHA1 = new K8sObjectType<>(
             new K8sObjectTypeKey(
-                    ProjectApiConstants.GROUP,
+                    ProjectApiConstants.PROJECT_GROUP,
                     ProjectApiConstants.VERSION,
                     ProjectApiConstants.IMAGE_NAMESPACE_RESOURCE_KIND),
             V1alpha1ImageNamespace.class);
     public static final K8sObjectType<V1alpha1ImageReview> IMAGE_REVIEW_V1ALPHA1 = new K8sObjectType<>(
             new K8sObjectTypeKey(
-                    ProjectApiConstants.GROUP,
+                    ProjectApiConstants.PROJECT_GROUP,
                     ProjectApiConstants.VERSION,
                     ProjectApiConstants.IMAGE_REVIEW_RESOURCE_KIND),
             V1alpha1ImageReview.class);

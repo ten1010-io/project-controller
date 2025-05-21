@@ -1,0 +1,6 @@
+namespace: efk
+generatorOptions:
+  disableNameSuffixHash: true
+resources:
+  - templates/role.yaml
+  - templates/namespace.yaml

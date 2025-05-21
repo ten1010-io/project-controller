@@ -2,10 +2,7 @@ package io.ten1010.aipub.projectcontroller.controller.watch;
 
 import io.kubernetes.client.common.KubernetesObject;
 import io.kubernetes.client.openapi.models.*;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageNamespace;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeGroup;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.*;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.*;
 
 import java.util.Objects;
@@ -55,6 +52,10 @@ public class OnUpdateFilterFactory {
     }
 
     public BiPredicate<V1alpha1NodeGroup, V1alpha1NodeGroup> nodeGroupSpecFieldFilter() {
+        return (oldObj, newObj) -> !Objects.equals(oldObj.getSpec(), newObj.getSpec());
+    }
+
+    public BiPredicate<V1alpha1ResourceSet, V1alpha1ResourceSet> resourceSetSpecFieldFilter() {
         return (oldObj, newObj) -> !Objects.equals(oldObj.getSpec(), newObj.getSpec());
     }
 

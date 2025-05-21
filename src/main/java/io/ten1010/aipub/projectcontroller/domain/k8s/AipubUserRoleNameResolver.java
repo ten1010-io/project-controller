@@ -11,7 +11,7 @@ public class AipubUserRoleNameResolver {
         if (aipubUserName.contains(DELIMITER)) {
             throw new IllegalArgumentException();
         }
-        return ProjectApiConstants.GROUP + DELIMITER + INFIX + DELIMITER + aipubUserName;
+        return ProjectApiConstants.PROJECT_GROUP + DELIMITER + INFIX + DELIMITER + aipubUserName;
     }
 
     public Optional<String> resolveAipubUserName(String roleName) {
@@ -19,7 +19,7 @@ public class AipubUserRoleNameResolver {
         if (tokens.length != 3) {
             return Optional.empty();
         }
-        if (!tokens[0].equals(ProjectApiConstants.GROUP)) {
+        if (!tokens[0].equals(ProjectApiConstants.PROJECT_GROUP)) {
             return Optional.empty();
         }
         if (!tokens[1].equals(INFIX)) {

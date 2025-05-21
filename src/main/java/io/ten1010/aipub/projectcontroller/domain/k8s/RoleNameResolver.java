@@ -14,7 +14,7 @@ public class RoleNameResolver {
         if (projectName.contains(DELIMITER)) {
             throw new IllegalArgumentException();
         }
-        return ProjectApiConstants.GROUP + DELIMITER + getProjectRoleString(projectRoleEnum) + DELIMITER + projectName;
+        return ProjectApiConstants.PROJECT_GROUP + DELIMITER + getProjectRoleString(projectRoleEnum) + DELIMITER + projectName;
     }
 
     public Optional<ProjectNameAndRole> resolveProjectName(String roleName) {
@@ -22,7 +22,7 @@ public class RoleNameResolver {
         if (tokens.length != 3) {
             return Optional.empty();
         }
-        if (!tokens[0].equals(ProjectApiConstants.GROUP)) {
+        if (!tokens[0].equals(ProjectApiConstants.PROJECT_GROUP)) {
             return Optional.empty();
         }
         Optional<ProjectRoleEnum> roleEnumOpt = ProjectRoleEnum.getEnum(tokens[1]);

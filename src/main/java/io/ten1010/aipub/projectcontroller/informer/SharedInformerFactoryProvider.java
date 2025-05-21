@@ -36,6 +36,8 @@ public class SharedInformerFactoryProvider {
         registerAipubUserInformer(informerFactory);
         registerNodeGroupInformer(informerFactory);
         registerImageNamespaceInformer(informerFactory);
+        registerResourceSetInformer(informerFactory);
+        registerNodeResourceStatusInformer(informerFactory);
         registerNamespaceInformer(informerFactory);
         registerNodeInformer(informerFactory);
         registerClusterRoleInformer(informerFactory);
@@ -113,6 +115,23 @@ public class SharedInformerFactoryProvider {
         informerFactory.sharedIndexInformerFor(
                 this.k8sApiProvider.getImageNamespaceApi(),
                 V1alpha1ImageNamespace.class,
+                DEFAULT_RESYNC_PERIOD);
+    }
+
+    private void registerResourceSetInformer(SharedInformerFactory informerFactory) {
+        SharedIndexInformer<V1alpha1ResourceSet> informer = informerFactory.sharedIndexInformerFor(
+                this.k8sApiProvider.getResourceSetApi(),
+                V1alpha1ResourceSet.class,
+                DEFAULT_RESYNC_PERIOD);
+        informer.addIndexers(Map.of(
+                IndexerConstants.NODE_NAME_TO_RESOURCE_SETS_INDEXER_NAME,
+                ResourceSetUtils::getSpecNodeNames));
+    }
+
+    private void registerNodeResourceStatusInformer(SharedInformerFactory informerFactory) {
+        informerFactory.sharedIndexInformerFor(
+                this.k8sApiProvider.getNodeResourceStatusApi(),
+                V1alpha1NodeResourceStatus.class,
                 DEFAULT_RESYNC_PERIOD);
     }
 

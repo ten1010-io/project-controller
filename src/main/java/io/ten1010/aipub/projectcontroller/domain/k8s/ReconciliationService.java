@@ -19,14 +19,14 @@ public class ReconciliationService {
 
     private static List<V1OwnerReference> removeOwnerReferencesThatReferToProjectKind(List<V1OwnerReference> references) {
         return references.stream()
-                .filter(e -> !(ProjectApiConstants.API_VERSION.equals(e.getApiVersion()) &&
+                .filter(e -> !(ProjectApiConstants.PROJECT_API_VERSION.equals(e.getApiVersion()) &&
                         ProjectApiConstants.PROJECT_RESOURCE_KIND.equals(e.getKind())))
                 .toList();
     }
 
     private static List<V1OwnerReference> removeOwnerReferencesThatReferToAipubUserKind(List<V1OwnerReference> references) {
         return references.stream()
-                .filter(e -> !(ProjectApiConstants.API_VERSION.equals(e.getApiVersion()) &&
+                .filter(e -> !(ProjectApiConstants.PROJECT_API_VERSION.equals(e.getApiVersion()) &&
                         ProjectApiConstants.AIPUB_USER_RESOURCE_KIND.equals(e.getKind())))
                 .toList();
     }
@@ -259,16 +259,17 @@ public class ReconciliationService {
             V1alpha1Project project,
             ProjectRoleEnum projectRoleEnum,
             List<V1alpha1NodeGroup> bindingNodeGroups,
-            List<V1Node> bindingNodes) {
+            List<V1Node> bindingNodes,
+            List<V1alpha1ResourceSet> bindingResourceSets) {
         V1PolicyRule projectApiRule = switch (projectRoleEnum) {
             case PROJECT_ADMIN -> new V1PolicyRuleBuilder()
-                    .withApiGroups(ProjectApiConstants.GROUP)
+                    .withApiGroups(ProjectApiConstants.PROJECT_GROUP)
                     .withResources(ProjectApiConstants.PROJECT_RESOURCE_PLURAL)
                     .withResourceNames(K8sObjectUtils.getName(project))
                     .withVerbs("get", "update", "patch")
                     .build();
             case PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
-                    .withApiGroups(ProjectApiConstants.GROUP)
+                    .withApiGroups(ProjectApiConstants.PROJECT_GROUP)
                     .withResources(ProjectApiConstants.PROJECT_RESOURCE_PLURAL)
                     .withResourceNames(K8sObjectUtils.getName(project))
                     .withVerbs("get")
@@ -289,7 +290,7 @@ public class ReconciliationService {
                 .toList();
         V1PolicyRule nodeGroupApiRule = switch (projectRoleEnum) {
             case PROJECT_ADMIN, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
-                    .withApiGroups(ProjectApiConstants.GROUP)
+                    .withApiGroups(ProjectApiConstants.PROJECT_GROUP)
                     .withResources(ProjectApiConstants.NODE_GROUP_RESOURCE_PLURAL)
                     .withResourceNames(nodeGroups)
                     .withVerbs("get")
@@ -297,7 +298,7 @@ public class ReconciliationService {
         };
 
         List<String> nodes = bindingNodes.stream()
-                .map(K8sObjectUtils::getName)
+                .map(NodeResourceStatusUtils::getName)
                 .toList();
         V1PolicyRule nodeApiRule = switch (projectRoleEnum) {
             case PROJECT_ADMIN, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
@@ -309,25 +310,49 @@ public class ReconciliationService {
         };
 
         //todo --
-        V1PolicyRule aipubResourceTypeApiRule = new V1PolicyRuleBuilder()
-                .withApiGroups("aipub.ten1010.io")
-                .withResources("resourcetypes")
-                .withVerbs("get")
-                .build();
+        V1PolicyRule nodeResourceStatusApiRule = switch (projectRoleEnum) {
+            case PROJECT_ADMIN, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+                    .withApiGroups(ProjectApiConstants.COASTER_GROUP)
+                    .withResources(ProjectApiConstants.NODE_RESOURCE_STATUS_RESOURCE_PLURAL)
+                    .withResourceNames(nodes)
+                    .withVerbs("get")
+                    .build();
+        };
+
+        List<String> resourceSetNames = bindingResourceSets.stream()
+                .map(K8sObjectUtils::getName)
+                .toList();
+        V1PolicyRule resourceSetApiRule = switch (projectRoleEnum) {
+            case PROJECT_ADMIN, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+                    .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
+                    .withResources(ProjectApiConstants.RESOURCE_SET_RESOURCE_PLURAL)
+                    .withResourceNames(resourceSetNames)
+                    .withVerbs("get")
+                    .build();
+        };
         //todo --
 
-        return List.of(projectApiRule, namespaceApiRule, nodeGroupApiRule, nodeApiRule, aipubResourceTypeApiRule);
+        return List.of(projectApiRule, namespaceApiRule, nodeGroupApiRule, nodeApiRule, resourceSetApiRule, nodeResourceStatusApiRule);
     }
 
     public List<V1PolicyRule> reconcileClusterRoleRules(V1alpha1AipubUser aipubUser) {
         V1PolicyRule aipubUserApiRule = new V1PolicyRuleBuilder()
-                .withApiGroups(ProjectApiConstants.GROUP)
+                .withApiGroups(ProjectApiConstants.PROJECT_GROUP)
                 .withResources(ProjectApiConstants.AIPUB_USER_RESOURCE_PLURAL)
                 .withResourceNames(K8sObjectUtils.getName(aipubUser))
                 .withVerbs("get")
                 .build();
 
-        return List.of(aipubUserApiRule);
+        // todo --
+        V1PolicyRule gpuQuotasApiRule = new V1PolicyRuleBuilder()
+                .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
+                .withResources(ProjectApiConstants.GPU_QUOTA_RESOURCE_PLURAL)
+                .withResourceNames(K8sObjectUtils.getName(aipubUser))
+                .withVerbs("get")
+                .build();
+        // todo --
+
+        return List.of(aipubUserApiRule, gpuQuotasApiRule);
     }
 
     @Nullable
@@ -355,7 +380,8 @@ public class ReconciliationService {
                                 "serviceaccounts",
                                 "limitranges",
                                 "events",
-                                "replicationcontrollers")
+                                "replicationcontrollers",
+                                "endpoints")
                         .withVerbs("*")
                         .build();
                 V1PolicyRule eventApiRule = new V1PolicyRuleBuilder().withApiGroups("events.k8s.io")
@@ -368,6 +394,10 @@ public class ReconciliationService {
                         .build();
                 V1PolicyRule appsApiRule = new V1PolicyRuleBuilder().withApiGroups("apps")
                         .withResources("deployments", "statefulsets", "daemonsets", "replicasets")
+                        .withVerbs("*")
+                        .build();
+                V1PolicyRule networkingApiRule = new V1PolicyRuleBuilder().withApiGroups("networking.k8s.io")
+                        .withResources("ingresses")
                         .withVerbs("*")
                         .build();
                 V1PolicyRule autoscalingApiRule = new V1PolicyRuleBuilder().withApiGroups("autoscaling")
@@ -384,12 +414,21 @@ public class ReconciliationService {
                         .withResources("operations")
                         .withVerbs("*")
                         .build();
+                //todo --
+                V1PolicyRule aipubWorkspaceApiRule = new V1PolicyRuleBuilder().withApiGroups("aipub.ten1010.io")
+                        .withResources("workspaces")
+                        .withVerbs("*")
+                        .build();
                 V1PolicyRule aipubOperationRevisionApiRule = new V1PolicyRuleBuilder().withApiGroups("aipub.ten1010.io")
                         .withResources("operationrevisions")
                         .withVerbs("*")
                         .build();
                 V1PolicyRule aipubFtpServerApiRule = new V1PolicyRuleBuilder().withApiGroups("aipub.ten1010.io")
                         .withResources("ftpservers")
+                        .withVerbs("*")
+                        .build();
+                V1PolicyRule aipubVolumesApiRule = new V1PolicyRuleBuilder().withApiGroups("aipub.ten1010.io")
+                        .withResources("aipubvolumes")
                         .withVerbs("*")
                         .build();
                 //todo --
@@ -399,11 +438,15 @@ public class ReconciliationService {
                         eventApiRule,
                         batchApiRule,
                         appsApiRule,
+                        networkingApiRule,
                         autoscalingApiRule,
                         poddisruptionbudgetApiRule,
                         aipubOperationApiRule,
                         aipubOperationRevisionApiRule,
-                        aipubFtpServerApiRule);
+                        aipubWorkspaceApiRule,
+                        aipubFtpServerApiRule,
+                        aipubVolumesApiRule
+                );
             }
         };
     }

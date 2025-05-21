@@ -13,6 +13,7 @@ import io.ten1010.aipub.projectcontroller.controller.RequestHelper;
 import io.ten1010.aipub.projectcontroller.domain.k8s.*;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeGroup;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ResourceSet;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.NodeUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.RoleUtils;
@@ -77,7 +78,9 @@ public class ClusterRoleReconciler extends AbstractReconciler {
         List<V1alpha1NodeGroup> boundNodeGroups = this.boundObjectResolver.getAllBoundNodeGroups(projectOpt.get());
         List<V1Node> boundNodes = this.boundObjectResolver.getAllBoundNodes(projectOpt.get());
         boundNodes = NodeUtils.getProjectManagedNodes(boundNodes);
-        List<V1PolicyRule> reconciledRules = this.reconciliationService.reconcileClusterRoleRules(projectOpt.get(), projRoleEnum, boundNodeGroups, boundNodes);
+
+        List<V1alpha1ResourceSet> boundNodesResourceSets = this.boundObjectResolver.getAllBoundResourceSets(projectOpt.get());
+        List<V1PolicyRule> reconciledRules = this.reconciliationService.reconcileClusterRoleRules(projectOpt.get(), projRoleEnum, boundNodeGroups, boundNodes, boundNodesResourceSets);
         V1AggregationRule reconciledAggregationRule = this.reconciliationService.reconcileClusterRoleAggregationRule(projectOpt.get(), projRoleEnum);
 
         if (roleOpt.isPresent()) {
