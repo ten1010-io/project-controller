@@ -12,9 +12,9 @@ import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryR
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryRobotListOptions;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryRobotPermission;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageNamespace;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageHub;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
-import io.ten1010.aipub.projectcontroller.domain.k8s.util.ImageNamespaceUtils;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.ImageHubUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.ProjectUtils;
 
 import java.util.List;
@@ -24,13 +24,13 @@ import java.util.Set;
 
 public class ImageRegistryRobotReconciler extends AbstractReconciler {
 
-    private static ImageRegistryRobotPermission createPermission(V1alpha1ImageNamespace imageNamespace) {
+    private static ImageRegistryRobotPermission createPermission(V1alpha1ImageHub imageHub) {
         ImageRegistryAccess access = new ImageRegistryAccess();
         access.setResource("repository");
         access.setAction("pull");
 
         ImageRegistryRobotPermission permission = new ImageRegistryRobotPermission();
-        permission.setImageNamespaceId(ImageNamespaceUtils.getSpecId(imageNamespace));
+        permission.setImageHubId(ImageHubUtils.getSpecId(imageHub));
         permission.setAccesses(List.of(access));
 
         return permission;
@@ -39,7 +39,7 @@ public class ImageRegistryRobotReconciler extends AbstractReconciler {
     private final ImageRegistryRobotService robotService;
     private final ImageRegistryRobotUsernameResolver usernameResolver;
     private final Indexer<V1alpha1Project> projectIndexer;
-    private final Indexer<V1alpha1ImageNamespace> imageNamespaceIndexer;
+    private final Indexer<V1alpha1ImageHub> imageHubIndexer;
     private final KeyResolver keyResolver;
 
     public ImageRegistryRobotReconciler(
@@ -49,8 +49,8 @@ public class ImageRegistryRobotReconciler extends AbstractReconciler {
         this.projectIndexer = sharedInformerFactory
                 .getExistingSharedIndexInformer(V1alpha1Project.class)
                 .getIndexer();
-        this.imageNamespaceIndexer = sharedInformerFactory
-                .getExistingSharedIndexInformer(V1alpha1ImageNamespace.class)
+        this.imageHubIndexer = sharedInformerFactory
+                .getExistingSharedIndexInformer(V1alpha1ImageHub.class)
                 .getIndexer();
         this.keyResolver = new KeyResolver();
     }
@@ -113,8 +113,8 @@ public class ImageRegistryRobotReconciler extends AbstractReconciler {
     }
 
     private List<ImageRegistryRobotPermission> createPermissions(V1alpha1Project project) {
-        return ProjectUtils.getSpecBindingImageNamespaces(project).stream()
-                .map(e -> this.imageNamespaceIndexer.getByKey(this.keyResolver.resolveKey(e)))
+        return ProjectUtils.getSpecBindingImageHubs(project).stream()
+                .map(e -> this.imageHubIndexer.getByKey(this.keyResolver.resolveKey(e)))
                 .filter(Objects::nonNull)
                 .map(ImageRegistryRobotReconciler::createPermission)
                 .toList();

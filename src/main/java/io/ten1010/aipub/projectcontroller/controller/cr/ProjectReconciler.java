@@ -81,9 +81,9 @@ public class ProjectReconciler extends AbstractReconciler {
         List<V1alpha1NodeGroup> boundNodeGroups = this.boundObjectResolver.getAllBoundNodeGroups(project);
         List<V1Node> boundNodes = this.boundObjectResolver.getAllBoundNodes(project);
         boundNodes = NodeUtils.getProjectManagedNodes(boundNodes);
-        List<V1alpha1ImageNamespace> boundImageNamespaces = this.boundObjectResolver.getAllBoundImageNamespaces(project);
+        List<V1alpha1ImageHub> boundImageHubs = this.boundObjectResolver.getAllBoundImageHubs(project);
         V1alpha1ProjectStatus reconciledStatus = this.reconciliationService.reconcileProjectStatus(
-                project, boundAipubUsers, boundQuota, boundNodeGroups, boundNodes, boundImageNamespaces);
+                project, boundAipubUsers, boundQuota, boundNodeGroups, boundNodes, boundImageHubs);
 
         return reconcileExistingProject(project, reconciledStatus);
     }

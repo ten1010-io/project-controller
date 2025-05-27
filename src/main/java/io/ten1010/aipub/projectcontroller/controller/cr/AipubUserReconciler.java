@@ -11,7 +11,7 @@ import io.ten1010.aipub.projectcontroller.controller.RequestHelper;
 import io.ten1010.aipub.projectcontroller.domain.k8s.*;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUserStatus;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageNamespace;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageHub;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.StatusPatchHelper;
@@ -54,8 +54,8 @@ public class AipubUserReconciler extends AbstractReconciler {
         V1alpha1AipubUser user = userOpt.get();
 
         List<V1alpha1Project> boundProjects = this.boundObjectResolver.getAllBoundProjects(user);
-        List<V1alpha1ImageNamespace> boundImageNamespaces = this.boundObjectResolver.getAllBoundImageNamespaces(user);
-        V1alpha1AipubUserStatus reconciledStatus = this.reconciliationService.reconcileAipubUserStatus(user, boundProjects, boundImageNamespaces);
+        List<V1alpha1ImageHub> boundHubs = this.boundObjectResolver.getAllBoundImageHubs(user);
+        V1alpha1AipubUserStatus reconciledStatus = this.reconciliationService.reconcileAipubUserStatus(user, boundProjects, boundHubs);
 
         return reconcileExistingAipubUser(userOpt.get(), reconciledStatus);
     }

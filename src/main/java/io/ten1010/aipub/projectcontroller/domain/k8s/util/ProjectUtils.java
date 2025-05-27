@@ -85,10 +85,10 @@ public abstract class ProjectUtils {
                 .orElseGet(List::of);
     }
 
-    public static List<String> getSpecBindingImageNamespaces(V1alpha1Project object) {
+    public static List<String> getSpecBindingImageHubs(V1alpha1Project object) {
         Optional<V1alpha1ProjectBinding> bindingOpt = getSpecBinding(object);
         return bindingOpt
-                .map(V1alpha1ProjectBinding::getImageNamespaces)
+                .map(V1alpha1ProjectBinding::getImageHubs)
                 .filter(Objects::nonNull)
                 .orElseGet(List::of);
     }
@@ -101,12 +101,12 @@ public abstract class ProjectUtils {
         return object.getStatus().getAllBoundAipubUsers();
     }
 
-    public static List<String> getStatusAllBoundImageNamespaces(V1alpha1Project object) {
+    public static List<String> getStatusAllBoundImageHubs(V1alpha1Project object) {
         if (object.getStatus() == null ||
-                object.getStatus().getAllBoundImageNamespaces() == null) {
+                object.getStatus().getAllBoundImageHubs() == null) {
             return List.of();
         }
-        return object.getStatus().getAllBoundImageNamespaces();
+        return object.getStatus().getAllBoundImageHubs();
     }
 
     private static V1alpha1ProjectMember clone(V1alpha1ProjectMember member) {
@@ -142,8 +142,8 @@ public abstract class ProjectUtils {
             if (spec.getBinding().getNodeGroups() != null) {
                 binding.setNodeGroups(new ArrayList<>(spec.getBinding().getNodeGroups()));
             }
-            if (spec.getBinding().getImageNamespaces() != null) {
-                binding.setImageNamespaces(new ArrayList<>(spec.getBinding().getImageNamespaces()));
+            if (spec.getBinding().getImageHubs() != null) {
+                binding.setImageHubs(new ArrayList<>(spec.getBinding().getImageHubs()));
             }
             clone.setBinding(binding);
         }
@@ -172,8 +172,8 @@ public abstract class ProjectUtils {
         if (status.getAllBoundNodes() != null) {
             clone.setAllBoundNodes(new ArrayList<>(status.getAllBoundNodes()));
         }
-        if (status.getAllBoundImageNamespaces() != null) {
-            clone.setAllBoundImageNamespaces(new ArrayList<>(status.getAllBoundImageNamespaces()));
+        if (status.getAllBoundImageHubs() != null) {
+            clone.setAllBoundImageHubs(new ArrayList<>(status.getAllBoundImageHubs()));
         }
 
         return clone;

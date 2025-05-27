@@ -3,6 +3,6 @@ kind: ImageReview
 metadata:
   name: img-review
 spec:
-  imgNS: "img-ns1"
+  imgHub: "img-hub1"
   repo: "ubuntu"
 ---

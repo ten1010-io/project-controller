@@ -23,12 +23,12 @@ public final class K8sObjectTypeConstants {
                     ProjectApiConstants.VERSION,
                     ProjectApiConstants.AIPUB_USER_RESOURCE_KIND),
             V1alpha1AipubUser.class);
-    public static final K8sObjectType<V1alpha1ImageNamespace> IMAGE_NAMESPACE_V1ALPHA1 = new K8sObjectType<>(
+    public static final K8sObjectType<V1alpha1ImageHub> IMAGE_HUB_V1ALPHA1 = new K8sObjectType<>(
             new K8sObjectTypeKey(
                     ProjectApiConstants.PROJECT_GROUP,
                     ProjectApiConstants.VERSION,
-                    ProjectApiConstants.IMAGE_NAMESPACE_RESOURCE_KIND),
-            V1alpha1ImageNamespace.class);
+                    ProjectApiConstants.IMAGE_HUB_RESOURCE_KIND),
+            V1alpha1ImageHub.class);
     public static final K8sObjectType<V1alpha1ImageReview> IMAGE_REVIEW_V1ALPHA1 = new K8sObjectType<>(
             new K8sObjectTypeKey(
                     ProjectApiConstants.PROJECT_GROUP,

@@ -16,7 +16,7 @@ import io.ten1010.aipub.projectcontroller.controller.watch.RequestBuilderFactory
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageNamespace;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageHub;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeGroup;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import lombok.AllArgsConstructor;
@@ -52,14 +52,14 @@ public class ProjectControllerFactory implements ControllerFactory {
                 .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1ResourceQuota.class)::hasSynced)
                 .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1alpha1NodeGroup.class)::hasSynced)
                 .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1Node.class)::hasSynced)
-                .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1alpha1ImageNamespace.class)::hasSynced)
+                .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1alpha1ImageHub.class)::hasSynced)
                 .watch(this::createProjectWatch)
                 .watch(this::createNamespaceWatch)
                 .watch(this::createAipubUserWatch)
                 .watch(this::createResourceQuotaWatch)
                 .watch(this::createNodeGroupWatch)
                 .watch(this::createNodeWatch)
-                .watch(this::createImageNamespaceWatch)
+                .watch(this::createImageHubWatch)
                 .withReconciler(new ProjectReconciler(this.reconciliationService, this.sharedInformerFactory, this.k8sApiProvider))
                 .build();
     }
@@ -105,10 +105,10 @@ public class ProjectControllerFactory implements ControllerFactory {
         return watch;
     }
 
-    private ControllerWatch<V1alpha1ImageNamespace> createImageNamespaceWatch(WorkQueue<Request> workQueue) {
-        DefaultControllerWatch<V1alpha1ImageNamespace> watch = new DefaultControllerWatch<>(workQueue, V1alpha1ImageNamespace.class);
+    private ControllerWatch<V1alpha1ImageHub> createImageHubWatch(WorkQueue<Request> workQueue) {
+        DefaultControllerWatch<V1alpha1ImageHub> watch = new DefaultControllerWatch<>(workQueue, V1alpha1ImageHub.class);
         watch.setOnUpdateFilter(this.onUpdateFilterFactory.alwaysFalseFilter());
-        watch.setRequestBuilder(this.requestBuilderFactory.imageNamespaceToBoundProjects());
+        watch.setRequestBuilder(this.requestBuilderFactory.imageHubToBoundProjects());
         return watch;
     }
 

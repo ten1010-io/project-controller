@@ -5,7 +5,7 @@ metadata:
 spec:
   members:
     - aipubUser: au1
-      role: project-admin
+      role: project-manager
     - aipubUser: au2
       role: project-developer
   quota:
@@ -15,6 +15,6 @@ spec:
       - node1
     nodeGroups:
       - ng1
-    imageNamespaces:
-      - img-ns1
+    imageHubs:
+      - img-hub1
 ---

@@ -6,11 +6,11 @@ import java.util.Optional;
 
 public abstract class ImageReviewUtils {
 
-    public static Optional<String> getImgNS(V1alpha1ImageReview object) {
+    public static Optional<String> getImgHub(V1alpha1ImageReview object) {
         if (object.getSpec() == null) {
             return Optional.empty();
         }
-        return Optional.ofNullable(object.getSpec().getImgNS());
+        return Optional.ofNullable(object.getSpec().getImgHub());
     }
 
     public static Optional<String> getRepo(V1alpha1ImageReview object) {

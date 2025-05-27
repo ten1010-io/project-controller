@@ -56,7 +56,7 @@ public class ImagePullSecretReconcilerFactory implements ControllerFactory {
 
     private ControllerWatch<V1alpha1Project> createProjectWatch(WorkQueue<Request> workQueue) {
         DefaultControllerWatch<V1alpha1Project> watch = new DefaultControllerWatch<>(workQueue, V1alpha1Project.class);
-        watch.setOnUpdateFilter(this.onUpdateFilterFactory.projectSpecBindingImageNamespacesFieldFilter());
+        watch.setOnUpdateFilter(this.onUpdateFilterFactory.projectSpecBindingImageHubsFieldFilter());
         watch.setRequestBuilder(this.requestBuilderFactory.projectToImagePullSecrets());
         return watch;
     }

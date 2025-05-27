@@ -11,6 +11,6 @@ public class V1alpha1AipubUserStatus {
     @Nullable
     private List<String> allBoundProjects;
     @Nullable
-    private List<String> allBoundImageNamespaces;
+    private List<String> allBoundImageHubs;
 
 }

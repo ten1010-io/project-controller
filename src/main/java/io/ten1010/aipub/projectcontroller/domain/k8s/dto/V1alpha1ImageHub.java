@@ -6,7 +6,7 @@ import lombok.Data;
 import org.jspecify.annotations.Nullable;
 
 @Data
-public class V1alpha1ImageNamespace implements KubernetesObject {
+public class V1alpha1ImageHub implements KubernetesObject {
 
     @Nullable
     private String apiVersion;
@@ -15,8 +15,8 @@ public class V1alpha1ImageNamespace implements KubernetesObject {
     @Nullable
     private V1ObjectMeta metadata;
     @Nullable
-    private V1alpha1ImageNamespaceSpec spec;
+    private V1alpha1ImageHubSpec spec;
     @Nullable
-    private V1alpha1ImageNamespaceStatus status;
+    private V1alpha1ImageHubStatus status;
 
 }

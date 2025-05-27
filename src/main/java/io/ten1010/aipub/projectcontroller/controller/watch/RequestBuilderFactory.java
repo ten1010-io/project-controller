@@ -66,8 +66,8 @@ public class RequestBuilderFactory {
                 .toList();
     }
 
-    public Function<V1alpha1Project, List<Request>> projectToBoundImageNamespaces() {
-        return project -> this.boundObjectResolver.getAllBoundImageNamespaces(project).stream()
+    public Function<V1alpha1Project, List<Request>> projectToBoundImageHubs() {
+        return project -> this.boundObjectResolver.getAllBoundImageHubs(project).stream()
                 .map(K8sObjectUtils::getName)
                 .map(Request::new)
                 .toList();
@@ -83,7 +83,7 @@ public class RequestBuilderFactory {
     public Function<V1alpha1Project, List<Request>> projectToRoles(boolean namespacedRole) {
         return project -> {
             String projName = K8sObjectUtils.getName(project);
-            String adminRole = this.roleNameResolver.resolveRoleName(projName, ProjectRoleEnum.PROJECT_ADMIN);
+            String adminRole = this.roleNameResolver.resolveRoleName(projName, ProjectRoleEnum.PROJECT_MANAGER);
             String developerRole = this.roleNameResolver.resolveRoleName(projName, ProjectRoleEnum.PROJECT_DEVELOPER);
             if (namespacedRole) {
                 String namespace = this.namespaceNameResolver.resolveNamespaceName(projName);
@@ -222,8 +222,8 @@ public class RequestBuilderFactory {
     }
 
 
-    public Function<V1alpha1ImageNamespace, List<Request>> imageNamespaceToBoundProjects() {
-        return imgNs -> this.boundObjectResolver.getAllBoundProjects(imgNs).stream()
+    public Function<V1alpha1ImageHub, List<Request>> imageHubToBoundProjects() {
+        return imgHub -> this.boundObjectResolver.getAllBoundProjects(imgHub).stream()
                 .map(K8sObjectUtils::getName)
                 .map(Request::new)
                 .toList();

@@ -31,8 +31,8 @@ public class OnUpdateFilterFactory {
         return (oldObj, newObj) -> !ProjectUtils.getSpecQuota(oldObj).equals(ProjectUtils.getSpecQuota(newObj));
     }
 
-    public BiPredicate<V1alpha1Project, V1alpha1Project> projectSpecBindingImageNamespacesFieldFilter() {
-        return (oldObj, newObj) -> !ProjectUtils.getSpecBindingImageNamespaces(oldObj).equals(ProjectUtils.getSpecBindingImageNamespaces(newObj));
+    public BiPredicate<V1alpha1Project, V1alpha1Project> projectSpecBindingImageHubsFieldFilter() {
+        return (oldObj, newObj) -> !ProjectUtils.getSpecBindingImageHubs(oldObj).equals(ProjectUtils.getSpecBindingImageHubs(newObj));
     }
 
     public BiPredicate<V1alpha1Project, V1alpha1Project> projectSpecBindingFieldFilter() {
@@ -43,8 +43,8 @@ public class OnUpdateFilterFactory {
         return (oldObj, newObj) -> !ProjectUtils.getStatusAllBoundAipubUsers(oldObj).equals(ProjectUtils.getStatusAllBoundAipubUsers(newObj));
     }
 
-    public BiPredicate<V1alpha1Project, V1alpha1Project> projectStatusAllBoundImageNamespacesFieldFilter() {
-        return (oldObj, newObj) -> !ProjectUtils.getStatusAllBoundImageNamespaces(oldObj).equals(ProjectUtils.getStatusAllBoundImageNamespaces(newObj));
+    public BiPredicate<V1alpha1Project, V1alpha1Project> projectStatusAllBoundImageHubsFieldFilter() {
+        return (oldObj, newObj) -> !ProjectUtils.getStatusAllBoundImageHubs(oldObj).equals(ProjectUtils.getStatusAllBoundImageHubs(newObj));
     }
 
     public BiPredicate<V1alpha1AipubUser, V1alpha1AipubUser> aipubUserSpecFieldFilter() {
@@ -59,7 +59,7 @@ public class OnUpdateFilterFactory {
         return (oldObj, newObj) -> !Objects.equals(oldObj.getSpec(), newObj.getSpec());
     }
 
-    public BiPredicate<V1alpha1ImageNamespace, V1alpha1ImageNamespace> imageNamespaceSpecFieldFilter() {
+    public BiPredicate<V1alpha1ImageHub, V1alpha1ImageHub> imageHubSpecFieldFilter() {
         return (oldObj, newObj) -> !Objects.equals(oldObj.getSpec(), newObj.getSpec());
     }
 

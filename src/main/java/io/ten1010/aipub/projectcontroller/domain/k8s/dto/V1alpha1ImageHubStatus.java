@@ -6,7 +6,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.List;
 
 @Data
-public class V1alpha1ImageNamespaceStatus {
+public class V1alpha1ImageHubStatus {
 
     @Nullable
     private List<String> allBoundProjects;

@@ -23,7 +23,7 @@ public class BoundObjectResolver {
     private final Indexer<V1alpha1Project> projectIndexer;
     private final Indexer<V1alpha1AipubUser> aipubUserIndexer;
     private final Indexer<V1alpha1NodeGroup> nodeGroupIndexer;
-    private final Indexer<V1alpha1ImageNamespace> imageNamespaceIndexer;
+    private final Indexer<V1alpha1ImageHub> imageHubIndexer;
     private final Indexer<V1Node> nodeIndexer;
     private final Indexer<V1alpha1ResourceSet> resourceSetIndexer;
 
@@ -38,8 +38,8 @@ public class BoundObjectResolver {
         this.nodeGroupIndexer = sharedInformerFactory
                 .getExistingSharedIndexInformer(V1alpha1NodeGroup.class)
                 .getIndexer();
-        this.imageNamespaceIndexer = sharedInformerFactory
-                .getExistingSharedIndexInformer(V1alpha1ImageNamespace.class)
+        this.imageHubIndexer = sharedInformerFactory
+                .getExistingSharedIndexInformer(V1alpha1ImageHub.class)
                 .getIndexer();
         this.nodeIndexer = sharedInformerFactory
                 .getExistingSharedIndexInformer(V1Node.class)
@@ -57,8 +57,8 @@ public class BoundObjectResolver {
         return getDirectlyBoundNodeGroups(project);
     }
 
-    public List<V1alpha1ImageNamespace> getAllBoundImageNamespaces(V1alpha1Project project) {
-        return getDirectlyBoundImageNamespaces(project);
+    public List<V1alpha1ImageHub> getAllBoundImageHubs(V1alpha1Project project) {
+        return getDirectlyBoundImageHubs(project);
     }
 
     public List<V1Node> getAllBoundNodes(V1alpha1Project project) {
@@ -75,13 +75,13 @@ public class BoundObjectResolver {
         return getDirectlyBoundProjects(aipubUser);
     }
 
-    public List<V1alpha1ImageNamespace> getAllBoundImageNamespaces(V1alpha1AipubUser aipubUser) {
+    public List<V1alpha1ImageHub> getAllBoundImageHubs(V1alpha1AipubUser aipubUser) {
         List<V1alpha1Project> projects = getAllBoundProjects(aipubUser);
         return projects.stream()
-                .flatMap(e -> ProjectUtils.getSpecBindingImageNamespaces(e).stream())
+                .flatMap(e -> ProjectUtils.getSpecBindingImageHubs(e).stream())
                 .distinct()
                 .map(this.keyResolver::resolveKey)
-                .map(this.imageNamespaceIndexer::getByKey)
+                .map(this.imageHubIndexer::getByKey)
                 .filter(Objects::nonNull)
                 .toList();
     }
@@ -106,12 +106,12 @@ public class BoundObjectResolver {
                 .toList();
     }
 
-    public List<V1alpha1Project> getAllBoundProjects(V1alpha1ImageNamespace imageNamespace) {
-        return getDirectlyBoundProjects(imageNamespace);
+    public List<V1alpha1Project> getAllBoundProjects(V1alpha1ImageHub imageHub) {
+        return getDirectlyBoundProjects(imageHub);
     }
 
-    public List<V1alpha1AipubUser> getAllBoundAipubUsers(V1alpha1ImageNamespace imageNamespace) {
-        List<V1alpha1AipubUser> allBoundUsers = getAllBoundProjects(imageNamespace).stream()
+    public List<V1alpha1AipubUser> getAllBoundAipubUsers(V1alpha1ImageHub imageHub) {
+        List<V1alpha1AipubUser> allBoundUsers = getAllBoundProjects(imageHub).stream()
                 .flatMap(e -> getAllBoundAipubUsers(e).stream())
                 .toList();
         return K8sObjectUtils.distinctByKey(this.keyResolver, allBoundUsers);
@@ -170,10 +170,10 @@ public class BoundObjectResolver {
                 .toList();
     }
 
-    private List<V1alpha1ImageNamespace> getDirectlyBoundImageNamespaces(V1alpha1Project project) {
-        return ProjectUtils.getSpecBindingImageNamespaces(project).stream()
+    private List<V1alpha1ImageHub> getDirectlyBoundImageHubs(V1alpha1Project project) {
+        return ProjectUtils.getSpecBindingImageHubs(project).stream()
                 .map(this.keyResolver::resolveKey)
-                .map(this.imageNamespaceIndexer::getByKey)
+                .map(this.imageHubIndexer::getByKey)
                 .filter(Objects::nonNull)
                 .toList();
     }
@@ -215,10 +215,10 @@ public class BoundObjectResolver {
                 K8sObjectUtils.getName(nodeGroup));
     }
 
-    private List<V1alpha1Project> getDirectlyBoundProjects(V1alpha1ImageNamespace imageNamespace) {
+    private List<V1alpha1Project> getDirectlyBoundProjects(V1alpha1ImageHub imageHub) {
         return this.projectIndexer.byIndex(
-                IndexerConstants.IMAGE_NAMESPACE_NAME_TO_PROJECTS_INDEXER_NAME,
-                K8sObjectUtils.getName(imageNamespace));
+                IndexerConstants.IMAGE_HUB_NAME_TO_PROJECTS_INDEXER_NAME,
+                K8sObjectUtils.getName(imageHub));
     }
 
     private List<V1alpha1Project> getDirectlyBoundProjects(V1Node node) {

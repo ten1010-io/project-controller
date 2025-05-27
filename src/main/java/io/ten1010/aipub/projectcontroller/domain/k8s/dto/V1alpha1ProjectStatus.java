@@ -17,6 +17,6 @@ public class V1alpha1ProjectStatus {
     @Nullable
     private List<String> allBoundNodes;
     @Nullable
-    private List<String> allBoundImageNamespaces;
+    private List<String> allBoundImageHubs;
 
 }

@@ -25,12 +25,12 @@ public class RepositoryServiceImpl implements RepositoryService {
     }
 
     @Override
-    public List<Repository> listNamespacedRepositories(String namespacedId, RepositoryListOptions options) {
+    public List<Repository> listNamespacedRepositories(String hubId, RepositoryListOptions options) {
         Map<String, String> queryParams = new HashMap<>();
         ListOptionsUtils.applyRepositoryListOptions(queryParams, options);
 
         Call call = this.aipubBackendClient.buildCall(
-                "/imagenamespaces/" + namespacedId + "/repositories",
+                "/imagehubs/" + hubId + "/repositories",
                 "GET",
                 queryParams);
         return this.callHelper.executeCall(call, REPOSITORY_LIST_TYPE_TOKEN).orElseThrow();

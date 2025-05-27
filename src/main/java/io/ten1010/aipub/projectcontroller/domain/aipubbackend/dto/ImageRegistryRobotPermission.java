@@ -9,7 +9,7 @@ import java.util.List;
 public class ImageRegistryRobotPermission {
 
     @Nullable
-    private String imageNamespaceId;
+    private String imageHubId;
     @Nullable
     private List<ImageRegistryAccess> accesses;
 

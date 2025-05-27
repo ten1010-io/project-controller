@@ -38,13 +38,13 @@ public class K8sApiProvider {
                 apiClient);
     }
 
-    private static GenericKubernetesApi<V1alpha1ImageNamespace, V1alpha1ImageNamespaceList> createImageNamespaceApi(ApiClient apiClient) {
+    private static GenericKubernetesApi<V1alpha1ImageHub, V1alpha1ImageHubList> createImageHubApi(ApiClient apiClient) {
         return new GenericKubernetesApi<>(
-                V1alpha1ImageNamespace.class,
-                V1alpha1ImageNamespaceList.class,
+                V1alpha1ImageHub.class,
+                V1alpha1ImageHubList.class,
                 ProjectApiConstants.PROJECT_GROUP,
                 ProjectApiConstants.VERSION,
-                ProjectApiConstants.IMAGE_NAMESPACE_RESOURCE_PLURAL,
+                ProjectApiConstants.IMAGE_HUB_RESOURCE_PLURAL,
                 apiClient);
     }
 
@@ -75,7 +75,7 @@ public class K8sApiProvider {
     private final GenericKubernetesApi<V1alpha1Project, V1alpha1ProjectList> projectApi;
     private final GenericKubernetesApi<V1alpha1AipubUser, V1alpha1AipubUserList> aipubUserApi;
     private final GenericKubernetesApi<V1alpha1NodeGroup, V1alpha1NodeGroupList> nodeGroupApi;
-    private final GenericKubernetesApi<V1alpha1ImageNamespace, V1alpha1ImageNamespaceList> imageNamespaceApi;
+    private final GenericKubernetesApi<V1alpha1ImageHub, V1alpha1ImageHubList> imageHubApi;
     private final GenericKubernetesApi<V1alpha1ResourceSet, V1alpha1ResourceSetList> resourceSetApi;
     private final GenericKubernetesApi<V1alpha1NodeResourceStatus, V1alpha1NodeResourceStatusList> nodeResourceStatusApi;
 
@@ -84,7 +84,7 @@ public class K8sApiProvider {
         this.projectApi = createProjectApi(apiClient);
         this.aipubUserApi = createAipubUserApi(apiClient);
         this.nodeGroupApi = createNodeGroupApi(apiClient);
-        this.imageNamespaceApi = createImageNamespaceApi(apiClient);
+        this.imageHubApi = createImageHubApi(apiClient);
         this.resourceSetApi = createResourceSetApi(apiClient);
         this.nodeResourceStatusApi = createNodeResourceStatusApi(apiClient);
     }

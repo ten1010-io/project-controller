@@ -4,7 +4,7 @@ import lombok.Data;
 import org.jspecify.annotations.Nullable;
 
 @Data
-public class V1alpha1ImageNamespaceSpec {
+public class V1alpha1ImageHubSpec {
 
     @Nullable
     private String id;

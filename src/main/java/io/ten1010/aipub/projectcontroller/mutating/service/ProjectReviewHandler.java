@@ -74,7 +74,7 @@ public class ProjectReviewHandler extends AbstractReviewHandler<V1alpha1Project>
         Optional<V1alpha1Project> existingProjectOpt = Optional.ofNullable(this.projectIndexer.getByKey(projectKey));
         if (existingProjectOpt.isPresent()) {
             V1alpha1Project existingProject = existingProjectOpt.get();
-            if (!isProjectAdmin(userInfo, existingProject)) {
+            if (!isProjectManager(userInfo, existingProject)) {
                 V1AdmissionReviewUtils.reject(review, HttpStatus.FORBIDDEN.value(), "Forbidden");
                 return;
             }
@@ -89,9 +89,9 @@ public class ProjectReviewHandler extends AbstractReviewHandler<V1alpha1Project>
         V1AdmissionReviewUtils.allow(review);
     }
 
-    private boolean isProjectAdmin(V1UserInfo userInfo, V1alpha1Project project) {
+    private boolean isProjectManager(V1UserInfo userInfo, V1alpha1Project project) {
         String username = userInfo.getUsername();
-        List<V1alpha1ProjectMember> adminMembers = ProjectUtils.getSpecMembers(project, ProjectRoleEnum.PROJECT_ADMIN);
+        List<V1alpha1ProjectMember> adminMembers = ProjectUtils.getSpecMembers(project, ProjectRoleEnum.PROJECT_MANAGER);
         for (V1alpha1ProjectMember member : adminMembers) {
             Optional<RbacV1Subject> subjectOpt = this.subjectResolver.resolve(member);
             if (subjectOpt.isEmpty() || !RbacSubjectUtils.isUserSubject(subjectOpt.get())) {

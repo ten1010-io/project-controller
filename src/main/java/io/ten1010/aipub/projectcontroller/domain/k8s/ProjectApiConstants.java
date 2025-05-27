@@ -19,8 +19,8 @@ public final class ProjectApiConstants {
     public static final String AIPUB_USER_RESOURCE_KIND = "AipubUser";
     public static final String AIPUB_USER_RESOURCE_PLURAL = "aipubusers";
 
-    public static final String IMAGE_NAMESPACE_RESOURCE_KIND = "ImageNamespace";
-    public static final String IMAGE_NAMESPACE_RESOURCE_PLURAL = "imagenamespaces";
+    public static final String IMAGE_HUB_RESOURCE_KIND = "ImageHub";
+    public static final String IMAGE_HUB_RESOURCE_PLURAL = "imagehubs";
 
     public static final String IMAGE_REVIEW_RESOURCE_KIND = "ImageReview";
     public static final String IMAGE_REVIEW_RESOURCE_PLURAL = "imagereviews";

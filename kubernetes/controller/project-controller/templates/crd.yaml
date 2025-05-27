@@ -69,7 +69,7 @@ spec:
                       default: [ ]
                       items:
                         type: string
-                    imageNamespaces:
+                    imageHubs:
                       type: array
                       default: [ ]
                       items:
@@ -102,7 +102,7 @@ spec:
                   default: [ ]
                   items:
                     type: string
-                allBoundImageNamespaces:
+                allBoundImageHubs:
                   type: array
                   default: [ ]
                   items:
@@ -228,7 +228,7 @@ spec:
                   default: [ ]
                   items:
                     type: string
-                allBoundImageNamespaces:
+                allBoundImageHubs:
                   type: array
                   default: [ ]
                   items:
@@ -237,15 +237,15 @@ spec:
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: imagenamespaces.project.aipub.ten1010.io
+  name: imagehubs.project.aipub.ten1010.io
 spec:
   scope: Cluster
   names:
-    plural: imagenamespaces
-    singular: imagenamespace
-    kind: ImageNamespace
+    plural: imagehubs
+    singular: imagehub
+    kind: ImageHub
     shortNames:
-      - imgns
+      - imghub
   group: project.aipub.ten1010.io
   versions:
     - name: v1alpha1
@@ -310,9 +310,9 @@ spec:
             spec:
               type: object
               required:
-                - imgNS
+                - imgHub
               properties:
-                imgNS:
+                imgHub:
                   type: string
                 repo:
                   type: string

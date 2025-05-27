@@ -9,7 +9,7 @@ public class Repository {
     @Nullable
     private String id;
     @Nullable
-    private String namespaceId;
+    private String hubId;
     @Nullable
     private String name;
     @Nullable

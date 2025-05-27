@@ -12,10 +12,10 @@ import io.ten1010.aipub.projectcontroller.controller.watch.OnUpdateFilterFactory
 import io.ten1010.aipub.projectcontroller.controller.watch.RequestBuilderFactory;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageNamespace;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageHub;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 
-public class ImageNamespaceControllerFactory implements ControllerFactory {
+public class ImageHubControllerFactory implements ControllerFactory {
 
     private final SharedInformerFactory sharedInformerFactory;
     private final OnUpdateFilterFactory onUpdateFilterFactory;
@@ -23,7 +23,7 @@ public class ImageNamespaceControllerFactory implements ControllerFactory {
     private final K8sApiProvider k8sApiProvider;
     private final ReconciliationService reconciliationService;
 
-    public ImageNamespaceControllerFactory(
+    public ImageHubControllerFactory(
             SharedInformerFactory sharedInformerFactory,
             K8sApiProvider k8sApiProvider,
             ReconciliationService reconciliationService) {
@@ -37,34 +37,34 @@ public class ImageNamespaceControllerFactory implements ControllerFactory {
     @Override
     public Controller createController() {
         return ControllerBuilder.defaultBuilder(this.sharedInformerFactory)
-                .withName("image-namespace-controller")
+                .withName("image-hub-controller")
                 .withWorkerCount(1)
-                .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1alpha1ImageNamespace.class)::hasSynced)
+                .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1alpha1ImageHub.class)::hasSynced)
                 .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1alpha1Project.class)::hasSynced)
-                .watch(this::createImageNamespaceWatch)
+                .watch(this::createImageHubWatch)
                 .watch(this::createProjectSpecWatch)
                 .watch(this::createProjectStatusWatch)
-                .withReconciler(new ImageNamespaceReconciler(this.sharedInformerFactory, this.k8sApiProvider, this.reconciliationService))
+                .withReconciler(new ImageHubReconciler(this.sharedInformerFactory, this.k8sApiProvider, this.reconciliationService))
                 .build();
     }
 
-    private ControllerWatch<V1alpha1ImageNamespace> createImageNamespaceWatch(WorkQueue<Request> workQueue) {
-        DefaultControllerWatch<V1alpha1ImageNamespace> watch = new DefaultControllerWatch<>(workQueue, V1alpha1ImageNamespace.class);
-        watch.setOnUpdateFilter(this.onUpdateFilterFactory.imageNamespaceSpecFieldFilter());
+    private ControllerWatch<V1alpha1ImageHub> createImageHubWatch(WorkQueue<Request> workQueue) {
+        DefaultControllerWatch<V1alpha1ImageHub> watch = new DefaultControllerWatch<>(workQueue, V1alpha1ImageHub.class);
+        watch.setOnUpdateFilter(this.onUpdateFilterFactory.imageHubSpecFieldFilter());
         return watch;
     }
 
     private ControllerWatch<V1alpha1Project> createProjectSpecWatch(WorkQueue<Request> workQueue) {
         DefaultControllerWatch<V1alpha1Project> watch = new DefaultControllerWatch<>(workQueue, V1alpha1Project.class);
         watch.setOnUpdateFilter(this.onUpdateFilterFactory.projectSpecFieldFilter());
-        watch.setRequestBuilder(this.requestBuilderFactory.projectToBoundImageNamespaces());
+        watch.setRequestBuilder(this.requestBuilderFactory.projectToBoundImageHubs());
         return watch;
     }
 
     private ControllerWatch<V1alpha1Project> createProjectStatusWatch(WorkQueue<Request> workQueue) {
         DefaultControllerWatch<V1alpha1Project> watch = new DefaultControllerWatch<>(workQueue, V1alpha1Project.class);
         watch.setOnUpdateFilter(this.onUpdateFilterFactory.projectStatusAllBoundAipubUsersFieldFilter());
-        watch.setRequestBuilder(this.requestBuilderFactory.projectToBoundImageNamespaces());
+        watch.setRequestBuilder(this.requestBuilderFactory.projectToBoundImageHubs());
         return watch;
     }
 

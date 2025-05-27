@@ -9,7 +9,7 @@ import io.kubernetes.client.informer.SharedInformerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cluster.NamespaceControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cluster.NodeControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cr.AipubUserControllerFactory;
-import io.ten1010.aipub.projectcontroller.controller.cr.ImageNamespaceControllerFactory;
+import io.ten1010.aipub.projectcontroller.controller.cr.ImageHubControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cr.NodeGroupControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cr.ProjectControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.namespaced.ImagePullSecretReconcilerFactory;
@@ -92,10 +92,10 @@ public class ControllerConfiguration {
     }
 
     @Bean
-    public Controller imageNamespaceController(SharedInformerFactory sharedInformerFactory,
-                                               K8sApiProvider k8sApiProvider,
-                                               ReconciliationService reconciliationService) {
-        return new ImageNamespaceControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+    public Controller imageHubController(SharedInformerFactory sharedInformerFactory,
+                                         K8sApiProvider k8sApiProvider,
+                                         ReconciliationService reconciliationService) {
+        return new ImageHubControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
                 .createController();
     }
 

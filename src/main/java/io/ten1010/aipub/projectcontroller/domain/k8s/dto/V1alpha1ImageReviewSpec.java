@@ -7,7 +7,7 @@ import org.jspecify.annotations.Nullable;
 public class V1alpha1ImageReviewSpec {
 
     @Nullable
-    private String imgNS;
+    private String imgHub;
     @Nullable
     private String repo;
 

@@ -262,7 +262,7 @@ public class ReconciliationService {
             List<V1Node> bindingNodes,
             List<V1alpha1ResourceSet> bindingResourceSets) {
         V1PolicyRule projectApiRule = switch (projectRoleEnum) {
-            case PROJECT_ADMIN -> new V1PolicyRuleBuilder()
+            case PROJECT_MANAGER -> new V1PolicyRuleBuilder()
                     .withApiGroups(ProjectApiConstants.PROJECT_GROUP)
                     .withResources(ProjectApiConstants.PROJECT_RESOURCE_PLURAL)
                     .withResourceNames(K8sObjectUtils.getName(project))
@@ -277,7 +277,7 @@ public class ReconciliationService {
         };
 
         V1PolicyRule namespaceApiRule = switch (projectRoleEnum) {
-            case PROJECT_ADMIN, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+            case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
                     .withApiGroups("")
                     .withResources("namespaces")
                     .withResourceNames(K8sObjectUtils.getName(project))
@@ -289,7 +289,7 @@ public class ReconciliationService {
                 .map(K8sObjectUtils::getName)
                 .toList();
         V1PolicyRule nodeGroupApiRule = switch (projectRoleEnum) {
-            case PROJECT_ADMIN, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+            case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
                     .withApiGroups(ProjectApiConstants.PROJECT_GROUP)
                     .withResources(ProjectApiConstants.NODE_GROUP_RESOURCE_PLURAL)
                     .withResourceNames(nodeGroups)
@@ -301,7 +301,7 @@ public class ReconciliationService {
                 .map(NodeResourceStatusUtils::getName)
                 .toList();
         V1PolicyRule nodeApiRule = switch (projectRoleEnum) {
-            case PROJECT_ADMIN, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+            case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
                     .withApiGroups("")
                     .withResources("nodes")
                     .withResourceNames(nodes)
@@ -311,7 +311,7 @@ public class ReconciliationService {
 
         //todo --
         V1PolicyRule nodeResourceStatusApiRule = switch (projectRoleEnum) {
-            case PROJECT_ADMIN, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+            case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
                     .withApiGroups(ProjectApiConstants.COASTER_GROUP)
                     .withResources(ProjectApiConstants.NODE_RESOURCE_STATUS_RESOURCE_PLURAL)
                     .withResourceNames(nodes)
@@ -323,7 +323,7 @@ public class ReconciliationService {
                 .map(K8sObjectUtils::getName)
                 .toList();
         V1PolicyRule resourceSetApiRule = switch (projectRoleEnum) {
-            case PROJECT_ADMIN, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+            case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
                     .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
                     .withResources(ProjectApiConstants.RESOURCE_SET_RESOURCE_PLURAL)
                     .withResourceNames(resourceSetNames)
@@ -369,7 +369,7 @@ public class ReconciliationService {
             V1alpha1Project project,
             ProjectRoleEnum projectRoleEnum) {
         return switch (projectRoleEnum) {
-            case PROJECT_ADMIN, PROJECT_DEVELOPER -> {
+            case PROJECT_MANAGER, PROJECT_DEVELOPER -> {
                 V1PolicyRule coreApiRule = new V1PolicyRuleBuilder().withApiGroups("")
                         .withResources(
                                 "pods",
@@ -544,13 +544,13 @@ public class ReconciliationService {
             @Nullable V1ResourceQuota boundQuota,
             List<V1alpha1NodeGroup> boundNodeGroups,
             List<V1Node> boundNodes,
-            List<V1alpha1ImageNamespace> boundImageNamespaces) {
+            List<V1alpha1ImageHub> boundImageHubs) {
         V1alpha1ProjectStatus status = new V1alpha1ProjectStatus();
         status.setAllBoundAipubUsers(K8sObjectUtils.getNames(boundAipubUsers));
         status.setQuota(buildProjectStatusQuota(boundQuota));
         status.setAllBoundNodeGroups(K8sObjectUtils.getNames(boundNodeGroups));
         status.setAllBoundNodes(K8sObjectUtils.getNames(boundNodes));
-        status.setAllBoundImageNamespaces(K8sObjectUtils.getNames(boundImageNamespaces));
+        status.setAllBoundImageHubs(K8sObjectUtils.getNames(boundImageHubs));
 
         return status;
     }
@@ -558,10 +558,10 @@ public class ReconciliationService {
     public V1alpha1AipubUserStatus reconcileAipubUserStatus(
             V1alpha1AipubUser existing,
             List<V1alpha1Project> boundProjects,
-            List<V1alpha1ImageNamespace> boundImageNamespaces) {
+            List<V1alpha1ImageHub> boundImageHubs) {
         V1alpha1AipubUserStatus status = new V1alpha1AipubUserStatus();
         status.setAllBoundProjects(K8sObjectUtils.getNames(boundProjects));
-        status.setAllBoundImageNamespaces(K8sObjectUtils.getNames(boundImageNamespaces));
+        status.setAllBoundImageHubs(K8sObjectUtils.getNames(boundImageHubs));
 
         return status;
     }
@@ -574,11 +574,11 @@ public class ReconciliationService {
         return status;
     }
 
-    public V1alpha1ImageNamespaceStatus reconcileImageNamespaceStatus(
-            V1alpha1ImageNamespace existing,
+    public V1alpha1ImageHubStatus reconcileImageHubStatus(
+            V1alpha1ImageHub existing,
             List<V1alpha1Project> boundProjects,
             List<V1alpha1AipubUser> boundAipubUsers) {
-        V1alpha1ImageNamespaceStatus status = new V1alpha1ImageNamespaceStatus();
+        V1alpha1ImageHubStatus status = new V1alpha1ImageHubStatus();
         status.setAllBoundProjects(K8sObjectUtils.getNames(boundProjects));
         status.setAllBoundAipubUsers(K8sObjectUtils.getNames(boundAipubUsers));
 

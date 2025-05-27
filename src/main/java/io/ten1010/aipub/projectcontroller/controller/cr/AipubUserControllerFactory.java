@@ -63,7 +63,7 @@ public class AipubUserControllerFactory implements ControllerFactory {
 
     private ControllerWatch<V1alpha1Project> createProjectStatusWatch(WorkQueue<Request> workQueue) {
         DefaultControllerWatch<V1alpha1Project> watch = new DefaultControllerWatch<>(workQueue, V1alpha1Project.class);
-        watch.setOnUpdateFilter(this.onUpdateFilterFactory.projectStatusAllBoundImageNamespacesFieldFilter());
+        watch.setOnUpdateFilter(this.onUpdateFilterFactory.projectStatusAllBoundImageHubsFieldFilter());
         watch.setRequestBuilder(this.requestBuilderFactory.projectToBoundAipubUsers());
         return watch;
     }

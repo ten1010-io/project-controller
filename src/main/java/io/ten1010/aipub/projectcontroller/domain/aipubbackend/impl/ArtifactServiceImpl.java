@@ -25,12 +25,12 @@ public class ArtifactServiceImpl implements ArtifactService {
     }
 
     @Override
-    public List<Artifact> listArtifacts(String namespacedId, String repositoryName, ArtifactListOptions options) {
+    public List<Artifact> listArtifacts(String hubId, String repositoryName, ArtifactListOptions options) {
         Map<String, String> queryParams = new HashMap<>();
         ListOptionsUtils.applyArtifactListOptions(queryParams, options);
 
         Call call = this.aipubBackendClient.buildCall(
-                "/imagenamespaces/" + namespacedId + "/repositories/" + repositoryName + "/artifacts",
+                "/imagehubs/" + hubId + "/repositories/" + repositoryName + "/artifacts",
                 "GET",
                 queryParams);
         return this.callHelper.executeCall(call, ARTIFACT_LIST_TYPE_TOKEN).orElseThrow();

@@ -12,7 +12,7 @@ import java.util.Optional;
 @Getter
 public enum ProjectRoleEnum {
 
-    PROJECT_ADMIN("project-admin"), PROJECT_DEVELOPER("project-developer");
+    PROJECT_MANAGER("project-manager"), PROJECT_DEVELOPER("project-developer");
 
     private static final Map<String, ProjectRoleEnum> STR_TO_ENUM;
 
