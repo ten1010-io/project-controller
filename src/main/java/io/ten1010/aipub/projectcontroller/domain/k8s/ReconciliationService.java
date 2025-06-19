@@ -330,9 +330,18 @@ public class ReconciliationService {
                     .withVerbs("get")
                     .build();
         };
+
+        V1PolicyRule tcpPortValidatorsApiRule = switch (projectRoleEnum) {
+            case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+                    .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
+                    .withResources(ProjectApiConstants.TCP_PORT_VALIDATORS_RESOURCE_PLURAL)
+                    .withVerbs("create")
+                    .build();
+        };
         //todo --
 
-        return List.of(projectApiRule, namespaceApiRule, nodeGroupApiRule, nodeApiRule, resourceSetApiRule, nodeResourceStatusApiRule);
+        return List.of(projectApiRule, namespaceApiRule, nodeGroupApiRule, nodeApiRule,
+                resourceSetApiRule, nodeResourceStatusApiRule, tcpPortValidatorsApiRule);
     }
 
     public List<V1PolicyRule> reconcileClusterRoleRules(V1alpha1AipubUser aipubUser) {
