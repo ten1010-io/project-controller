@@ -43,6 +43,9 @@ rules:
   - apiGroups: ["project.aipub.ten1010.io"]
     resources: ["aipubuserauthoritystatuses"]
     verbs: ["create"]
+  - apiGroups: ["aipub.ten1010.io"]
+    resources: ["tcpportvalidators"]
+    verbs: ["create"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
