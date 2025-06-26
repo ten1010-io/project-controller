@@ -313,7 +313,7 @@ public class ReconciliationService {
         V1PolicyRule nodeResourceStatusApiRule = switch (projectRoleEnum) {
             case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
                     .withApiGroups(ProjectApiConstants.COASTER_GROUP)
-                    .withResources(ProjectApiConstants.NODE_RESOURCE_STATUS_RESOURCE_PLURAL)
+                    .withResources(ProjectApiConstants.GPU_CONFIG_RESOURCE_PLURAL)
                     .withResourceNames(nodes)
                     .withVerbs("get")
                     .build();

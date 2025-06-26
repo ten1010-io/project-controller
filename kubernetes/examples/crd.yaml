@@ -34,3 +34,111 @@ spec:
           type: object
       served: true
       storage: true
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: gpuconfigs.coaster.ten1010.io
+spec:
+  conversion:
+    strategy: None
+  group: coaster.ten1010.io
+  names:
+    categories:
+      - all
+    kind: GPUConfig
+    listKind: GPUConfigList
+    plural: gpuconfigs
+    shortNames:
+      - gpuconf
+      - gconfig
+      - gconf
+    singular: gpuconfig
+  scope: Cluster
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .metadata.name
+          name: NODE_NAME
+          type: string
+        - jsonPath: .status.completionCondition.status
+          name: COMPLETED
+          type: boolean
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            metadata:
+              type: object
+            spec:
+              properties:
+                gpus:
+                  default: []
+                  items:
+                    properties:
+                      gpuIndex:
+                        type: integer
+                        x-kubernetes-validations:
+                          - message: gpuIndex must be zero or greater
+                            rule: self >= 0
+                      migCount:
+                        type: integer
+                        x-kubernetes-validations:
+                          - message: migCount must be between 2 and 7
+                            rule: self >= 2 && self <= 7
+                      type:
+                        type: string
+                        x-kubernetes-validations:
+                          - message: Invalid type. type must be one of 'Normal' and 'Block'
+                            rule: self in ["Normal", "Block"]
+                    required:
+                      - gpuIndex
+                      - type
+                    type: object
+                    x-kubernetes-validations:
+                      - message: migCount can only be used when type is Normal
+                        rule: '!((self.type == ''Block'') && has(self.migCount))'
+                  maxItems: 32
+                  type: array
+                  x-kubernetes-validations:
+                    - message: gpuIndex must be unique
+                      rule: self.all(x, size(self.filter(y, y.gpuIndex == x.gpuIndex))
+                        == 1)
+              required:
+                - gpus
+              type: object
+            status:
+              default:
+                gpus: []
+              properties:
+                completionCondition:
+                  properties:
+                    message:
+                      type: string
+                    reason:
+                      type: string
+                    status:
+                      type: boolean
+                    timestamp:
+                      type: string
+                  type: object
+                gpus:
+                  items:
+                    properties:
+                      gpuIndex:
+                        type: integer
+                      migCount:
+                        type: integer
+                      type:
+                        type: string
+                    type: object
+                  maxItems: 32
+                  type: array
+              type: object
+          required:
+            - metadata
+            - spec
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

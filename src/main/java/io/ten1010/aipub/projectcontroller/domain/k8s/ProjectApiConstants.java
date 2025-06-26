@@ -37,6 +37,9 @@ public final class ProjectApiConstants {
     public static final String GPU_QUOTA_RESOURCE_KIND = "GpuQuota";
     public static final String GPU_QUOTA_RESOURCE_PLURAL = "gpuquotas";
 
+    public static final String GPU_CONFIG_RESOURCE_KIND = "GPUConfig";
+    public static final String GPU_CONFIG_RESOURCE_PLURAL = "gpuconfigs";
+
     private ProjectApiConstants() {
     }
 
