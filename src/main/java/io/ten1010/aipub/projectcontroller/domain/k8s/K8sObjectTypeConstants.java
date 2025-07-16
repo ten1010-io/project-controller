@@ -36,6 +36,9 @@ public final class K8sObjectTypeConstants {
                     ProjectApiConstants.IMAGE_REVIEW_RESOURCE_KIND),
             V1alpha1ImageReview.class);
 
+    public static final K8sObjectType<V1Namespace> NAMESPACE_V1 = new K8sObjectType<>(
+            new K8sObjectTypeKey("core/v1", "Namespace"),
+            V1Namespace.class);
     public static final K8sObjectType<V1Pod> POD_V1 = new K8sObjectType<>(
             new K8sObjectTypeKey("core/v1", "Pod"),
             V1Pod.class);

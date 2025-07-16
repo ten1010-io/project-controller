@@ -4,6 +4,9 @@ import lombok.Data;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @ConfigurationProperties(prefix = "app.aipub")
 @Data
 public class AipubProperties {
@@ -18,5 +21,6 @@ public class AipubProperties {
     private String username;
     @Nullable
     private String password;
+    private List<String> reservedNamespace = new ArrayList<>();
 
 }

@@ -21,3 +21,4 @@ app:
     verifying-ssl: true
     username: ""
     password: ""
+    reserved-namespace: "aipub, project-controller"

@@ -48,8 +48,13 @@ public class MutatingConfiguration {
     }
 
     @Bean
-    public ProjectReviewHandler projectReviewHandler(SubjectResolver subjectResolver, SharedInformerFactory sharedInformerFactory) {
-        return new ProjectReviewHandler(subjectResolver, sharedInformerFactory);
+    public NamespaceReviewHandler namespaceReviewHandler(AipubProperties aipubProperties, SubjectResolver subjectResolver, SharedInformerFactory sharedInformerFactory) {
+        return new NamespaceReviewHandler(aipubProperties, subjectResolver, sharedInformerFactory);
+    }
+
+    @Bean
+    public ProjectReviewHandler projectReviewHandler(AipubProperties aipubProperties, SubjectResolver subjectResolver, SharedInformerFactory sharedInformerFactory) {
+        return new ProjectReviewHandler(aipubProperties, subjectResolver, sharedInformerFactory);
     }
 
     @Bean

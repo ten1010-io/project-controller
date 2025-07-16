@@ -47,6 +47,28 @@ webhooks:
         scope: "*"
     sideEffects: None
     timeoutSeconds: 10
+  - name: namespaces.project-controller.project.aipub.ten1010.io
+    admissionReviewVersions: [ "v1" ]
+    clientConfig:
+      caBundle: <CA_BUNDLE>
+      service:
+        namespace: project-controller
+        name: project-controller
+        path: /api/v1/admissionreviews
+        port: 8080
+    failurePolicy: Ignore
+    matchPolicy: Equivalent
+    namespaceSelector: { }
+    objectSelector: { }
+    reinvocationPolicy: IfNeeded
+    rules:
+      - apiGroups: [ "" ]
+        apiVersions: [ "v1" ]
+        operations: [ "DELETE" ]
+        resources: [ "namespaces" ]
+        scope: "*"
+    sideEffects: None
+    timeoutSeconds: 10
   - name: projects.project-controller.project.aipub.ten1010.io
     admissionReviewVersions: [ "v1" ]
     clientConfig:
@@ -64,7 +86,7 @@ webhooks:
     rules:
       - apiGroups: [ "project.aipub.ten1010.io" ]
         apiVersions: [ "v1alpha1" ]
-        operations: [ "UPDATE" ]
+        operations: [ "CREATE", "UPDATE" ]
         resources: [ "projects" ]
         scope: "*"
     sideEffects: None
