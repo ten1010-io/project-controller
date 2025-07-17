@@ -34,6 +34,9 @@ public final class ProjectApiConstants {
     public static final String TCP_PORT_VALIDATORS_RESOURCE_KIND = "TCPPortValidator";
     public static final String TCP_PORT_VALIDATORS_RESOURCE_PLURAL = "tcpportvalidators";
 
+    public static final String USER_WORKSPACE_RECLAIM_RESOURCE_KIND = "UserWorkspaceReclaim";
+    public static final String USER_WORKSPACE_RECLAIM_RESOURCE_PLURAL = "userworkspacereclaims";
+
     public static final String GPU_QUOTA_RESOURCE_KIND = "GpuQuota";
     public static final String GPU_QUOTA_RESOURCE_PLURAL = "gpuquotas";
 

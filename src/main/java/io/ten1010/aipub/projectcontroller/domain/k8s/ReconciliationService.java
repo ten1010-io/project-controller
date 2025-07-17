@@ -359,9 +359,15 @@ public class ReconciliationService {
                 .withResourceNames(K8sObjectUtils.getName(aipubUser))
                 .withVerbs("get")
                 .build();
+        V1PolicyRule userWorkspaceReclaims = new V1PolicyRuleBuilder()
+                .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
+                .withResources(ProjectApiConstants.USER_WORKSPACE_RECLAIM_RESOURCE_PLURAL)
+                .withResourceNames(K8sObjectUtils.getName(aipubUser))
+                .withVerbs("get")
+                .build();
         // todo --
 
-        return List.of(aipubUserApiRule, gpuQuotasApiRule);
+        return List.of(aipubUserApiRule, gpuQuotasApiRule, userWorkspaceReclaims);
     }
 
     @Nullable
