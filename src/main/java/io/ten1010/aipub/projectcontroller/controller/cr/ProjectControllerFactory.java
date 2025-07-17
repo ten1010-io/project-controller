@@ -66,7 +66,7 @@ public class ProjectControllerFactory implements ControllerFactory {
 
     private ControllerWatch<V1alpha1Project> createProjectWatch(WorkQueue<Request> workQueue) {
         DefaultControllerWatch<V1alpha1Project> watch = new DefaultControllerWatch<>(workQueue, V1alpha1Project.class);
-        watch.setOnUpdateFilter(this.onUpdateFilterFactory.projectSpecBindingFieldFilter());
+        watch.setOnUpdateFilter(this.onUpdateFilterFactory.projectSpecFieldFilter());
         return watch;
     }
 
