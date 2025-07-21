@@ -353,6 +353,12 @@ public class ReconciliationService {
                 .build();
 
         // todo --
+        V1PolicyRule userResourceQuotasApiRule = new V1PolicyRuleBuilder()
+                .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
+                .withResources(ProjectApiConstants.USER_RESOURCE_QUOTA_RESOURCE_PLURAL)
+                .withResourceNames(K8sObjectUtils.getName(aipubUser))
+                .withVerbs("get")
+                .build();
         V1PolicyRule gpuQuotasApiRule = new V1PolicyRuleBuilder()
                 .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
                 .withResources(ProjectApiConstants.GPU_QUOTA_RESOURCE_PLURAL)
@@ -367,7 +373,7 @@ public class ReconciliationService {
                 .build();
         // todo --
 
-        return List.of(aipubUserApiRule, gpuQuotasApiRule, userWorkspaceReclaims);
+        return List.of(aipubUserApiRule, userResourceQuotasApiRule, gpuQuotasApiRule, userWorkspaceReclaims);
     }
 
     @Nullable

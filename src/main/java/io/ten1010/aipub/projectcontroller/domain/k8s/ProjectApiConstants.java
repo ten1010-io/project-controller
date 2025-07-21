@@ -37,6 +37,9 @@ public final class ProjectApiConstants {
     public static final String USER_WORKSPACE_RECLAIM_RESOURCE_KIND = "UserWorkspaceReclaim";
     public static final String USER_WORKSPACE_RECLAIM_RESOURCE_PLURAL = "userworkspacereclaims";
 
+    public static final String USER_RESOURCE_QUOTA_RESOURCE_KIND = "UserResourceQuota";
+    public static final String USER_RESOURCE_QUOTA_RESOURCE_PLURAL = "userresourcequotas";
+
     public static final String GPU_QUOTA_RESOURCE_KIND = "GpuQuota";
     public static final String GPU_QUOTA_RESOURCE_PLURAL = "gpuquotas";
 
