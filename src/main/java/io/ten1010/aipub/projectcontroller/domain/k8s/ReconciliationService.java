@@ -440,6 +440,10 @@ public class ReconciliationService {
                         .withResources("workspaces")
                         .withVerbs("*")
                         .build();
+                V1PolicyRule aipubJobsApiRule = new V1PolicyRuleBuilder().withApiGroups("aipub.ten1010.io")
+                        .withResources("aipubjobs")
+                        .withVerbs("*")
+                        .build();
                 V1PolicyRule aipubOperationRevisionApiRule = new V1PolicyRuleBuilder().withApiGroups("aipub.ten1010.io")
                         .withResources("operationrevisions")
                         .withVerbs("*")
@@ -465,6 +469,7 @@ public class ReconciliationService {
                         aipubOperationApiRule,
                         aipubOperationRevisionApiRule,
                         aipubWorkspaceApiRule,
+                        aipubJobsApiRule,
                         aipubFtpServerApiRule,
                         aipubVolumesApiRule
                 );
