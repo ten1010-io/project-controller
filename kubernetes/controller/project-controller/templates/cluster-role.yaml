@@ -41,7 +41,7 @@ rules:
     resources: [ "imagereviews" ]
     verbs: [ "create" ]
   - apiGroups: ["aipub.ten1010.io"]
-    resources: ["userauthorities"]
+    resources: ["userauthorityreviews"]
     verbs: ["create"]
   - apiGroups: ["aipub.ten1010.io"]
     resources: ["tcpportvalidators"]
