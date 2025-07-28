@@ -23,6 +23,7 @@ resources:
   - templates/namespace.yaml
   - templates/service-account.yaml
   - templates/cluster-role.yaml
+  - templates/role.yaml
   - templates/crd.yaml
   - templates/deployment.yaml
   - templates/service.yaml
