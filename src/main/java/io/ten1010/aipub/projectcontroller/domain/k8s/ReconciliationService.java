@@ -310,6 +310,14 @@ public class ReconciliationService {
         };
 
         //todo --
+        V1PolicyRule storageClassesApiRule = switch (projectRoleEnum) {
+            case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+                    .withApiGroups("storage.k8s.io")
+                    .withResources("storageclasses")
+                    .withVerbs("get", "list")
+                    .build();
+        };
+
         V1PolicyRule nodeResourcesApiRule = switch (projectRoleEnum) {
             case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
                     .withApiGroups(ProjectApiConstants.COASTER_GROUP)
@@ -349,8 +357,8 @@ public class ReconciliationService {
         };
         //todo --
 
-        return List.of(projectApiRule, namespaceApiRule, nodeGroupApiRule, nodeApiRule,
-                resourceSetApiRule, nodeResourcesApiRule, gpuConfigsApiRule, tcpPortValidatorsApiRule);
+        return List.of(projectApiRule, namespaceApiRule, nodeGroupApiRule, nodeApiRule, resourceSetApiRule,
+                nodeResourcesApiRule, gpuConfigsApiRule, tcpPortValidatorsApiRule, storageClassesApiRule);
     }
 
     public List<V1PolicyRule> reconcileClusterRoleRules(V1alpha1AipubUser aipubUser) {
