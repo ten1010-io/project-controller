@@ -419,6 +419,8 @@ public class ReconciliationService {
                 V1PolicyRule coreApiRule = new V1PolicyRuleBuilder().withApiGroups("")
                         .withResources(
                                 "pods",
+                                "pods/log",
+                                "pods/exec",
                                 "services",
                                 "configmaps",
                                 "secrets",
