@@ -319,15 +319,6 @@ public class ReconciliationService {
                     .build();
         };
 
-        V1PolicyRule nodeResourceStatusApiRule = switch (projectRoleEnum) {
-            case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
-                    .withApiGroups(ProjectApiConstants.COASTER_GROUP)
-                    .withResources(ProjectApiConstants.NODE_RESOURCE_STATUS_RESOURCE_PLURAL)
-                    .withResourceNames(nodes)
-                    .withVerbs("get")
-                    .build();
-        };
-
         V1PolicyRule gpuConfigsApiRule = switch (projectRoleEnum) {
             case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
                     .withApiGroups(ProjectApiConstants.COASTER_GROUP)
@@ -359,7 +350,7 @@ public class ReconciliationService {
         //todo --
 
         return List.of(projectApiRule, namespaceApiRule, nodeGroupApiRule, nodeApiRule,
-                resourceSetApiRule, nodeResourcesApiRule, nodeResourceStatusApiRule, gpuConfigsApiRule, tcpPortValidatorsApiRule);
+                resourceSetApiRule, nodeResourcesApiRule, gpuConfigsApiRule, tcpPortValidatorsApiRule);
     }
 
     public List<V1PolicyRule> reconcileClusterRoleRules(V1alpha1AipubUser aipubUser) {
