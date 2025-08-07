@@ -97,6 +97,11 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <image>
+                        <name>ten1010io/project-controller:0.1.0-SNAPSHOT</name>
+                    </image>
+                </configuration>
             </plugin>
         </plugins>
     </build>
