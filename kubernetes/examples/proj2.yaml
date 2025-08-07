@@ -1,14 +1,12 @@
 apiVersion: project.aipub.ten1010.io/v1alpha1
 kind: Project
 metadata:
-  name: proj1
+  name: proj2
 spec:
   members:
     - aipubUser: au1
       role: project-manager
     - aipubUser: au2
-      role: project-developer
-    - aipubUser: au3
       role: project-developer
   quota:
   binding:

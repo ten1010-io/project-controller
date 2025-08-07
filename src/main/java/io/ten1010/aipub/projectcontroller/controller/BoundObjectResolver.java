@@ -53,17 +53,39 @@ public class BoundObjectResolver {
         return getDirectlyBoundAipubUsers(project);
     }
 
+    public List<V1alpha1AipubUser> getAllBoundAipubUsers(V1alpha1ProjectForTest project) {
+        return getDirectlyBoundAipubUsers(project);
+    }
+
     public List<V1alpha1NodeGroup> getAllBoundNodeGroups(V1alpha1Project project) {
         return getDirectlyBoundNodeGroups(project);
+    }
+
+    public List<V1alpha1NodeGroup> getAllBoundNodeGroups(V1alpha1ProjectForTest project) {
+        return getDirectlyBoundNodeGroupsForTest(project);
     }
 
     public List<V1alpha1ImageHub> getAllBoundImageHubs(V1alpha1Project project) {
         return getDirectlyBoundImageHubs(project);
     }
 
+    public List<V1alpha1ImageHub> getAllBoundImageHubsForTest(V1alpha1ProjectForTest project) {
+        return getDirectlyBoundImageHubsForTest(project);
+    }
+
     public List<V1Node> getAllBoundNodes(V1alpha1Project project) {
         List<V1Node> nodesDirectlyBoundToProject = getDirectlyBoundNodes(project);
         List<V1Node> nodesIndirectlyBoundToProject = getDirectlyBoundNodeGroups(project).stream()
+                .flatMap(e -> getAllBoundNodes(e).stream())
+                .toList();
+        List<V1Node> allBoundNodes = new ArrayList<>(nodesDirectlyBoundToProject);
+        allBoundNodes.addAll(nodesIndirectlyBoundToProject);
+        return K8sObjectUtils.distinctByKey(this.keyResolver, allBoundNodes);
+    }
+
+    public List<V1Node> getAllBoundNodes(V1alpha1ProjectForTest project) {
+        List<V1Node> nodesDirectlyBoundToProject = getDirectlyBoundNodesForTest(project);
+        List<V1Node> nodesIndirectlyBoundToProject = getDirectlyBoundNodeGroupsForTest(project).stream()
                 .flatMap(e -> getAllBoundNodes(e).stream())
                 .toList();
         List<V1Node> allBoundNodes = new ArrayList<>(nodesDirectlyBoundToProject);
@@ -150,7 +172,27 @@ public class BoundObjectResolver {
                 .toList();
     }
 
+    private List<V1Node> getDirectlyBoundNodesForTest(V1alpha1ProjectForTest project) {
+        return ProjectUtils.getSpecBindingNodes(project).stream()
+                .distinct()
+                .map(this.keyResolver::resolveKey)
+                .map(this.nodeIndexer::getByKey)
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
     private List<V1alpha1AipubUser> getDirectlyBoundAipubUsers(V1alpha1Project project) {
+        return ProjectUtils.getSpecMembers(project).stream()
+                .map(V1alpha1ProjectMember::getAipubUser)
+                .filter(Objects::nonNull)
+                .distinct()
+                .map(this.keyResolver::resolveKey)
+                .map(this.aipubUserIndexer::getByKey)
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private List<V1alpha1AipubUser> getDirectlyBoundAipubUsers(V1alpha1ProjectForTest project) {
         return ProjectUtils.getSpecMembers(project).stream()
                 .map(V1alpha1ProjectMember::getAipubUser)
                 .filter(Objects::nonNull)
@@ -170,7 +212,24 @@ public class BoundObjectResolver {
                 .toList();
     }
 
+    private List<V1alpha1NodeGroup> getDirectlyBoundNodeGroupsForTest(V1alpha1ProjectForTest project) {
+        return ProjectUtils.getSpecBindingNodeGroups(project).stream()
+                .distinct()
+                .map(this.keyResolver::resolveKey)
+                .map(this.nodeGroupIndexer::getByKey)
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
     private List<V1alpha1ImageHub> getDirectlyBoundImageHubs(V1alpha1Project project) {
+        return ProjectUtils.getSpecBindingImageHubs(project).stream()
+                .map(this.keyResolver::resolveKey)
+                .map(this.imageHubIndexer::getByKey)
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private List<V1alpha1ImageHub> getDirectlyBoundImageHubsForTest(V1alpha1ProjectForTest project) {
         return ProjectUtils.getSpecBindingImageHubs(project).stream()
                 .map(this.keyResolver::resolveKey)
                 .map(this.imageHubIndexer::getByKey)

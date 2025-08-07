@@ -608,6 +608,23 @@ public class ReconciliationService {
         return status;
     }
 
+    public V1alpha1ProjectStatus reconcileProjectForTestStatus(
+            V1alpha1ProjectForTest existing,
+            List<V1alpha1AipubUser> boundAipubUsers,
+            @Nullable V1ResourceQuota boundQuota,
+            List<V1alpha1NodeGroup> boundNodeGroups,
+            List<V1Node> boundNodes,
+            List<V1alpha1ImageHub> boundImageHubs) {
+        V1alpha1ProjectStatus status = new V1alpha1ProjectStatus();
+        status.setAllBoundAipubUsers(K8sObjectUtils.getNames(boundAipubUsers));
+        status.setQuota(buildProjectStatusQuota(boundQuota));
+        status.setAllBoundNodeGroups(K8sObjectUtils.getNames(boundNodeGroups));
+        status.setAllBoundNodes(K8sObjectUtils.getNames(boundNodes));
+        status.setAllBoundImageHubs(K8sObjectUtils.getNames(boundImageHubs));
+
+        return status;
+    }
+
     public V1alpha1AipubUserStatus reconcileAipubUserStatus(
             V1alpha1AipubUser existing,
             List<V1alpha1Project> boundProjects,

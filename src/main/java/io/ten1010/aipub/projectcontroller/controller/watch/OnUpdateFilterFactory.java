@@ -27,6 +27,11 @@ public class OnUpdateFilterFactory {
         return (oldObj, newObj) -> !Objects.equals(oldObj.getSpec(), newObj.getSpec());
     }
 
+    //
+    public BiPredicate<V1alpha1ProjectForTest, V1alpha1ProjectForTest> projectForTestSpecFieldFilter() {
+        return (oldObj, newObj) -> !Objects.equals(oldObj.getSpec(), newObj.getSpec());
+    }
+
     public BiPredicate<V1alpha1Project, V1alpha1Project> projectSpecQuotaFieldFilter() {
         return (oldObj, newObj) -> !ProjectUtils.getSpecQuota(oldObj).equals(ProjectUtils.getSpecQuota(newObj));
     }
