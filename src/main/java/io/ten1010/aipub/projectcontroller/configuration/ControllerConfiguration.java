@@ -9,6 +9,7 @@ import io.kubernetes.client.informer.SharedInformerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cluster.CordonControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cluster.NamespaceControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cluster.NodeControllerFactory;
+import io.ten1010.aipub.projectcontroller.controller.cluster.UncordonControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cr.*;
 import io.ten1010.aipub.projectcontroller.controller.namespaced.ImagePullSecretReconcilerFactory;
 import io.ten1010.aipub.projectcontroller.controller.namespaced.ResourceQuotaControllerFactory;
@@ -126,6 +127,14 @@ public class ControllerConfiguration {
                                      K8sApiProvider k8sApiProvider,
                                      ReconciliationService reconciliationService) {
         return new CordonControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+                .createController();
+    }
+
+    @Bean
+    public Controller uncordonController(SharedInformerFactory sharedInformerFactory,
+                                     K8sApiProvider k8sApiProvider,
+                                     ReconciliationService reconciliationService) {
+        return new UncordonControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
                 .createController();
     }
 
