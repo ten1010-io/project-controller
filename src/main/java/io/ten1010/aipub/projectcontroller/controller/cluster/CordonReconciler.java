@@ -51,7 +51,14 @@ public class CordonReconciler extends AbstractReconciler {
             for (V1Pod item : coreV1Api.listNamespacedPod("project-controller").execute().getItems()) {
                 V1PodSpec _spec = Objects.requireNonNull(item.getSpec());
                 V1ObjectMeta metadata = Objects.requireNonNull(item.getMetadata());
-                if (name.equals(_spec.getNodeName())) {
+                boolean isDaemonset = false;
+                for (V1OwnerReference ownerReference : metadata.getOwnerReferences()) {
+                    if (ownerReference.getKind().equalsIgnoreCase("DaemonSet")) {
+                        isDaemonset = true;
+                        break;
+                    }
+                }
+                if (!isDaemonset && name.equals(_spec.getNodeName())) {
                     log.info("delete pod : name - {} / namespace - {}", metadata.getName(), metadata.getNamespace());
                     coreV1Api.deleteNamespacedPod(metadata.getName(), metadata.getNamespace()).execute();
                 }

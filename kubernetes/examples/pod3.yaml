@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nginx-pod-daemonset
+  namespace: project-controller
+spec:
+  selector:
+    matchLabels:
+      app: nginx-pod-daemonset
+  #  tolerations:
+  #    - key: "node-role.kubernetes.io/control-plane"
+  #      operator: "Exists"
+  #      effect: "NoSchedule"
+  template:
+    metadata:
+      labels:
+        app: nginx-pod-daemonset
+    spec:
+      containers:
+        - name: my-nginx
+          image: nginx
