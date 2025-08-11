@@ -37,7 +37,7 @@ public class CordonControllerFactory implements ControllerFactory {
                 .withWorkerCount(1)
                 .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1Node.class)::hasSynced)
                 .watch(this::cordonNodeWatch)
-                .withReconciler(new CordonReconciler(this.sharedInformerFactory))
+                .withReconciler(new CordonReconciler(this.sharedInformerFactory, this.k8sApiProvider))
                 .build();
     }
 

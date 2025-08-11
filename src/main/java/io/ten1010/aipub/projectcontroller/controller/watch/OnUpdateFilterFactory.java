@@ -75,7 +75,10 @@ public class OnUpdateFilterFactory {
     }
 
     public BiPredicate<V1Node, V1Node> nodeUnschedulableFilter() {
-        return (oldObj, newObj) -> newObj.getSpec() != null && Boolean.TRUE.equals(newObj.getSpec().getUnschedulable());
+        return (oldObj, newObj) ->
+                oldObj.getSpec() != null && newObj.getSpec() != null &&
+                        newObj.getSpec().getUnschedulable() != null &&
+                        Boolean.TRUE.equals(newObj.getSpec().getUnschedulable());
     }
 
     public BiPredicate<V1ClusterRole, V1ClusterRole> clusterRoleFilter() {
