@@ -74,13 +74,6 @@ public class OnUpdateFilterFactory {
                 !Set.copyOf(NodeUtils.getTaints(oldObj)).equals(Set.copyOf(NodeUtils.getTaints(newObj)));
     }
 
-    public BiPredicate<V1Node, V1Node> nodeUnschedulableFilter() {
-        return (oldObj, newObj) ->
-                oldObj.getSpec() != null && newObj.getSpec() != null &&
-                        newObj.getSpec().getUnschedulable() != null &&
-                        Boolean.TRUE.equals(newObj.getSpec().getUnschedulable());
-    }
-
     public BiPredicate<V1ClusterRole, V1ClusterRole> clusterRoleFilter() {
         return (oldObj, newObj) -> !Set.copyOf(K8sObjectUtils.getOwnerReferences(oldObj)).equals(Set.copyOf(K8sObjectUtils.getOwnerReferences(newObj))) ||
                 !Set.copyOf(RoleUtils.getRules(oldObj)).equals(Set.copyOf(RoleUtils.getRules(newObj))) ||
