@@ -14,13 +14,11 @@ app:
   k8s:
     verify-ssl: true
     kube-config:
-      mode: file
-      kube-config-path: "/Users/daekwonpark/.kube/config"
-#      mode: in_cluster
+      mode: in_cluster
   aipub:
     enabled: false
-    server-url: "https://aipub.clutser6.idc1.ten1010.io"
-    verifying-ssl: false
-    username: "testuser"
-    password: "asdasdasd"
+    server-url: ""
+    verifying-ssl: true
+    username: ""
+    password: ""
     reserved-namespace: "aipub, project-controller"

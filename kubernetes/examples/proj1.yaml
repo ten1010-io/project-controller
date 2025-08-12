@@ -8,12 +8,13 @@ spec:
       role: project-manager
     - aipubUser: au2
       role: project-developer
-    - aipubUser: au3
-      role: project-developer
   quota:
+    pvcStorage: 500Gi
   binding:
     nodes:
-      - minikube
+      - node1
     nodeGroups:
+      - ng1
     imageHubs:
+      - img-hub1
 ---

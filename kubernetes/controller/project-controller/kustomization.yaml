@@ -5,7 +5,7 @@ configMapGenerator:
       - TZ=Asia/Seoul
       - SERVER_SSL_KEY_STORE=/etc/project-controller/tls/tls.p12
       - APP_AIPUB_ENABLED=false
-      - APP_AIPUB_SERVER_URL=https://aipub.clutser6.idc1.ten1010.io
+      - APP_AIPUB_SERVER_URL=https://k10s.clutser9.idc1.ten1010.io
       - APP_AIPUB_VERIFYING-SSL=false
       - APP_AIPUB_USERNAME=testuser
       - APP_AIPUB_PASSWORD=asdasdasd

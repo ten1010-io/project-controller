@@ -7,9 +7,3 @@ spec:
   action:
     type: uncordon
 #    ignoreDaemonSets: true
-#    - type: drain
-#      podSelector: { }
-#    - type: taint
-#      key: maintenance
-#      value: "true"
-#      effect: NoSchedule
