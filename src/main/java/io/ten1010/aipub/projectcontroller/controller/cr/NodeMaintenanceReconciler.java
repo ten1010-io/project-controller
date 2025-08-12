@@ -78,6 +78,12 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
                 break;
             case "drain":
                 //
+                if (targetNode.getSpec().getUnschedulable() == null || Boolean.FALSE.equals(targetNode.getSpec().getUnschedulable())) {
+                    log.error("Node {} isn't cordon state", nodeMaintenanceName);
+                    deleteClusterCO(nodeMaintenanceName);
+                    return new Result(false);
+                }
+
                 var podRequest = coreV1Api.listNamespacedPod(namespace);
                 var podResponse = podRequest.executeWithHttpInfo();
                 if (podResponse.getStatusCode() != 200) {
