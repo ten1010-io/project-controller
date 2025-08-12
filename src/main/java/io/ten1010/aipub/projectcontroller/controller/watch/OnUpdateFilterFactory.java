@@ -27,8 +27,8 @@ public class OnUpdateFilterFactory {
         return (oldObj, newObj) -> !Objects.equals(oldObj.getSpec(), newObj.getSpec());
     }
 
-    //
-    public BiPredicate<V1alpha1ProjectForTest, V1alpha1ProjectForTest> projectForTestSpecFieldFilter() {
+    // NodeMaintenance for cordon, drain
+    public BiPredicate<V1alpha1NodeMaintenance, V1alpha1NodeMaintenance> nodeMaintenanceSpecFieldFilter() {
         return (oldObj, newObj) -> !Objects.equals(oldObj.getSpec(), newObj.getSpec());
     }
 

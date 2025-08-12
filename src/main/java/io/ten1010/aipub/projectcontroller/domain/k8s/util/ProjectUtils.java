@@ -35,36 +35,7 @@ public abstract class ProjectUtils {
         return clone;
     }
 
-    public static V1alpha1ProjectForTest clone(V1alpha1ProjectForTest object) {
-        V1ObjectMeta metadataClone = new V1ObjectMetaBuilder(object.getMetadata()).build();
-        V1alpha1ProjectSpec specClone = null;
-        if (object.getSpec() != null) {
-            specClone = clone(object.getSpec());
-        }
-        V1alpha1ProjectStatus statusClone = null;
-        if (object.getStatus() != null) {
-            statusClone = clone(object.getStatus());
-        }
-
-        V1alpha1ProjectForTest clone = new V1alpha1ProjectForTest();
-        clone.setApiVersion(object.getApiVersion());
-        clone.setKind(object.getKind());
-        clone.setMetadata(metadataClone);
-        clone.setSpec(specClone);
-        clone.setStatus(statusClone);
-
-        return clone;
-    }
-
     public static List<V1alpha1ProjectMember> getSpecMembers(V1alpha1Project object) {
-        if (object.getSpec() == null ||
-                object.getSpec().getMembers() == null) {
-            return List.of();
-        }
-        return object.getSpec().getMembers();
-    }
-
-    public static List<V1alpha1ProjectMember> getSpecMembers(V1alpha1ProjectForTest object) {
         if (object.getSpec() == null ||
                 object.getSpec().getMembers() == null) {
             return List.of();
@@ -98,22 +69,7 @@ public abstract class ProjectUtils {
         return Optional.ofNullable(object.getSpec().getBinding());
     }
 
-    public static Optional<V1alpha1ProjectBinding> getSpecBinding(V1alpha1ProjectForTest object) {
-        if (object.getSpec() == null) {
-            return Optional.empty();
-        }
-        return Optional.ofNullable(object.getSpec().getBinding());
-    }
-
     public static List<String> getSpecBindingNodeGroups(V1alpha1Project object) {
-        Optional<V1alpha1ProjectBinding> bindingOpt = getSpecBinding(object);
-        return bindingOpt
-                .map(V1alpha1ProjectBinding::getNodeGroups)
-                .filter(Objects::nonNull)
-                .orElseGet(List::of);
-    }
-
-    public static List<String> getSpecBindingNodeGroups(V1alpha1ProjectForTest object) {
         Optional<V1alpha1ProjectBinding> bindingOpt = getSpecBinding(object);
         return bindingOpt
                 .map(V1alpha1ProjectBinding::getNodeGroups)
@@ -129,23 +85,7 @@ public abstract class ProjectUtils {
                 .orElseGet(List::of);
     }
 
-    public static List<String> getSpecBindingNodes(V1alpha1ProjectForTest object) {
-        Optional<V1alpha1ProjectBinding> bindingOpt = getSpecBinding(object);
-        return bindingOpt
-                .map(V1alpha1ProjectBinding::getNodes)
-                .filter(Objects::nonNull)
-                .orElseGet(List::of);
-    }
-
     public static List<String> getSpecBindingImageHubs(V1alpha1Project object) {
-        Optional<V1alpha1ProjectBinding> bindingOpt = getSpecBinding(object);
-        return bindingOpt
-                .map(V1alpha1ProjectBinding::getImageHubs)
-                .filter(Objects::nonNull)
-                .orElseGet(List::of);
-    }
-
-    public static List<String> getSpecBindingImageHubs(V1alpha1ProjectForTest object) {
         Optional<V1alpha1ProjectBinding> bindingOpt = getSpecBinding(object);
         return bindingOpt
                 .map(V1alpha1ProjectBinding::getImageHubs)

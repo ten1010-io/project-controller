@@ -1,0 +1,15 @@
+apiVersion: project.aipub.ten1010.io/v1alpha1
+kind: NodeMaintenance
+metadata:
+  name: node1-maintenance
+spec:
+  targetNode: minikube-m03
+  action:
+    type: uncordon
+#    ignoreDaemonSets: true
+#    - type: drain
+#      podSelector: { }
+#    - type: taint
+#      key: maintenance
+#      value: "true"
+#      effect: NoSchedule

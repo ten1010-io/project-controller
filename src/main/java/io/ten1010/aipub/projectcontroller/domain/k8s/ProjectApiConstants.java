@@ -16,6 +16,9 @@ public final class ProjectApiConstants {
     public static final String NODE_GROUP_RESOURCE_KIND = "NodeGroup";
     public static final String NODE_GROUP_RESOURCE_PLURAL = "nodegroups";
 
+    public static final String NODE_MAINTENANCE_RESOURCE_KIND = "NodeMaintenance";
+    public static final String NODE_MAINTENANCE_RESOURCE_PLURAL = "nodemaintenances";
+
     public static final String AIPUB_USER_RESOURCE_KIND = "AipubUser";
     public static final String AIPUB_USER_RESOURCE_PLURAL = "aipubusers";
 

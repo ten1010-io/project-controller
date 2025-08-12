@@ -32,7 +32,7 @@ public class SharedInformerFactoryProvider {
 
     public SharedInformerFactory createSharedInformerFactory() {
         SharedInformerFactory informerFactory = new SharedInformerFactory(this.k8sApiProvider.getApiClient());
-        registerProjectForTestInformer(informerFactory);
+        registerNodeMaintenanceInformer(informerFactory);
         registerProjectInformer(informerFactory);
         registerAipubUserInformer(informerFactory);
         registerNodeGroupInformer(informerFactory);
@@ -75,26 +75,11 @@ public class SharedInformerFactoryProvider {
                 ProjectUtils::getSpecBindingImageHubs));
     }
 
-    private void registerProjectForTestInformer(SharedInformerFactory informerFactory) {
-        SharedIndexInformer<V1alpha1ProjectForTest> informer = informerFactory.sharedIndexInformerFor(
-                this.k8sApiProvider.getProjectForTestApi(),
-                V1alpha1ProjectForTest.class,
+    private void registerNodeMaintenanceInformer(SharedInformerFactory informerFactory) {
+        informerFactory.sharedIndexInformerFor(
+                this.k8sApiProvider.getNodeMaintenanceApi(),
+                V1alpha1NodeMaintenance.class,
                 DEFAULT_RESYNC_PERIOD);
-        informer.addIndexers(Map.of(
-                IndexerConstants.AIPUB_USER_NAME_TO_PROJECTS_INDEXER_NAME,
-                project -> ProjectUtils.getSpecMembers(project).stream()
-                        .map(V1alpha1ProjectMember::getAipubUser)
-                        .filter(Objects::nonNull)
-                        .toList()));
-        informer.addIndexers(Map.of(
-                IndexerConstants.NODE_GROUP_NAME_TO_PROJECTS_INDEXER_NAME,
-                ProjectUtils::getSpecBindingNodeGroups));
-        informer.addIndexers(Map.of(
-                IndexerConstants.NODE_NAME_TO_PROJECTS_INDEXER_NAME,
-                ProjectUtils::getSpecBindingNodes));
-        informer.addIndexers(Map.of(
-                IndexerConstants.IMAGE_HUB_NAME_TO_PROJECTS_INDEXER_NAME,
-                ProjectUtils::getSpecBindingImageHubs));
     }
 
     private void registerAipubUserInformer(SharedInformerFactory informerFactory) {

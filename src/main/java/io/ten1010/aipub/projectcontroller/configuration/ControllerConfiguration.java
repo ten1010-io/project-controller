@@ -38,7 +38,6 @@ public class ControllerConfiguration {
     @Bean
     public ControllerManager controllerManager(
             SharedInformerFactory sharedInformerFactory, List<Controller> controllers, List<WorkloadControllerFactory<?>> workloadControllerFactories) {
-        System.out.println(controllers);
         ControllerManagerBuilder builder = ControllerBuilder.controllerManagerBuilder(sharedInformerFactory);
         controllers.forEach(builder::addController);
         workloadControllerFactories.forEach(f -> builder.addController(f.createController()));
@@ -59,10 +58,10 @@ public class ControllerConfiguration {
     }
 
     @Bean
-    public Controller projectForTestController(SharedInformerFactory sharedInformerFactory,
+    public Controller nodeMaintenanceController(SharedInformerFactory sharedInformerFactory,
                                         K8sApiProvider k8sApiProvider,
                                         ReconciliationService reconciliationService) {
-        return new ProjectForTestControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+        return new NodeMaintenanceControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
                 .createController();
     }
 
@@ -122,21 +121,21 @@ public class ControllerConfiguration {
                 .createController();
     }
 
-    @Bean
-    public Controller cordonController(SharedInformerFactory sharedInformerFactory,
-                                     K8sApiProvider k8sApiProvider,
-                                     ReconciliationService reconciliationService) {
-        return new CordonControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
-                .createController();
-    }
-
-    @Bean
-    public Controller uncordonController(SharedInformerFactory sharedInformerFactory,
-                                     K8sApiProvider k8sApiProvider,
-                                     ReconciliationService reconciliationService) {
-        return new UncordonControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
-                .createController();
-    }
+//    @Bean
+//    public Controller cordonController(SharedInformerFactory sharedInformerFactory,
+//                                     K8sApiProvider k8sApiProvider,
+//                                     ReconciliationService reconciliationService) {
+//        return new CordonControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+//                .createController();
+//    }
+//
+//    @Bean
+//    public Controller uncordonController(SharedInformerFactory sharedInformerFactory,
+//                                     K8sApiProvider k8sApiProvider,
+//                                     ReconciliationService reconciliationService) {
+//        return new UncordonControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+//                .createController();
+//    }
 
     @Bean
     public Controller clusterRoleController(SharedInformerFactory sharedInformerFactory,

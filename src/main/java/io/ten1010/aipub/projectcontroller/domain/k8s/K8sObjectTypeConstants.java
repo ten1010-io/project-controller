@@ -11,12 +11,12 @@ public final class K8sObjectTypeConstants {
                     ProjectApiConstants.VERSION,
                     ProjectApiConstants.PROJECT_RESOURCE_KIND),
             V1alpha1Project.class);
-    public static final K8sObjectType<V1alpha1ProjectForTest> PROJECT_FOR_TEST_V1ALPHA1 = new K8sObjectType<>(
+    public static final K8sObjectType<V1alpha1NodeMaintenance> NODE_MAINTENANCE_V1ALPHA1 = new K8sObjectType<>(
             new K8sObjectTypeKey(
                     ProjectApiConstants.PROJECT_GROUP,
                     ProjectApiConstants.VERSION,
-                    ProjectApiConstants.PROJECT_RESOURCE_KIND),
-            V1alpha1ProjectForTest.class);
+                    ProjectApiConstants.NODE_MAINTENANCE_RESOURCE_KIND),
+            V1alpha1NodeMaintenance.class);
     public static final K8sObjectType<V1alpha1NodeGroup> NODE_GROUP_V1ALPHA1 = new K8sObjectType<>(
             new K8sObjectTypeKey(
                     ProjectApiConstants.PROJECT_GROUP,

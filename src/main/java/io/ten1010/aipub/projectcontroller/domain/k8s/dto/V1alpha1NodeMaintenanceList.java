@@ -8,7 +8,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.List;
 
 @Data
-public class V1alpha1ProjectForTestList implements KubernetesListObject {
+public class V1alpha1NodeMaintenanceList implements KubernetesListObject {
 
     @Nullable
     private String apiVersion;
@@ -17,6 +17,6 @@ public class V1alpha1ProjectForTestList implements KubernetesListObject {
     @Nullable
     private V1ListMeta metadata;
     @Nullable
-    private List<V1alpha1ProjectForTest> items;
+    private List<V1alpha1NodeMaintenance> items;
 
 }

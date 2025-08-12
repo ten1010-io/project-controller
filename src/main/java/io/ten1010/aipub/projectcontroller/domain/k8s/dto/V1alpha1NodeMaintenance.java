@@ -6,7 +6,7 @@ import lombok.Data;
 import org.jspecify.annotations.Nullable;
 
 @Data
-public class V1alpha1ProjectForTest implements KubernetesObject {
+public class V1alpha1NodeMaintenance implements KubernetesObject {
 
     @Nullable
     private String apiVersion;
@@ -15,8 +15,8 @@ public class V1alpha1ProjectForTest implements KubernetesObject {
     @Nullable
     private V1ObjectMeta metadata;
     @Nullable
-    private V1alpha1ProjectSpec spec;
+    private V1alpha1NodeMaintenanceSpec spec;
     @Nullable
-    private V1alpha1ProjectStatus status;
+    private V1alpha1NodeMaintenanceStatus status;
 
 }

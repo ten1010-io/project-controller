@@ -309,6 +309,15 @@ public class ReconciliationService {
                     .build();
         };
 
+        V1PolicyRule nodeMaintenanceApiRule = switch (projectRoleEnum) {
+            case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+                    .withApiGroups(ProjectApiConstants.PROJECT_GROUP)
+                    .withResources(ProjectApiConstants.NODE_GROUP_RESOURCE_PLURAL)
+                    .withResourceNames(nodes)
+                    .withVerbs("list")
+                    .build();
+        };
+
         //todo --
         V1PolicyRule storageClassesApiRule = switch (projectRoleEnum) {
             case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
@@ -366,7 +375,9 @@ public class ReconciliationService {
         //todo --
 
         return List.of(projectApiRule, namespaceApiRule, nodeGroupApiRule, nodeApiRule, resourceSetApiRule,
-                nodeResourcesApiRule, gpuConfigsApiRule, tcpPortValidatorsApiRule, storageClassesApiRule, ingressClassesApiRule);
+                nodeResourcesApiRule, gpuConfigsApiRule, tcpPortValidatorsApiRule, storageClassesApiRule, ingressClassesApiRule,
+                nodeMaintenanceApiRule
+        );
     }
 
     public List<V1PolicyRule> reconcileClusterRoleRules(V1alpha1AipubUser aipubUser) {
@@ -593,23 +604,6 @@ public class ReconciliationService {
 
     public V1alpha1ProjectStatus reconcileProjectStatus(
             V1alpha1Project existing,
-            List<V1alpha1AipubUser> boundAipubUsers,
-            @Nullable V1ResourceQuota boundQuota,
-            List<V1alpha1NodeGroup> boundNodeGroups,
-            List<V1Node> boundNodes,
-            List<V1alpha1ImageHub> boundImageHubs) {
-        V1alpha1ProjectStatus status = new V1alpha1ProjectStatus();
-        status.setAllBoundAipubUsers(K8sObjectUtils.getNames(boundAipubUsers));
-        status.setQuota(buildProjectStatusQuota(boundQuota));
-        status.setAllBoundNodeGroups(K8sObjectUtils.getNames(boundNodeGroups));
-        status.setAllBoundNodes(K8sObjectUtils.getNames(boundNodes));
-        status.setAllBoundImageHubs(K8sObjectUtils.getNames(boundImageHubs));
-
-        return status;
-    }
-
-    public V1alpha1ProjectStatus reconcileProjectForTestStatus(
-            V1alpha1ProjectForTest existing,
             List<V1alpha1AipubUser> boundAipubUsers,
             @Nullable V1ResourceQuota boundQuota,
             List<V1alpha1NodeGroup> boundNodeGroups,
