@@ -7,10 +7,6 @@ spec:
   selector:
     matchLabels:
       app: nginx-pod-daemonset
-  #  tolerations:
-  #    - key: "node-role.kubernetes.io/control-plane"
-  #      operator: "Exists"
-  #      effect: "NoSchedule"
   template:
     metadata:
       labels:
