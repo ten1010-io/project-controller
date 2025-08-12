@@ -8,8 +8,8 @@ public final class K8sGroupConstants {
 
     public static final String SYSTEM_MASTERS_GROUP_NAME = "system:masters";
 
-    public static final String AIPUB_ADMIN_GROUP_NAME = "aipub-admin";
-    public static final String AIPUB_MEMBER_GROUP_NAME = "aipub-member";
+    public static final String AIPUB_ADMIN_GROUP_NAME = "oidc:aipub-admin";
+    public static final String AIPUB_MEMBER_GROUP_NAME = "oidc:aipub-member";
 
     private K8sGroupConstants() {
     }

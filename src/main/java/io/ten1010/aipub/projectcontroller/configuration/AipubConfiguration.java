@@ -53,9 +53,7 @@ public class AipubConfiguration {
     @Bean
     public SubjectResolver subjectResolver() {
         if (this.aipubEnabled) {
-            Objects.requireNonNull(this.aipubBackendClient);
-            OpenidProviderInfoService service = new OpenidProviderInfoServiceImpl(this.aipubBackendClient);
-            return new AipubSubjectResolver(service);
+            return new AipubSubjectResolver();
         }
         return new DefaultSubjectResolver();
     }

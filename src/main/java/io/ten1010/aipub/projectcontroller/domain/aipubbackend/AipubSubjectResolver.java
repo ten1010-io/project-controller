@@ -9,17 +9,9 @@ import java.util.Optional;
 
 public class AipubSubjectResolver extends DefaultSubjectResolver {
 
-    private final String oidcIssuerUrl;
-
-    public AipubSubjectResolver(OpenidProviderInfoService openidProviderInfoService) {
-        String url = openidProviderInfoService.getOpenidProviderInfo().getIssuerUri();
-        Objects.requireNonNull(url);
-        this.oidcIssuerUrl = url;
-    }
-
     @Override
     protected Optional<RbacV1Subject> resolve(String aipubUser) {
-        RbacV1Subject subject = RbacSubjectUtils.buildSubject(this.oidcIssuerUrl, aipubUser);
+        RbacV1Subject subject = RbacSubjectUtils.buildSubject(aipubUser);
         return Optional.of(subject);
     }
 

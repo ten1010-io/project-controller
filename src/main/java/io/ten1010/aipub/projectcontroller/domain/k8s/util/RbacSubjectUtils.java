@@ -7,16 +7,17 @@ public abstract class RbacSubjectUtils {
 
     public static final String K8S_RBAC_API_GROUP = "rbac.authorization.k8s.io";
     public static final String USER_KIND = "User";
+    public static final String OIDC_PREFIX = "oidc:";
 
-    private static String buildName(String oidcIssuerUrl, String oidcUsername) {
-        return oidcIssuerUrl + "#" + oidcUsername;
+    private static String buildName(String oidcUsername) {
+        return  OIDC_PREFIX + oidcUsername;
     }
 
-    public static RbacV1Subject buildSubject(String oidcIssuerUrl, String oidcUsername) {
+    public static RbacV1Subject buildSubject(String oidcUsername) {
         return new RbacV1SubjectBuilder()
                 .withApiGroup(K8S_RBAC_API_GROUP)
                 .withKind(USER_KIND)
-                .withName(buildName(oidcIssuerUrl, oidcUsername))
+                .withName(buildName(oidcUsername))
                 .build();
     }
 
