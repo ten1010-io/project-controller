@@ -11,6 +11,5 @@ spec:
   enableNodeSelector: false
   nodeSelector: { }
   nodes:
-    - minikube-m02
-    - minikube-m03
+    - node2
 ---
