@@ -3,7 +3,10 @@ kind: NodeMaintenance
 metadata:
   name: node1-maintenance
 spec:
-  targetNode: minikube-m03
+  targetNodes:
+    - minikube-m02
+    - minikube-m03
   action:
-    type: uncordon
-#    ignoreDaemonSets: true
+    type: cordon
+    ignoreDaemonSets: true
+    force: true

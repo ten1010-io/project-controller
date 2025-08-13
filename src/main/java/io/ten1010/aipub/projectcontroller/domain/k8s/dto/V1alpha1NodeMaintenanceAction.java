@@ -12,4 +12,7 @@ public class V1alpha1NodeMaintenanceAction {
     @Nullable
     private Boolean ignoreDaemonSets;
 
+    @Nullable
+    private Boolean force;
+
 }

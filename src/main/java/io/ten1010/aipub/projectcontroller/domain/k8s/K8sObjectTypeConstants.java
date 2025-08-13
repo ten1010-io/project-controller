@@ -17,6 +17,12 @@ public final class K8sObjectTypeConstants {
                     ProjectApiConstants.VERSION,
                     ProjectApiConstants.NODE_GROUP_RESOURCE_KIND),
             V1alpha1NodeGroup.class);
+    public static final K8sObjectType<V1alpha1NodeMaintenance> NODE_MAINTENANCE_V1ALPHA1 = new K8sObjectType<>(
+            new K8sObjectTypeKey(
+                    ProjectApiConstants.PROJECT_GROUP,
+                    ProjectApiConstants.VERSION,
+                    ProjectApiConstants.NODE_MAINTENANCE_RESOURCE_KIND),
+            V1alpha1NodeMaintenance.class);
     public static final K8sObjectType<V1alpha1AipubUser> AIPUB_USER_V1ALPHA1 = new K8sObjectType<V1alpha1AipubUser>(
             new K8sObjectTypeKey(
                     ProjectApiConstants.PROJECT_GROUP,
