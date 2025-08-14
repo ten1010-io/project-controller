@@ -12,5 +12,5 @@ public class V1alpha1NodeMaintenanceStatus {
     private List<String> allEffectedNodes;
 
     @Nullable
-    private Integer untilCount;
+    private String status;
 }

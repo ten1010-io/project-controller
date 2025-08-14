@@ -17,6 +17,8 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ProjectApiConstants;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeMaintenance;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeMaintenanceAction;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeMaintenanceStatus;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.StatusPatchHelper;
 import lombok.extern.slf4j.Slf4j;
 
@@ -44,7 +46,6 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
                 .getIndexer();
         this.coreV1Api = new CoreV1Api(k8sApiProvider.getApiClient());
         this.customObjectsApi = new CustomObjectsApi(k8sApiProvider.getApiClient());
-        // todo NodeMaintenance.setStatus 를 하지 않는다면, statusPatchHelper는 필요없음
         this.statusPatchHelper = new StatusPatchHelper<>(
                 k8sApiProvider.getApiClient(),
                 K8sObjectTypeConstants.NODE_MAINTENANCE_V1ALPHA1,
@@ -59,17 +60,21 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
             return new Result(false);
         }
 
-        //
         var nodeMaintenance = nodeMaintenanceOpt.get();
-        var metadata = Objects.requireNonNull(nodeMaintenance.getMetadata());
+        if (nodeMaintenance.getStatus() != null && nodeMaintenance.getStatus().getStatus() != null) {
+            return new Result(false);
+        }
+        // todo
+        System.out.println("nodeMaintenance = " + nodeMaintenance);
+
+        //
         var spec = Objects.requireNonNull(nodeMaintenance.getSpec());
         var action = Objects.requireNonNull(spec.getAction());
         var actionType = Objects.requireNonNull(action.getType());
-        String nodeMaintenanceName = Objects.requireNonNull(metadata.getName());
+        String nodeMaintenanceName = K8sObjectUtils.getName(nodeMaintenance);
         List<String> targetNodeNames = Objects.requireNonNull(spec.getTargetNodes());
 
         List<String> effectedNodes = new ArrayList<>();
-        int countPod = 0;
         for (String targetNodeName : targetNodeNames) {
             var targetNodeRequest = coreV1Api.readNode(targetNodeName);
             var targetNodeResponse = targetNodeRequest.executeWithHttpInfo();
@@ -105,22 +110,26 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
                     }
                     executePodDelete(podResponse, targetNodeName, action, nodeMaintenanceName);
                     effectedNodes.add(targetNodeName);
-                    // todo
-                    // countPod = countPod(podResponse, targetNodeName);
                     break;
                 default:
             }
         }
 
         //
-        deleteClusterCustomObject(nodeMaintenanceName);
+        V1alpha1NodeMaintenanceStatus edited = new V1alpha1NodeMaintenanceStatus();
+        edited.setAllEffectedNodes(targetNodeNames);
+        edited.setStatus("COMPLETED");
+        nodeMaintenance.setStatus(edited);
+        this.updateNodeMaintenanceStatus(nodeMaintenance);
 
         // todo
-//        V1alpha1NodeMaintenanceStatus status = new V1alpha1NodeMaintenanceStatus();
-//        status.setAllEffectedNodes(targetNodeNames);
-//        status.setUntilCount(countPod);
-//        nodeMaintenance.setStatus(status);
-//        this.statusPatchHelper.patchStatus(null, K8sObjectUtils.getName(nodeMaintenance), nodeMaintenance.getStatus());
+        CustomObjectsApi.APIgetClusterCustomObjectRequest req = this.customObjectsApi.getClusterCustomObject(ProjectApiConstants.PROJECT_GROUP, ProjectApiConstants.VERSION, ProjectApiConstants.NODE_MAINTENANCE_RESOURCE_PLURAL, K8sObjectUtils.getName(nodeMaintenance));
+        try {
+            Object execute = req.execute();
+            System.out.println("execute = " + execute);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         return new Result(true);
     }
@@ -161,27 +170,6 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
         }
     }
 
-    private int countPod(ApiResponse<V1PodList> podResponse, String targetNodeName) {
-        int count = 0;
-        for (V1Pod _item : podResponse.getData().getItems()) {
-            if (targetNodeName.equals(Objects.requireNonNull(_item.getSpec()).getNodeName())) {
-                var ownerReferences = Objects.requireNonNull(Objects.requireNonNull(_item.getMetadata()).getOwnerReferences());
-                boolean isDaemonset = false;
-                for (V1OwnerReference ownerReference : ownerReferences) {
-                    if (ownerReference.getKind().equalsIgnoreCase("DaemonSet")) {
-                        isDaemonset = true;
-                        break;
-                    }
-                }
-                if (!isDaemonset) {
-                    count++;
-                }
-            }
-        }
-
-        return count;
-    }
-
     private void executeSchedulable(V1Node targetNode, boolean isUnschedulable, String maintenanceName) throws ApiException {
         String nodeName = targetNode.getMetadata().getName();
         targetNode.getSpec().setUnschedulable(isUnschedulable);
@@ -194,13 +182,9 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
         coreV1Api.replaceNode(nodeName, targetNode).execute();
     }
 
-    private void deleteClusterCustomObject(String maintenanceName) throws ApiException {
-        customObjectsApi.deleteClusterCustomObject(
-                ProjectApiConstants.PROJECT_GROUP,
-                ProjectApiConstants.VERSION,
-                ProjectApiConstants.NODE_MAINTENANCE_RESOURCE_PLURAL,
-                maintenanceName
-        ).execute();
+    private void updateNodeMaintenanceStatus(V1alpha1NodeMaintenance nodeMaintenance) throws ApiException {
+        Objects.requireNonNull(nodeMaintenance.getStatus());
+        this.statusPatchHelper.patchStatus(null, K8sObjectUtils.getName(nodeMaintenance), nodeMaintenance.getStatus());
     }
 
 }

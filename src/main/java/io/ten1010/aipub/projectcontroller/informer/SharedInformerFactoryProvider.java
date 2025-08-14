@@ -4,11 +4,13 @@ import io.kubernetes.client.informer.SharedIndexInformer;
 import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
+import io.kubernetes.client.openapi.apis.CustomObjectsApi;
 import io.kubernetes.client.openapi.apis.RbacAuthorizationV1Api;
 import io.kubernetes.client.openapi.models.*;
 import io.kubernetes.client.util.CallGeneratorParams;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.ProjectApiConstants;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.*;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.*;
 
@@ -76,10 +78,16 @@ public class SharedInformerFactoryProvider {
     }
 
     private void registerNodeMaintenanceInformer(SharedInformerFactory informerFactory) {
+        ApiClient apiClient = this.k8sApiProvider.getApiClient();
         informerFactory.sharedIndexInformerFor(
-                this.k8sApiProvider.getNodeMaintenanceApi(),
+                (CallGeneratorParams params) -> new CustomObjectsApi(apiClient)
+                        .listClusterCustomObject(ProjectApiConstants.PROJECT_GROUP, ProjectApiConstants.VERSION, ProjectApiConstants.NODE_MAINTENANCE_RESOURCE_PLURAL)
+                        .resourceVersion(params.resourceVersion)
+                        .watch(params.watch)
+                        .timeoutSeconds(params.timeoutSeconds)
+                        .buildCall(null),
                 V1alpha1NodeMaintenance.class,
-                DEFAULT_RESYNC_PERIOD);
+                V1alpha1NodeMaintenanceList.class);
     }
 
     private void registerAipubUserInformer(SharedInformerFactory informerFactory) {
