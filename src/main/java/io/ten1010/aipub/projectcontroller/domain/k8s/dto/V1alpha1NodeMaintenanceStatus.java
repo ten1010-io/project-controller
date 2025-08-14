@@ -12,5 +12,8 @@ public class V1alpha1NodeMaintenanceStatus {
     private List<String> allEffectedNodes;
 
     @Nullable
+    private V1alpha1NodeMaintenanceAction action;
+
+    @Nullable
     private String status;
 }

@@ -7,7 +7,6 @@ import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.ApiResponse;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
-import io.kubernetes.client.openapi.apis.CustomObjectsApi;
 import io.kubernetes.client.openapi.models.*;
 import io.ten1010.aipub.projectcontroller.controller.AbstractReconciler;
 import io.ten1010.aipub.projectcontroller.controller.RequestHelper;
@@ -33,7 +32,6 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
     private final KeyResolver keyResolver;
     private final Indexer<V1alpha1NodeMaintenance> projectIndexer;
     private final CoreV1Api coreV1Api;
-    private final CustomObjectsApi customObjectsApi;
     private final StatusPatchHelper<V1alpha1NodeMaintenance> statusPatchHelper;
     private final String namespace = "project-controller";
 
@@ -45,7 +43,6 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
                 .getExistingSharedIndexInformer(V1alpha1NodeMaintenance.class)
                 .getIndexer();
         this.coreV1Api = new CoreV1Api(k8sApiProvider.getApiClient());
-        this.customObjectsApi = new CustomObjectsApi(k8sApiProvider.getApiClient());
         this.statusPatchHelper = new StatusPatchHelper<>(
                 k8sApiProvider.getApiClient(),
                 K8sObjectTypeConstants.NODE_MAINTENANCE_V1ALPHA1,
@@ -61,18 +58,18 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
         }
 
         var nodeMaintenance = nodeMaintenanceOpt.get();
-        if (nodeMaintenance.getStatus() != null && nodeMaintenance.getStatus().getStatus() != null) {
-            return new Result(false);
-        }
-        // todo
-        System.out.println("nodeMaintenance = " + nodeMaintenance);
-
-        //
         var spec = Objects.requireNonNull(nodeMaintenance.getSpec());
+        var status = nodeMaintenance.getStatus();
         var action = Objects.requireNonNull(spec.getAction());
         var actionType = Objects.requireNonNull(action.getType());
         String nodeMaintenanceName = K8sObjectUtils.getName(nodeMaintenance);
         List<String> targetNodeNames = Objects.requireNonNull(spec.getTargetNodes());
+
+        if (status != null && (
+                targetNodeNames.equals(status.getAllEffectedNodes()) && action.equals(status.getAction())
+        )) {
+            return new Result(false);
+        }
 
         List<String> effectedNodes = new ArrayList<>();
         for (String targetNodeName : targetNodeNames) {
@@ -118,20 +115,13 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
         //
         V1alpha1NodeMaintenanceStatus edited = new V1alpha1NodeMaintenanceStatus();
         edited.setAllEffectedNodes(targetNodeNames);
+        edited.setAction(action);
         edited.setStatus("COMPLETED");
         nodeMaintenance.setStatus(edited);
+
         this.updateNodeMaintenanceStatus(nodeMaintenance);
 
-        // todo
-        CustomObjectsApi.APIgetClusterCustomObjectRequest req = this.customObjectsApi.getClusterCustomObject(ProjectApiConstants.PROJECT_GROUP, ProjectApiConstants.VERSION, ProjectApiConstants.NODE_MAINTENANCE_RESOURCE_PLURAL, K8sObjectUtils.getName(nodeMaintenance));
-        try {
-            Object execute = req.execute();
-            System.out.println("execute = " + execute);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return new Result(true);
+        return new Result(false);
     }
 
     private void executePodDelete(ApiResponse<V1PodList> podResponse, String targetNodeName, V1alpha1NodeMaintenanceAction action, String maintenanceName) throws ApiException {
@@ -158,13 +148,13 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
                         log.info("drain daemonSet ignore : pod name - {} / namespace - {}", podName, podNamespace);
                         coreV1Api.deleteNamespacedPod(podName, podNamespace)
                                 .gracePeriodSeconds(gracePeriodSeconds)
-                                .executeAsync(null);
+                                .execute();
                     }
                 } else {
                     log.info("drain all pods : pod name - {} / namespace - {}", podName, podNamespace);
                     coreV1Api.deleteNamespacedPod(podName, podNamespace)
                             .gracePeriodSeconds(gracePeriodSeconds)
-                            .executeAsync(null);
+                            .execute();
                 }
             }
         }

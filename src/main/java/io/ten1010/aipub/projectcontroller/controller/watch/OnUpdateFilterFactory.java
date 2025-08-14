@@ -28,7 +28,7 @@ public class OnUpdateFilterFactory {
     }
 
     public BiPredicate<V1alpha1NodeMaintenance, V1alpha1NodeMaintenance> nodeMaintenanceSpecFieldFilter() {
-        return (oldObj, newObj) -> (oldObj.getStatus() != null && oldObj.getStatus().getStatus() != null) && newObj.getStatus() == null;
+        return (oldObj, newObj) -> !Objects.equals(oldObj.getSpec(), newObj.getSpec());
     }
 
     public BiPredicate<V1alpha1Project, V1alpha1Project> projectSpecQuotaFieldFilter() {

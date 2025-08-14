@@ -5,8 +5,7 @@ metadata:
 spec:
   targetNodes:
     - minikube-m02
-    - minikube-m03
   action:
-    type: uncordon
+    type: cordon
     ignoreDaemonSets: true
-    force: true
+    force: false
