@@ -91,7 +91,6 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
         }
         edited.setActions(actionList);
         nodeMaintenance.setStatus(edited);
-        System.out.println("edited progress = " + edited);
         this.updateNodeMaintenanceStatus(nodeMaintenance);
 
         // target Node 의 상태를 확인해서 COMPLETED 으로 변경한다.

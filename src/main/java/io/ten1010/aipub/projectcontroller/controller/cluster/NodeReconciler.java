@@ -108,10 +108,8 @@ public class NodeReconciler extends AbstractReconciler {
             for (V1alpha1NodeMaintenanceAction action : nodeMaintenance.getSpec().getActions()) {
                 if (action.getType().equals("cordon")) {
                     targetNode.getSpec().setUnschedulable(true);
-                    System.out.println(action.getType() + " : node name - " + nodeName + " / yaml - " + maintenanceName);
                 } else if (action.getType().equals("uncordon")) {
                     targetNode.getSpec().setUnschedulable(false);
-                    System.out.println(action.getType() + " : node name - " + nodeName + " / yaml - " + maintenanceName);
                 }
             }
         }

@@ -167,11 +167,9 @@ public class BoundObjectResolver {
                     if (action.getType().equals("drain")) {
                         if (isDaemonset) {
                             if (action.getIgnoreDaemonSets()) {
-                                // todo System.out.println("isDrainTargetPod[daemonset] = " + node.getMetadata().getName() + " // " + pod.getMetadata().getName() + " // " + allBoundNodeGroups.size());
                                 return Optional.of(action);
                             }
                         } else {
-                            // todo System.out.println("isDrainTargetPod = " + node.getMetadata().getName() + " // " + pod.getMetadata().getName() + " // " + allBoundNodeGroups.size());
                             return Optional.of(action);
                         }
                     }

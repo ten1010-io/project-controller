@@ -81,7 +81,6 @@ public class PodReconciler extends AbstractReconciler {
 
         Optional<V1alpha1NodeMaintenanceAction> optDelete = this.boundObjectResolver.optNodeMaintenanceActionDrainPod(node, pod);
         if (optDelete.isPresent()) {
-            System.out.println("isDelete = " + optDelete.get() + " // " + node.getMetadata().getName() + " // " + pod.getMetadata().getName());
             deletePod(pod, optDelete.get().getForce());
             return new Result(false);
         }
