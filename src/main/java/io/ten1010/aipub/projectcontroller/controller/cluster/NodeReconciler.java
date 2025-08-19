@@ -95,14 +95,10 @@ public class NodeReconciler extends AbstractReconciler {
     private void executeSchedulable(V1Node targetNode, List<V1alpha1NodeMaintenance> allBoundNodeMaintenances) throws ApiException {
         String nodeName = K8sObjectUtils.getName(targetNode);
         for (V1alpha1NodeMaintenance nodeMaintenance : allBoundNodeMaintenances) {
-            String maintenanceName = K8sObjectUtils.getName(nodeMaintenance);
-            int go = 0;
-            for (V1alpha1NodeMaintenanceStatusAction action : nodeMaintenance.getStatus().getActions()) {
-                if (!action.getType().equals("drain") && action.getStatus().equals("COMPLETED")){
-                    go++;
-                }
-            }
-            if (go == 1) {
+            long checkCnt = nodeMaintenance.getStatus().getActions().stream()
+                    .filter(x -> !x.getType().equals("drain") && x.getStatus().equals("COMPLETED"))
+                    .count();
+            if (checkCnt == 1) {
                 break;
             }
             for (V1alpha1NodeMaintenanceAction action : nodeMaintenance.getSpec().getActions()) {
