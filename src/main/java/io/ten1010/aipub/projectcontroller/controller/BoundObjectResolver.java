@@ -143,8 +143,6 @@ public class BoundObjectResolver {
         return K8sObjectUtils.distinctByKey(this.keyResolver, allBoundNodeGroups);
     }
 
-    // used : PodReconciler
-    // NodeMaintenance 목록에서 pod 를 찾아서 응답한다.
     public Optional<V1alpha1NodeMaintenanceAction> optNodeMaintenanceActionDrainPod(V1Node node, V1Pod pod) {
         List<V1alpha1NodeMaintenance> allBoundNodeGroups = this.nodeMaintenanceIndexer.byIndex(
                 IndexerConstants.NODE_NAME_TO_NODE_MAINTENANCE_INDEXER_NAME,
@@ -217,8 +215,6 @@ public class BoundObjectResolver {
         return resultCnt == 0 ? true : false;
     }
 
-    // used : NodeReconciler
-    // NodeMaintenance 목록에서 node 를 찾아서 응답한다.
     public List<V1alpha1NodeMaintenance> getAllBoundNodeMaintenances(V1Node node) {
         List<V1alpha1NodeMaintenance> allBoundNodeGroups = this.nodeMaintenanceIndexer.byIndex(
                 IndexerConstants.NODE_NAME_TO_NODE_MAINTENANCE_INDEXER_NAME,
@@ -226,8 +222,6 @@ public class BoundObjectResolver {
         return K8sObjectUtils.distinctByKey(this.keyResolver, allBoundNodeGroups);
     }
 
-    // used RequestBuilderFactory
-    // 노드 목록에서 NodeMaintenance 의 targetNodes 를 찾아서 응답한다.
     public List<V1Node> getAllBoundNodeByNodeMaintenances(V1alpha1NodeMaintenance node) {
         List<V1Node> allBoundNodeGroups = new ArrayList<>();
         for (String targetNode : node.getSpec().getTargetNodes()) {

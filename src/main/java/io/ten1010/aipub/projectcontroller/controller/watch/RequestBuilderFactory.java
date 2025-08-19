@@ -175,7 +175,6 @@ public class RequestBuilderFactory {
                 .toList();
     }
 
-    // NodeControllerFactory 에서 사용
     public Function<V1alpha1NodeMaintenance, List<Request>> nodeMaintenanceToBoundNodes() {
         return nodeMaintenance -> this.boundObjectResolver.getAllBoundNodeByNodeMaintenances(nodeMaintenance).stream()
                 .map(K8sObjectUtils::getName)
@@ -183,7 +182,6 @@ public class RequestBuilderFactory {
                 .toList();
     }
 
-    // PodControllerFactory 에서 사용
     public Function<V1alpha1NodeMaintenance, List<Request>> podListByNodeMaintenance() {
         Indexer<V1Pod> podIndexer = this.sharedInformerFactory.getExistingSharedIndexInformer(V1Pod.class).getIndexer();
         return nodeMaintenance -> {

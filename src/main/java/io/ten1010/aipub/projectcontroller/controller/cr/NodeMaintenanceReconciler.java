@@ -79,7 +79,6 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
             }
         }
 
-        // NodeMaintenanceStatus 의 action 상태를 PROGRESS 으로 변경한다
         V1alpha1NodeMaintenanceStatus edited = new V1alpha1NodeMaintenanceStatus();
         edited.setAllEffectedNodes(targetNodeNames);
         List<V1alpha1NodeMaintenanceStatusAction> actionList = new ArrayList<>();
@@ -93,7 +92,6 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
         nodeMaintenance.setStatus(edited);
         this.updateNodeMaintenanceStatus(nodeMaintenance);
 
-        // target Node 의 상태를 확인해서 COMPLETED 으로 변경한다.
         if (nodeMaintenance.getStatus() != null) {
             List<V1Node> nodeList = this.boundObjectResolver.getAllBoundNodeByNodeMaintenances(nodeMaintenance);
             for (V1alpha1NodeMaintenanceStatusAction action : nodeMaintenance.getStatus().getActions()) {
