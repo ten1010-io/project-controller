@@ -5,6 +5,8 @@ import io.kubernetes.client.openapi.models.*;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.*;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiPredicate;
@@ -27,8 +29,25 @@ public class OnUpdateFilterFactory {
         return (oldObj, newObj) -> !Objects.equals(oldObj.getSpec(), newObj.getSpec());
     }
 
-    public BiPredicate<V1alpha1NodeMaintenance, V1alpha1NodeMaintenance> nodeMaintenanceSpecFieldFilter() {
-        return (oldObj, newObj) -> !Objects.equals(oldObj.getSpec(), newObj.getSpec());
+    public BiPredicate<V1alpha1NodeMaintenance, V1alpha1NodeMaintenance> nodeMaintenanceCreateFilter() {
+        return (oldObj, newObj) -> {
+            if (newObj.getStatus() != null) {
+                List<String> actionTypes = new ArrayList<>();
+                for (V1alpha1NodeMaintenanceAction action : newObj.getSpec().getActions()) {
+                    actionTypes.add(action.getType());
+                }
+                List<String> statusTypes = new ArrayList<>();
+                for (V1alpha1NodeMaintenanceStatusAction action : newObj.getStatus().getActions()) {
+                    statusTypes.add(action.getType());
+                }
+
+                return !Objects.equals(oldObj.getSpec(), newObj.getSpec())
+                        || !newObj.getSpec().getTargetNodes().equals(newObj.getStatus().getAllEffectedNodes())
+                        || !actionTypes.equals(statusTypes);
+            } else {
+                return oldObj.getSpec() == null && newObj.getSpec() != null;
+            }
+        };
     }
 
     public BiPredicate<V1alpha1Project, V1alpha1Project> projectSpecQuotaFieldFilter() {

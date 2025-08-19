@@ -11,6 +11,6 @@ public class V1alpha1NodeMaintenanceSpec {
     @Nullable
     private List<String> targetNodes;
     @Nullable
-    private V1alpha1NodeMaintenanceAction action;
+    private List<V1alpha1NodeMaintenanceAction> actions;
 
 }

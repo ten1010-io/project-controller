@@ -79,7 +79,7 @@ public class SharedInformerFactoryProvider {
 
     private void registerNodeMaintenanceInformer(SharedInformerFactory informerFactory) {
         ApiClient apiClient = this.k8sApiProvider.getApiClient();
-        informerFactory.sharedIndexInformerFor(
+        SharedIndexInformer<V1alpha1NodeMaintenance> informer = informerFactory.sharedIndexInformerFor(
                 (CallGeneratorParams params) -> new CustomObjectsApi(apiClient)
                         .listClusterCustomObject(ProjectApiConstants.PROJECT_GROUP, ProjectApiConstants.VERSION, ProjectApiConstants.NODE_MAINTENANCE_RESOURCE_PLURAL)
                         .resourceVersion(params.resourceVersion)
@@ -88,6 +88,10 @@ public class SharedInformerFactoryProvider {
                         .buildCall(null),
                 V1alpha1NodeMaintenance.class,
                 V1alpha1NodeMaintenanceList.class);
+        informer.addIndexers(Map.of(
+                IndexerConstants.NODE_NAME_TO_NODE_MAINTENANCE_INDEXER_NAME,
+                x -> x.getSpec().getTargetNodes())
+        );
     }
 
     private void registerAipubUserInformer(SharedInformerFactory informerFactory) {

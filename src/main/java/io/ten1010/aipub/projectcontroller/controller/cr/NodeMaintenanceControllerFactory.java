@@ -6,6 +6,8 @@ import io.kubernetes.client.extended.controller.builder.ControllerBuilder;
 import io.kubernetes.client.extended.controller.reconciler.Request;
 import io.kubernetes.client.extended.workqueue.WorkQueue;
 import io.kubernetes.client.informer.SharedInformerFactory;
+import io.kubernetes.client.openapi.models.V1Node;
+import io.kubernetes.client.openapi.models.V1Pod;
 import io.ten1010.aipub.projectcontroller.controller.ControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.watch.DefaultControllerWatch;
 import io.ten1010.aipub.projectcontroller.controller.watch.OnUpdateFilterFactory;
@@ -34,14 +36,30 @@ public class NodeMaintenanceControllerFactory implements ControllerFactory {
                 .withName("node-maintenance-controller")
                 .withWorkerCount(1)
                 .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1alpha1NodeMaintenance.class)::hasSynced)
+                .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1Node.class)::hasSynced)
+                .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1Pod.class)::hasSynced)
                 .watch(this::createNodeMaintenanceWatch)
+                .watch(this::changeNodeStatus)
+                .watch(this::changePodStatus)
                 .withReconciler(new NodeMaintenanceReconciler(this.sharedInformerFactory, this.k8sApiProvider))
                 .build();
     }
 
+    private ControllerWatch<V1Node> changeNodeStatus(WorkQueue<Request> workQueue) {
+        DefaultControllerWatch<V1Node> watch = new DefaultControllerWatch<>(workQueue, V1Node.class);
+        watch.setOnUpdateFilter(this.onUpdateFilterFactory.nodeFilter());
+        return watch;
+    }
+
+    private ControllerWatch<V1Pod> changePodStatus(WorkQueue<Request> workQueue) {
+        DefaultControllerWatch<V1Pod> watch = new DefaultControllerWatch<>(workQueue, V1Pod.class);
+        watch.setOnUpdateFilter(this.onUpdateFilterFactory.podNodeNameFieldFilter());
+        return watch;
+    }
+
     private ControllerWatch<V1alpha1NodeMaintenance> createNodeMaintenanceWatch(WorkQueue<Request> workQueue) {
         DefaultControllerWatch<V1alpha1NodeMaintenance> watch = new DefaultControllerWatch<>(workQueue, V1alpha1NodeMaintenance.class);
-        watch.setOnUpdateFilter(this.onUpdateFilterFactory.nodeMaintenanceSpecFieldFilter());
+        watch.setOnUpdateFilter(this.onUpdateFilterFactory.nodeMaintenanceCreateFilter());
         return watch;
     }
 

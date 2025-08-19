@@ -15,8 +15,7 @@ import io.ten1010.aipub.projectcontroller.controller.RequestHelper;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeGroup;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.*;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.NodeUtils;
 
@@ -61,6 +60,12 @@ public class NodeReconciler extends AbstractReconciler {
         Map<String, String> reconciledAnnotations = this.reconciliationService.reconcileNodeAnnotations(node, boundProjects, boundNodeGroups);
         List<V1Taint> reconciledTaints = this.reconciliationService.reconcileTaints(node);
 
+        List<V1alpha1NodeMaintenance> allBoundNodeMaintenances = this.boundObjectResolver.getAllBoundNodeMaintenances(node);
+        if (!allBoundNodeMaintenances.isEmpty()) {
+            executeSchedulable(node, allBoundNodeMaintenances);
+            return new Result(false);
+        }
+
         return reconcileExistingNode(nodeOpt.get(), reconciledLabels, reconciledAnnotations, reconciledTaints);
     }
 
@@ -85,6 +90,32 @@ public class NodeReconciler extends AbstractReconciler {
                 .build();
         updateNode(K8sObjectUtils.getName(node), edited);
         return new Result(false);
+    }
+
+    private void executeSchedulable(V1Node targetNode, List<V1alpha1NodeMaintenance> allBoundNodeMaintenances) throws ApiException {
+        String nodeName = K8sObjectUtils.getName(targetNode);
+        for (V1alpha1NodeMaintenance nodeMaintenance : allBoundNodeMaintenances) {
+            String maintenanceName = K8sObjectUtils.getName(nodeMaintenance);
+            int go = 0;
+            for (V1alpha1NodeMaintenanceStatusAction action : nodeMaintenance.getStatus().getActions()) {
+                if (!action.getType().equals("drain") && action.getStatus().equals("COMPLETED")){
+                    go++;
+                }
+            }
+            if (go == 1) {
+                break;
+            }
+            for (V1alpha1NodeMaintenanceAction action : nodeMaintenance.getSpec().getActions()) {
+                if (action.getType().equals("cordon")) {
+                    targetNode.getSpec().setUnschedulable(true);
+                    System.out.println(action.getType() + " : node name - " + nodeName + " / yaml - " + maintenanceName);
+                } else if (action.getType().equals("uncordon")) {
+                    targetNode.getSpec().setUnschedulable(false);
+                    System.out.println(action.getType() + " : node name - " + nodeName + " / yaml - " + maintenanceName);
+                }
+            }
+        }
+        updateNode(nodeName, targetNode);
     }
 
     private void updateNode(String objName, V1Node node) throws ApiException {

@@ -9,10 +9,12 @@ import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Node;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.ten1010.aipub.projectcontroller.controller.AbstractReconciler;
+import io.ten1010.aipub.projectcontroller.controller.BoundObjectResolver;
 import io.ten1010.aipub.projectcontroller.controller.RequestHelper;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceNameResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeMaintenanceAction;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.NodeUtils;
@@ -32,6 +34,7 @@ public class PodReconciler extends AbstractReconciler {
     private final Indexer<V1alpha1Project> projectIndexer;
     private final CoreV1Api coreV1Api;
     private final PodNodesResolver podNodesResolver;
+    private final BoundObjectResolver boundObjectResolver;
 
     public PodReconciler(
             SharedInformerFactory sharedInformerFactory,
@@ -50,6 +53,7 @@ public class PodReconciler extends AbstractReconciler {
                 .getIndexer();
         this.coreV1Api = new CoreV1Api(k8sApiProvider.getApiClient());
         this.podNodesResolver = podNodesResolver;
+        this.boundObjectResolver = new BoundObjectResolver(sharedInformerFactory);
     }
 
     @Override
@@ -75,12 +79,25 @@ public class PodReconciler extends AbstractReconciler {
             return processCaseThatProjectManagedNode(node, pod);
         }
 
+        Optional<V1alpha1NodeMaintenanceAction> optDelete = this.boundObjectResolver.optNodeMaintenanceActionDrainPod(node, pod);
+        if (optDelete.isPresent()) {
+            System.out.println("isDelete = " + optDelete.get() + " // " + node.getMetadata().getName() + " // " + pod.getMetadata().getName());
+            deletePod(pod, optDelete.get().getForce());
+            return new Result(false);
+        }
+
         return processCaseThatNotProjectManagedNode(pod);
     }
 
-    private void deletePod(V1Pod pod) throws ApiException {
+    private void deletePod(V1Pod pod, boolean isForce) throws ApiException {
         if (K8sObjectUtils.getDeletionTimestamp(pod).isEmpty()) {
+            int terminationGrace = pod.getSpec().getTerminationGracePeriodSeconds().intValue();
+            if (isForce) {
+                terminationGrace = 0;
+            }
+
             this.coreV1Api.deleteNamespacedPod(K8sObjectUtils.getName(pod), K8sObjectUtils.getNamespace(pod))
+                    .gracePeriodSeconds(terminationGrace)
                     .execute();
         }
     }
@@ -94,7 +111,7 @@ public class PodReconciler extends AbstractReconciler {
         try {
             allowedProjectNodeObjects = this.podNodesResolver.getNodes(pod);
         } catch (UnsupportedControllerException e) {
-            deletePod(pod);
+            deletePod(pod, false);
             return new Result(false);
         }
 
@@ -102,7 +119,7 @@ public class PodReconciler extends AbstractReconciler {
                 .map(K8sObjectUtils::getName)
                 .collect(Collectors.toSet());
         if (!allowedProjectNodes.contains(K8sObjectUtils.getName(node))) {
-            deletePod(pod);
+            deletePod(pod, false);
             return new Result(false);
         }
         return new Result(false);
@@ -114,7 +131,7 @@ public class PodReconciler extends AbstractReconciler {
         V1alpha1Project project = this.projectIndexer.getByKey(projKey);
 
         if (project != null) {
-            deletePod(pod);
+            deletePod(pod, false);
         }
         return new Result(false);
     }

@@ -14,6 +14,7 @@ import io.ten1010.aipub.projectcontroller.controller.watch.OnUpdateFilterFactory
 import io.ten1010.aipub.projectcontroller.controller.watch.RequestBuilderFactory;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeGroup;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeMaintenance;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 
 public class PodControllerFactory implements ControllerFactory {
@@ -44,11 +45,13 @@ public class PodControllerFactory implements ControllerFactory {
                 .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1alpha1Project.class)::hasSynced)
                 .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1alpha1NodeGroup.class)::hasSynced)
                 .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1Node.class)::hasSynced)
+                .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1alpha1NodeMaintenance.class)::hasSynced)
                 .watch(this::createPodWatch)
                 .watch(this::createProjectWatch)
                 .watch(this::createNodeGroupWatch)
                 .watch(this::createNodeWatch)
                 .watch(this::createBoundPodNodeWatch)
+                .watch(this::createNodeMaintenanceWatch)
                 .withReconciler(new PodReconciler(
                         this.sharedInformerFactory,
                         this.k8sApiProvider,
@@ -87,6 +90,13 @@ public class PodControllerFactory implements ControllerFactory {
         DefaultControllerWatch<V1Node> watch = new DefaultControllerWatch<>(workQueue, V1Node.class);
         watch.setOnUpdateFilter(this.onUpdateFilterFactory.nodeFilter());
         watch.setRequestBuilder(this.requestBuilderFactory.nodeToBoundPods());
+        return watch;
+    }
+
+    private ControllerWatch<V1alpha1NodeMaintenance> createNodeMaintenanceWatch(WorkQueue<Request> workQueue) {
+        DefaultControllerWatch<V1alpha1NodeMaintenance> watch = new DefaultControllerWatch<>(workQueue, V1alpha1NodeMaintenance.class);
+        watch.setOnUpdateFilter(this.onUpdateFilterFactory.nodeMaintenanceCreateFilter());
+        watch.setRequestBuilder(this.requestBuilderFactory.podListByNodeMaintenance());
         return watch;
     }
 

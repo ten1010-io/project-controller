@@ -11,6 +11,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.*;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.informer.IndexerConstants;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -172,6 +173,29 @@ public class RequestBuilderFactory {
                 .map(K8sObjectUtils::getName)
                 .map(Request::new)
                 .toList();
+    }
+
+    // NodeControllerFactory 에서 사용
+    public Function<V1alpha1NodeMaintenance, List<Request>> nodeMaintenanceToBoundNodes() {
+        return nodeMaintenance -> this.boundObjectResolver.getAllBoundNodeByNodeMaintenances(nodeMaintenance).stream()
+                .map(K8sObjectUtils::getName)
+                .map(Request::new)
+                .toList();
+    }
+
+    // PodControllerFactory 에서 사용
+    public Function<V1alpha1NodeMaintenance, List<Request>> podListByNodeMaintenance() {
+        Indexer<V1Pod> podIndexer = this.sharedInformerFactory.getExistingSharedIndexInformer(V1Pod.class).getIndexer();
+        return nodeMaintenance -> {
+            List<Request> requestList = new ArrayList<>();
+            for (String targetNode : nodeMaintenance.getSpec().getTargetNodes()) {
+                List<V1Pod> pods = podIndexer.byIndex(IndexerConstants.NODE_NAME_TO_POD_INDEXER_NAME, targetNode);
+                for (V1Pod pod : pods) {
+                    requestList.add(new Request(K8sObjectUtils.getNamespace(pod), K8sObjectUtils.getName(pod)));
+                }
+            }
+            return requestList;
+        };
     }
 
     public Function<V1alpha1NodeGroup, List<Request>> nodeGroupToNamespacedObjects(Class<? extends KubernetesObject> objectClass) {

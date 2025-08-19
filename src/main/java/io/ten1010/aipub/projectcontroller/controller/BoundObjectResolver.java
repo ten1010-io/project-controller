@@ -3,6 +3,8 @@ package io.ten1010.aipub.projectcontroller.controller;
 import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.models.V1Node;
+import io.kubernetes.client.openapi.models.V1OwnerReference;
+import io.kubernetes.client.openapi.models.V1Pod;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.*;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.*;
@@ -26,6 +28,8 @@ public class BoundObjectResolver {
     private final Indexer<V1alpha1ImageHub> imageHubIndexer;
     private final Indexer<V1Node> nodeIndexer;
     private final Indexer<V1alpha1ResourceSet> resourceSetIndexer;
+    private final Indexer<V1alpha1NodeMaintenance> nodeMaintenanceIndexer;
+    private final Indexer<V1Pod> podIndexer;
 
     public BoundObjectResolver(SharedInformerFactory sharedInformerFactory) {
         this.keyResolver = new KeyResolver();
@@ -46,6 +50,12 @@ public class BoundObjectResolver {
                 .getIndexer();
         this.resourceSetIndexer = sharedInformerFactory
                 .getExistingSharedIndexInformer(V1alpha1ResourceSet.class)
+                .getIndexer();
+        this.nodeMaintenanceIndexer = sharedInformerFactory
+                .getExistingSharedIndexInformer(V1alpha1NodeMaintenance.class)
+                .getIndexer();
+        this.podIndexer = sharedInformerFactory
+                .getExistingSharedIndexInformer(V1Pod.class)
                 .getIndexer();
     }
 
@@ -130,6 +140,104 @@ public class BoundObjectResolver {
     public List<V1alpha1NodeGroup> getAllBoundNodeGroups(V1Node node) {
         List<V1alpha1NodeGroup> allBoundNodeGroups = new ArrayList<>(getDirectlyBoundNodeGroups(node));
         allBoundNodeGroups.addAll(getBoundNodeGroupsByNodeSelector(node));
+        return K8sObjectUtils.distinctByKey(this.keyResolver, allBoundNodeGroups);
+    }
+
+    // used : PodReconciler
+    // NodeMaintenance 목록에서 pod 를 찾아서 응답한다.
+    public Optional<V1alpha1NodeMaintenanceAction> optNodeMaintenanceActionDrainPod(V1Node node, V1Pod pod) {
+        List<V1alpha1NodeMaintenance> allBoundNodeGroups = this.nodeMaintenanceIndexer.byIndex(
+                IndexerConstants.NODE_NAME_TO_NODE_MAINTENANCE_INDEXER_NAME,
+                K8sObjectUtils.getName(node));
+        if (allBoundNodeGroups.isEmpty()) {
+            return Optional.empty();
+        }
+        for (V1alpha1NodeMaintenance allBoundNodeGroup : allBoundNodeGroups) {
+            if (allBoundNodeGroup.getSpec().getTargetNodes().contains(node.getMetadata().getName())) {
+                var actions = allBoundNodeGroup.getSpec().getActions();
+                var ownerReferences = Objects.requireNonNull(pod.getMetadata().getOwnerReferences());
+                boolean isDaemonset = false;
+                for (V1OwnerReference ownerReference : ownerReferences) {
+                    if (ownerReference.getKind().equalsIgnoreCase("DaemonSet")) {
+                        isDaemonset = true;
+                        break;
+                    }
+                }
+                for (V1alpha1NodeMaintenanceAction action : actions) {
+                    if (action.getType().equals("drain")) {
+                        if (isDaemonset) {
+                            if (action.getIgnoreDaemonSets()) {
+                                // todo System.out.println("isDrainTargetPod[daemonset] = " + node.getMetadata().getName() + " // " + pod.getMetadata().getName() + " // " + allBoundNodeGroups.size());
+                                return Optional.of(action);
+                            }
+                        } else {
+                            // todo System.out.println("isDrainTargetPod = " + node.getMetadata().getName() + " // " + pod.getMetadata().getName() + " // " + allBoundNodeGroups.size());
+                            return Optional.of(action);
+                        }
+                    }
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    public boolean isDrainedTargetNode(V1Node node) {
+        List<V1alpha1NodeMaintenance> allBoundNodeGroups = this.nodeMaintenanceIndexer.byIndex(
+                IndexerConstants.NODE_NAME_TO_NODE_MAINTENANCE_INDEXER_NAME,
+                K8sObjectUtils.getName(node));
+        if (allBoundNodeGroups.isEmpty()) {
+            return false;
+        }
+        int resultCnt = 0;
+        for (V1alpha1NodeMaintenance allBoundNodeGroup : allBoundNodeGroups) {
+            if (allBoundNodeGroup.getSpec().getTargetNodes().contains(node.getMetadata().getName())) {
+                var actions = allBoundNodeGroup.getSpec().getActions();
+                List<V1Pod> pods = podIndexer.byIndex(IndexerConstants.NODE_NAME_TO_POD_INDEXER_NAME, node.getMetadata().getName());
+                for (V1Pod pod : pods) {
+                    var ownerReferences = Objects.requireNonNull(pod.getMetadata().getOwnerReferences());
+                    boolean isDaemonset = false;
+                    for (V1OwnerReference ownerReference : ownerReferences) {
+                        if (ownerReference.getKind().equalsIgnoreCase("DaemonSet")) {
+                            isDaemonset = true;
+                            break;
+                        }
+                    }
+                    for (V1alpha1NodeMaintenanceAction action : actions) {
+                        if (action.getType().equals("drain")) {
+                            if (isDaemonset) {
+                                if (action.getIgnoreDaemonSets()) {
+                                    resultCnt++;
+                                }
+                            } else {
+                                resultCnt++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return resultCnt == 0 ? true : false;
+    }
+
+    // used : NodeReconciler
+    // NodeMaintenance 목록에서 node 를 찾아서 응답한다.
+    public List<V1alpha1NodeMaintenance> getAllBoundNodeMaintenances(V1Node node) {
+        List<V1alpha1NodeMaintenance> allBoundNodeGroups = this.nodeMaintenanceIndexer.byIndex(
+                IndexerConstants.NODE_NAME_TO_NODE_MAINTENANCE_INDEXER_NAME,
+                K8sObjectUtils.getName(node));
+        return K8sObjectUtils.distinctByKey(this.keyResolver, allBoundNodeGroups);
+    }
+
+    // used RequestBuilderFactory
+    // 노드 목록에서 NodeMaintenance 의 targetNodes 를 찾아서 응답한다.
+    public List<V1Node> getAllBoundNodeByNodeMaintenances(V1alpha1NodeMaintenance node) {
+        List<V1Node> allBoundNodeGroups = new ArrayList<>();
+        for (String targetNode : node.getSpec().getTargetNodes()) {
+            Optional<V1Node> opt = Optional.ofNullable(this.nodeIndexer.getByKey(targetNode));
+            if (opt.isPresent()) {
+                allBoundNodeGroups.add(opt.get());
+            }
+        }
         return K8sObjectUtils.distinctByKey(this.keyResolver, allBoundNodeGroups);
     }
 
