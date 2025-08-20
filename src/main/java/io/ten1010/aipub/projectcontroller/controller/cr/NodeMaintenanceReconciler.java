@@ -94,26 +94,25 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
         if (nodeMaintenance.getStatus() != null) {
             List<V1Node> nodeList = this.boundObjectResolver.getAllBoundNodeByNodeMaintenances(nodeMaintenance);
             for (V1alpha1NodeMaintenanceStatusAction action : nodeMaintenance.getStatus().getActions()) {
-                if (action.getStatus().equals("COMPLETED")) {
-                    break;
+                if (action.getType().equals("cordon") && action.getStatus().equals("PROGRESS")) {
+                    for (V1Node _node : nodeList) {
+                        if (_node.getSpec().getUnschedulable() != null && _node.getSpec().getUnschedulable()) {
+                            action.setStatus("COMPLETED");
+                        }
+                    }
                 }
-                for (V1Node _node : nodeList) {
-                    switch (action.getType()) {
-                        case "cordon" -> {
-                            if (_node.getSpec().getUnschedulable() != null && _node.getSpec().getUnschedulable()) {
-                                action.setStatus("COMPLETED");
-                            }
+                if (action.getType().equals("uncordon") && action.getStatus().equals("PROGRESS")) {
+                    for (V1Node _node : nodeList) {
+                        if (_node.getSpec().getUnschedulable() == null || !_node.getSpec().getUnschedulable()) {
+                            action.setStatus("COMPLETED");
                         }
-                        case "uncordon" -> {
-                            if (_node.getSpec().getUnschedulable() != null && !_node.getSpec().getUnschedulable()) {
-                                action.setStatus("COMPLETED");
-                            }
-                        }
-                        case "drain" -> {
-                            boolean isDeleted = isDrainedTargetNode(_node);
-                            if (isDeleted) {
-                                action.setStatus("COMPLETED");
-                            }
+                    }
+                }
+                if (action.getType().equals("drain") && action.getStatus().equals("PROGRESS")) {
+                    for (V1Node _node : nodeList) {
+                        boolean isDeleted = isDrainedTargetNode(_node);
+                        if (isDeleted) {
+                            action.setStatus("COMPLETED");
                         }
                     }
                 }
@@ -121,7 +120,7 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
             this.updateNodeMaintenanceStatus(nodeMaintenance);
         }
 
-        return new Result(false);
+        return new Result(true);
     }
 
     private boolean isDrainedTargetNode(V1Node node) {

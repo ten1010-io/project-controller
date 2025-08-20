@@ -7,7 +7,7 @@ spec:
     - minikube-m02
     - minikube-m03
   actions:
-    - type: uncordon
+    - type: cordon
     - type: drain
       ignoreDaemonSets: false
       force: false
