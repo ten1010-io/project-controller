@@ -23,6 +23,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.StatusPatchHelper;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -120,7 +121,7 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
             this.updateNodeMaintenanceStatus(nodeMaintenance);
         }
 
-        return new Result(true);
+        return new Result(true, Duration.ofSeconds(1));
     }
 
     private boolean isDrainedTargetNode(V1Node node) {
