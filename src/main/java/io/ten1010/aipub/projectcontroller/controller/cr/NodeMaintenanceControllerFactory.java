@@ -39,19 +39,19 @@ public class NodeMaintenanceControllerFactory implements ControllerFactory {
                 .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1Node.class)::hasSynced)
                 .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1Pod.class)::hasSynced)
                 .watch(this::createNodeMaintenanceWatch)
-                .watch(this::changeNodeStatus)
-                .watch(this::changePodStatus)
+                .watch(this::updateNodeStatus)
+                .watch(this::updatePodStatus)
                 .withReconciler(new NodeMaintenanceReconciler(this.sharedInformerFactory, this.k8sApiProvider))
                 .build();
     }
 
-    private ControllerWatch<V1Node> changeNodeStatus(WorkQueue<Request> workQueue) {
+    private ControllerWatch<V1Node> updateNodeStatus(WorkQueue<Request> workQueue) {
         DefaultControllerWatch<V1Node> watch = new DefaultControllerWatch<>(workQueue, V1Node.class);
         watch.setOnUpdateFilter(this.onUpdateFilterFactory.nodeFilter());
         return watch;
     }
 
-    private ControllerWatch<V1Pod> changePodStatus(WorkQueue<Request> workQueue) {
+    private ControllerWatch<V1Pod> updatePodStatus(WorkQueue<Request> workQueue) {
         DefaultControllerWatch<V1Pod> watch = new DefaultControllerWatch<>(workQueue, V1Pod.class);
         watch.setOnUpdateFilter(this.onUpdateFilterFactory.podNodeNameFieldFilter());
         return watch;
