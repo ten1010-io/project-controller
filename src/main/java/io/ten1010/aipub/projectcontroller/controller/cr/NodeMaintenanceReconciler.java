@@ -135,7 +135,7 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
                     var ownerReferences = Objects.requireNonNull(pod.getMetadata().getOwnerReferences());
                     boolean isDaemonset = false;
                     for (V1OwnerReference ownerReference : ownerReferences) {
-                        if (ownerReference.getKind().equalsIgnoreCase("DaemonSet")) {
+                        if (ownerReference.getKind().equalsIgnoreCase(NodeMaintenanceConstants.NN_DAEMONSET)) {
                             isDaemonset = true;
                             break;
                         }

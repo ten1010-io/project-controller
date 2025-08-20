@@ -7,6 +7,7 @@ public final class NodeMaintenanceConstants {
     public static final String NN_UNCORDON = "uncordon";
     public static final String NN_PROGRESS = "PROGRESS";
     public static final String NN_COMPLETED = "COMPLETED";
+    public static final String NN_DAEMONSET = "DaemonSet";
 
     private NodeMaintenanceConstants() {
     }
