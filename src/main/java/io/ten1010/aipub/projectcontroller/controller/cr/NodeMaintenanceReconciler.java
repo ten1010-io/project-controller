@@ -6,6 +6,8 @@ import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.models.V1Node;
+import io.kubernetes.client.openapi.models.V1OwnerReference;
+import io.kubernetes.client.openapi.models.V1Pod;
 import io.ten1010.aipub.projectcontroller.controller.AbstractReconciler;
 import io.ten1010.aipub.projectcontroller.controller.BoundObjectResolver;
 import io.ten1010.aipub.projectcontroller.controller.RequestHelper;
@@ -108,7 +110,7 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
                             }
                         }
                         case "drain" -> {
-                            boolean isDeleted = this.boundObjectResolver.isDrainedTargetNode(_node);
+                            boolean isDeleted = isDrainedTargetNode(_node);
                             if (isDeleted) {
                                 action.setStatus("COMPLETED");
                             }
@@ -120,6 +122,42 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
         }
 
         return new Result(false);
+    }
+
+    private boolean isDrainedTargetNode(V1Node node) {
+        List<V1alpha1NodeMaintenance> nodeMaintenanceList = this.boundObjectResolver.getAllBoundNodeMaintenances(node);
+        List<V1Pod> pods = this.boundObjectResolver.getAllBoundPods(node.getMetadata().getName());
+        if (nodeMaintenanceList.isEmpty()) {
+            return false;
+        }
+        int resultCnt = 0;
+        for (V1alpha1NodeMaintenance allBoundNodeGroup : nodeMaintenanceList) {
+            if (allBoundNodeGroup.getSpec().getTargetNodes().contains(node.getMetadata().getName())) {
+                var actions = allBoundNodeGroup.getSpec().getActions();
+                for (V1Pod pod : pods) {
+                    var ownerReferences = Objects.requireNonNull(pod.getMetadata().getOwnerReferences());
+                    boolean isDaemonset = false;
+                    for (V1OwnerReference ownerReference : ownerReferences) {
+                        if (ownerReference.getKind().equalsIgnoreCase("DaemonSet")) {
+                            isDaemonset = true;
+                            break;
+                        }
+                    }
+                    for (V1alpha1NodeMaintenanceAction action : actions) {
+                        if (action.getType().equals("drain")) {
+                            if (isDaemonset) {
+                                if (action.getIgnoreDaemonSets()) {
+                                    resultCnt++;
+                                }
+                            } else {
+                                resultCnt++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return resultCnt == 0 ? true : false;
     }
 
     private void updateNodeMaintenanceStatus(V1alpha1NodeMaintenance nodeMaintenance) throws ApiException {

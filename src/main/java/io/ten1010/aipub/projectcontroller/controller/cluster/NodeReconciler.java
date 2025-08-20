@@ -62,8 +62,7 @@ public class NodeReconciler extends AbstractReconciler {
 
         List<V1alpha1NodeMaintenance> allBoundNodeMaintenances = this.boundObjectResolver.getAllBoundNodeMaintenances(node);
         if (!allBoundNodeMaintenances.isEmpty()) {
-            executeSchedulable(node, allBoundNodeMaintenances);
-            return new Result(false);
+            return executeSchedulable(node, allBoundNodeMaintenances);
         }
 
         return reconcileExistingNode(nodeOpt.get(), reconciledLabels, reconciledAnnotations, reconciledTaints);
@@ -92,15 +91,16 @@ public class NodeReconciler extends AbstractReconciler {
         return new Result(false);
     }
 
-    private void executeSchedulable(V1Node targetNode, List<V1alpha1NodeMaintenance> allBoundNodeMaintenances) throws ApiException {
+    private Result executeSchedulable(V1Node targetNode, List<V1alpha1NodeMaintenance> nodeMaintenances) throws ApiException {
         String nodeName = K8sObjectUtils.getName(targetNode);
-        for (V1alpha1NodeMaintenance nodeMaintenance : allBoundNodeMaintenances) {
-            long checkCnt = nodeMaintenance.getStatus().getActions().stream()
-                    .filter(x -> !x.getType().equals("drain") && x.getStatus().equals("COMPLETED"))
-                    .count();
-            if (checkCnt == 1) {
+        for (V1alpha1NodeMaintenance nodeMaintenance : nodeMaintenances) {
+            var progressList = nodeMaintenance.getStatus().getActions().stream()
+                    .filter(x -> !x.getType().equals("drain") && x.getStatus().equals("PROGRESS"))
+                    .toList();
+            if (progressList.isEmpty()) {
                 break;
             }
+
             for (V1alpha1NodeMaintenanceAction action : nodeMaintenance.getSpec().getActions()) {
                 if (action.getType().equals("cordon")) {
                     targetNode.getSpec().setUnschedulable(true);
@@ -110,6 +110,7 @@ public class NodeReconciler extends AbstractReconciler {
             }
         }
         updateNode(nodeName, targetNode);
+        return new Result(false);
     }
 
     private void updateNode(String objName, V1Node node) throws ApiException {

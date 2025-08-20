@@ -143,78 +143,6 @@ public class BoundObjectResolver {
         return K8sObjectUtils.distinctByKey(this.keyResolver, allBoundNodeGroups);
     }
 
-    public Optional<V1alpha1NodeMaintenanceAction> optNodeMaintenanceActionDrainPod(V1Node node, V1Pod pod) {
-        List<V1alpha1NodeMaintenance> allBoundNodeGroups = this.nodeMaintenanceIndexer.byIndex(
-                IndexerConstants.NODE_NAME_TO_NODE_MAINTENANCE_INDEXER_NAME,
-                K8sObjectUtils.getName(node));
-        if (allBoundNodeGroups.isEmpty()) {
-            return Optional.empty();
-        }
-        for (V1alpha1NodeMaintenance allBoundNodeGroup : allBoundNodeGroups) {
-            if (allBoundNodeGroup.getSpec().getTargetNodes().contains(node.getMetadata().getName())) {
-                var actions = allBoundNodeGroup.getSpec().getActions();
-                var ownerReferences = Objects.requireNonNull(pod.getMetadata().getOwnerReferences());
-                boolean isDaemonset = false;
-                for (V1OwnerReference ownerReference : ownerReferences) {
-                    if (ownerReference.getKind().equalsIgnoreCase("DaemonSet")) {
-                        isDaemonset = true;
-                        break;
-                    }
-                }
-                for (V1alpha1NodeMaintenanceAction action : actions) {
-                    if (action.getType().equals("drain")) {
-                        if (isDaemonset) {
-                            if (action.getIgnoreDaemonSets()) {
-                                return Optional.of(action);
-                            }
-                        } else {
-                            return Optional.of(action);
-                        }
-                    }
-                }
-            }
-        }
-        return Optional.empty();
-    }
-
-    public boolean isDrainedTargetNode(V1Node node) {
-        List<V1alpha1NodeMaintenance> allBoundNodeGroups = this.nodeMaintenanceIndexer.byIndex(
-                IndexerConstants.NODE_NAME_TO_NODE_MAINTENANCE_INDEXER_NAME,
-                K8sObjectUtils.getName(node));
-        if (allBoundNodeGroups.isEmpty()) {
-            return false;
-        }
-        int resultCnt = 0;
-        for (V1alpha1NodeMaintenance allBoundNodeGroup : allBoundNodeGroups) {
-            if (allBoundNodeGroup.getSpec().getTargetNodes().contains(node.getMetadata().getName())) {
-                var actions = allBoundNodeGroup.getSpec().getActions();
-                List<V1Pod> pods = podIndexer.byIndex(IndexerConstants.NODE_NAME_TO_POD_INDEXER_NAME, node.getMetadata().getName());
-                for (V1Pod pod : pods) {
-                    var ownerReferences = Objects.requireNonNull(pod.getMetadata().getOwnerReferences());
-                    boolean isDaemonset = false;
-                    for (V1OwnerReference ownerReference : ownerReferences) {
-                        if (ownerReference.getKind().equalsIgnoreCase("DaemonSet")) {
-                            isDaemonset = true;
-                            break;
-                        }
-                    }
-                    for (V1alpha1NodeMaintenanceAction action : actions) {
-                        if (action.getType().equals("drain")) {
-                            if (isDaemonset) {
-                                if (action.getIgnoreDaemonSets()) {
-                                    resultCnt++;
-                                }
-                            } else {
-                                resultCnt++;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return resultCnt == 0 ? true : false;
-    }
-
     public List<V1alpha1NodeMaintenance> getAllBoundNodeMaintenances(V1Node node) {
         List<V1alpha1NodeMaintenance> allBoundNodeGroups = this.nodeMaintenanceIndexer.byIndex(
                 IndexerConstants.NODE_NAME_TO_NODE_MAINTENANCE_INDEXER_NAME,
@@ -231,6 +159,10 @@ public class BoundObjectResolver {
             }
         }
         return K8sObjectUtils.distinctByKey(this.keyResolver, allBoundNodeGroups);
+    }
+
+    public List<V1Pod> getAllBoundPods(String nodeName) {
+        return podIndexer.byIndex(IndexerConstants.NODE_NAME_TO_POD_INDEXER_NAME, nodeName);
     }
 
     public List<V1alpha1ResourceSet> getAllBoundResourceSets(V1alpha1Project project) {

@@ -7,6 +7,7 @@ import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Node;
+import io.kubernetes.client.openapi.models.V1OwnerReference;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.ten1010.aipub.projectcontroller.controller.AbstractReconciler;
 import io.ten1010.aipub.projectcontroller.controller.BoundObjectResolver;
@@ -14,6 +15,7 @@ import io.ten1010.aipub.projectcontroller.controller.RequestHelper;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceNameResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeMaintenance;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeMaintenanceAction;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
@@ -21,6 +23,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.util.NodeUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.WorkloadUtils;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -79,13 +82,47 @@ public class PodReconciler extends AbstractReconciler {
             return processCaseThatProjectManagedNode(node, pod);
         }
 
-        Optional<V1alpha1NodeMaintenanceAction> optDelete = this.boundObjectResolver.optNodeMaintenanceActionDrainPod(node, pod);
-        if (optDelete.isPresent()) {
-            deletePod(pod, optDelete.get().getForce());
-            return new Result(false);
+        List<V1alpha1NodeMaintenance> targetNodes = this.boundObjectResolver.getAllBoundNodeMaintenances(node);
+        if (!targetNodes.isEmpty()) {
+            return nodeMaintenancePodDrain(targetNodes, node, pod);
         }
 
         return processCaseThatNotProjectManagedNode(pod);
+    }
+
+    private Result nodeMaintenancePodDrain(List<V1alpha1NodeMaintenance> targetNodes, V1Node node, V1Pod pod) throws ApiException {
+        for (V1alpha1NodeMaintenance nodeMaintenance : targetNodes) {
+            if (nodeMaintenance.getSpec().getTargetNodes().contains(node.getMetadata().getName())) {
+                var statusActions = nodeMaintenance.getStatus().getActions().stream()
+                        .filter(a -> a.getType().equals("drain") && a.getStatus().equals("PROGRESS"))
+                        .toList();
+                if (statusActions.isEmpty()) {
+                    return new Result(false);
+                }
+
+                var ownerReferences = Objects.requireNonNull(pod.getMetadata().getOwnerReferences());
+                boolean isDaemonset = false;
+                for (V1OwnerReference ownerReference : ownerReferences) {
+                    if (ownerReference.getKind().equalsIgnoreCase("DaemonSet")) {
+                        isDaemonset = true;
+                        break;
+                    }
+                }
+
+                var specActions = nodeMaintenance.getSpec().getActions().stream()
+                        .filter(a -> a.getType().equals("drain")).toList();
+                for (V1alpha1NodeMaintenanceAction action : specActions) {
+                    if (isDaemonset) {
+                        if (action.getIgnoreDaemonSets()) {
+                            deletePod(pod, action.getForce());
+                        }
+                    } else {
+                        deletePod(pod, action.getForce());
+                    }
+                }
+            }
+        }
+        return new Result(false);
     }
 
     private void deletePod(V1Pod pod, boolean isForce) throws ApiException {
