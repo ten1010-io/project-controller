@@ -51,7 +51,7 @@ public class PodControllerFactory implements ControllerFactory {
                 .watch(this::createNodeGroupWatch)
                 .watch(this::createNodeWatch)
                 .watch(this::createBoundPodNodeWatch)
-                .watch(this::createNodeMaintenanceWatch)
+                .watch(this::updateNodeMaintenanceWatch)
                 .withReconciler(new PodReconciler(
                         this.sharedInformerFactory,
                         this.k8sApiProvider,
@@ -93,7 +93,7 @@ public class PodControllerFactory implements ControllerFactory {
         return watch;
     }
 
-    private ControllerWatch<V1alpha1NodeMaintenance> createNodeMaintenanceWatch(WorkQueue<Request> workQueue) {
+    private ControllerWatch<V1alpha1NodeMaintenance> updateNodeMaintenanceWatch(WorkQueue<Request> workQueue) {
         DefaultControllerWatch<V1alpha1NodeMaintenance> watch = new DefaultControllerWatch<>(workQueue, V1alpha1NodeMaintenance.class);
         watch.setOnUpdateFilter(this.onUpdateFilterFactory.nodeMaintenanceCreateFilter());
         watch.setRequestBuilder(this.requestBuilderFactory.podListByNodeMaintenance());

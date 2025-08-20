@@ -48,7 +48,7 @@ public class NodeControllerFactory implements ControllerFactory {
                 .watch(this::createNodeWatch)
                 .watch(this::createProjectWatch)
                 .watch(this::createNodeGroupWatch)
-                .watch(this::createNodeMaintenanceWatch)
+                .watch(this::updateNodeMaintenanceWatch)
                 .withReconciler(new NodeReconciler(this.sharedInformerFactory, this.k8sApiProvider, this.reconciliationService))
                 .build();
     }
@@ -73,7 +73,7 @@ public class NodeControllerFactory implements ControllerFactory {
         return watch;
     }
 
-    private ControllerWatch<V1alpha1NodeMaintenance> createNodeMaintenanceWatch(WorkQueue<Request> workQueue) {
+    private ControllerWatch<V1alpha1NodeMaintenance> updateNodeMaintenanceWatch(WorkQueue<Request> workQueue) {
         DefaultControllerWatch<V1alpha1NodeMaintenance> watch = new DefaultControllerWatch<>(workQueue, V1alpha1NodeMaintenance.class);
         watch.setOnUpdateFilter(this.onUpdateFilterFactory.nodeMaintenanceCreateFilter());
         watch.setRequestBuilder(this.requestBuilderFactory.nodeMaintenanceToBoundNodes());
