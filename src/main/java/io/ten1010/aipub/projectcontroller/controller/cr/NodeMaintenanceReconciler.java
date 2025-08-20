@@ -133,16 +133,11 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
                 var actions = allBoundNodeGroup.getSpec().getActions();
                 for (V1Pod pod : pods) {
                     var ownerReferences = Objects.requireNonNull(pod.getMetadata().getOwnerReferences());
-                    boolean isDaemonset = false;
-                    for (V1OwnerReference ownerReference : ownerReferences) {
-                        if (ownerReference.getKind().equalsIgnoreCase(NodeMaintenanceConstants.NN_DAEMONSET)) {
-                            isDaemonset = true;
-                            break;
-                        }
-                    }
+                    boolean isDaemonSet = ownerReferences.stream()
+                            .anyMatch(x -> x.getKind().equalsIgnoreCase(NodeMaintenanceConstants.NN_DAEMONSET));
                     for (V1alpha1NodeMaintenanceAction action : actions) {
                         if (action.getType().equals(NodeMaintenanceConstants.NN_DRAIN)) {
-                            if (isDaemonset) {
+                            if (isDaemonSet) {
                                 if (action.getIgnoreDaemonSets()) {
                                     resultCnt++;
                                 }

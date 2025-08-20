@@ -103,18 +103,13 @@ public class PodReconciler extends AbstractReconciler {
                 }
 
                 var ownerReferences = Objects.requireNonNull(pod.getMetadata().getOwnerReferences());
-                boolean isDaemonset = false;
-                for (V1OwnerReference ownerReference : ownerReferences) {
-                    if (ownerReference.getKind().equalsIgnoreCase(NodeMaintenanceConstants.NN_DAEMONSET)) {
-                        isDaemonset = true;
-                        break;
-                    }
-                }
+                boolean isDaemonSet = ownerReferences.stream()
+                        .anyMatch(x -> x.getKind().equalsIgnoreCase(NodeMaintenanceConstants.NN_DAEMONSET));
 
                 var specActions = nodeMaintenance.getSpec().getActions().stream()
                         .filter(a -> a.getType().equals(NodeMaintenanceConstants.NN_DRAIN)).toList();
                 for (V1alpha1NodeMaintenanceAction action : specActions) {
-                    if (isDaemonset) {
+                    if (isDaemonSet) {
                         if (action.getIgnoreDaemonSets()) {
                             deletePod(pod, action.getForce());
                         }
