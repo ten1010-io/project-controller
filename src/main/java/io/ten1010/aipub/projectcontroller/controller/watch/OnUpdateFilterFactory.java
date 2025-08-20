@@ -32,14 +32,8 @@ public class OnUpdateFilterFactory {
     public BiPredicate<V1alpha1NodeMaintenance, V1alpha1NodeMaintenance> nodeMaintenanceCreateFilter() {
         return (oldObj, newObj) -> {
             if (newObj.getStatus() != null) {
-                List<String> actionTypes = new ArrayList<>();
-                for (V1alpha1NodeMaintenanceAction action : newObj.getSpec().getActions()) {
-                    actionTypes.add(action.getType());
-                }
-                List<String> statusTypes = new ArrayList<>();
-                for (V1alpha1NodeMaintenanceStatusAction action : newObj.getStatus().getActions()) {
-                    statusTypes.add(action.getType());
-                }
+                List<String> actionTypes = newObj.getSpec().getActions().stream().map(V1alpha1NodeMaintenanceAction::getType).toList();
+                List<String> statusTypes = newObj.getStatus().getActions().stream().map(V1alpha1NodeMaintenanceStatusAction::getType).toList();
 
                 return !Objects.equals(oldObj.getSpec(), newObj.getSpec())
                         || !newObj.getSpec().getTargetNodes().equals(newObj.getStatus().getAllEffectedNodes())

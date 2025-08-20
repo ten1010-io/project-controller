@@ -8,6 +8,6 @@ spec:
     - minikube-m03
   actions:
     - type: uncordon
-#    - type: drain
-#      ignoreDaemonSets: false
-#      force: false
+    - type: drain
+      ignoreDaemonSets: false
+      force: false

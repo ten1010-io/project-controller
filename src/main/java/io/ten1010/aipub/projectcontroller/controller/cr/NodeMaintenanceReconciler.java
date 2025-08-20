@@ -62,10 +62,7 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
         List<String> targetNodeNames = Objects.requireNonNull(spec.getTargetNodes());
 
         if (status != null && targetNodeNames.equals(status.getAllEffectedNodes())) {
-            List<String> specAction = new ArrayList<>();
-            for (V1alpha1NodeMaintenanceAction action : spec.getActions()) {
-                specAction.add(action.getType());
-            }
+            List<String> specAction = spec.getActions().stream().map(V1alpha1NodeMaintenanceAction::getType).toList();
             List<String> statusAction = new ArrayList<>();
             List<String> statusNotCompleted = new ArrayList<>();
             for (V1alpha1NodeMaintenanceStatusAction action : status.getActions()) {
