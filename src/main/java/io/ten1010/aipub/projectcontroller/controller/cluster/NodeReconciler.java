@@ -14,6 +14,7 @@ import io.ten1010.aipub.projectcontroller.controller.BoundObjectResolver;
 import io.ten1010.aipub.projectcontroller.controller.RequestHelper;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.NodeMaintenanceConstants;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.*;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
@@ -95,16 +96,17 @@ public class NodeReconciler extends AbstractReconciler {
         String nodeName = K8sObjectUtils.getName(targetNode);
         for (V1alpha1NodeMaintenance nodeMaintenance : nodeMaintenances) {
             var progressList = nodeMaintenance.getStatus().getActions().stream()
-                    .filter(x -> !x.getType().equals("drain") && x.getStatus().equals("PROGRESS"))
+                    .filter(x -> !x.getType().equals(NodeMaintenanceConstants.NN_DRAIN)
+                            && x.getStatus().equals(NodeMaintenanceConstants.NN_PROGRESS))
                     .toList();
             if (progressList.isEmpty()) {
                 break;
             }
 
             for (V1alpha1NodeMaintenanceAction action : nodeMaintenance.getSpec().getActions()) {
-                if (action.getType().equals("cordon")) {
+                if (action.getType().equals(NodeMaintenanceConstants.NN_CORDON)) {
                     targetNode.getSpec().setUnschedulable(true);
-                } else if (action.getType().equals("uncordon")) {
+                } else if (action.getType().equals(NodeMaintenanceConstants.NN_UNCORDON)) {
                     targetNode.getSpec().setUnschedulable(false);
                 }
             }

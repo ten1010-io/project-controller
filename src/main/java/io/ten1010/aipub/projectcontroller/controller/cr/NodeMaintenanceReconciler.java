@@ -11,10 +11,7 @@ import io.kubernetes.client.openapi.models.V1Pod;
 import io.ten1010.aipub.projectcontroller.controller.AbstractReconciler;
 import io.ten1010.aipub.projectcontroller.controller.BoundObjectResolver;
 import io.ten1010.aipub.projectcontroller.controller.RequestHelper;
-import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
-import io.ten1010.aipub.projectcontroller.domain.k8s.K8sObjectTypeConstants;
-import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
-import io.ten1010.aipub.projectcontroller.domain.k8s.ProjectApiConstants;
+import io.ten1010.aipub.projectcontroller.domain.k8s.*;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeMaintenance;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeMaintenanceAction;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeMaintenanceStatus;
@@ -70,7 +67,7 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
             List<String> statusNotCompleted = new ArrayList<>();
             for (V1alpha1NodeMaintenanceStatusAction action : status.getActions()) {
                 statusAction.add(action.getType());
-                if (action.getStatus() == null || !action.getStatus().equals("COMPLETED")) {
+                if (action.getStatus() == null || !action.getStatus().equals(NodeMaintenanceConstants.NN_COMPLETED)) {
                     statusNotCompleted.add("NOT COMPLETED");
                 }
             }
@@ -85,7 +82,7 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
         for (V1alpha1NodeMaintenanceAction action : nodeMaintenance.getSpec().getActions()) {
             V1alpha1NodeMaintenanceStatusAction _action = new V1alpha1NodeMaintenanceStatusAction();
             _action.setType(action.getType());
-            _action.setStatus("PROGRESS");
+            _action.setStatus(NodeMaintenanceConstants.NN_PROGRESS);
             actionList.add(_action);
         }
         edited.setActions(actionList);
@@ -95,25 +92,25 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
         if (nodeMaintenance.getStatus() != null) {
             List<V1Node> nodeList = this.boundObjectResolver.getAllBoundNodeByNodeMaintenances(nodeMaintenance);
             for (V1alpha1NodeMaintenanceStatusAction action : nodeMaintenance.getStatus().getActions()) {
-                if (action.getType().equals("cordon") && action.getStatus().equals("PROGRESS")) {
+                if (action.getType().equals(NodeMaintenanceConstants.NN_CORDON) && action.getStatus().equals(NodeMaintenanceConstants.NN_PROGRESS)) {
                     for (V1Node _node : nodeList) {
                         if (_node.getSpec().getUnschedulable() != null && _node.getSpec().getUnschedulable()) {
-                            action.setStatus("COMPLETED");
+                            action.setStatus(NodeMaintenanceConstants.NN_COMPLETED);
                         }
                     }
                 }
-                if (action.getType().equals("uncordon") && action.getStatus().equals("PROGRESS")) {
+                if (action.getType().equals(NodeMaintenanceConstants.NN_UNCORDON) && action.getStatus().equals(NodeMaintenanceConstants.NN_PROGRESS)) {
                     for (V1Node _node : nodeList) {
                         if (_node.getSpec().getUnschedulable() == null || !_node.getSpec().getUnschedulable()) {
-                            action.setStatus("COMPLETED");
+                            action.setStatus(NodeMaintenanceConstants.NN_COMPLETED);
                         }
                     }
                 }
-                if (action.getType().equals("drain") && action.getStatus().equals("PROGRESS")) {
+                if (action.getType().equals(NodeMaintenanceConstants.NN_DRAIN) && action.getStatus().equals(NodeMaintenanceConstants.NN_PROGRESS)) {
                     for (V1Node _node : nodeList) {
                         boolean isDeleted = isDrainedTargetNode(_node);
                         if (isDeleted) {
-                            action.setStatus("COMPLETED");
+                            action.setStatus(NodeMaintenanceConstants.NN_COMPLETED);
                         }
                     }
                 }
@@ -144,7 +141,7 @@ public class NodeMaintenanceReconciler extends AbstractReconciler {
                         }
                     }
                     for (V1alpha1NodeMaintenanceAction action : actions) {
-                        if (action.getType().equals("drain")) {
+                        if (action.getType().equals(NodeMaintenanceConstants.NN_DRAIN)) {
                             if (isDaemonset) {
                                 if (action.getIgnoreDaemonSets()) {
                                     resultCnt++;

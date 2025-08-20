@@ -15,6 +15,7 @@ import io.ten1010.aipub.projectcontroller.controller.RequestHelper;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceNameResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.NodeMaintenanceConstants;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeMaintenance;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeMaintenanceAction;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
@@ -94,7 +95,8 @@ public class PodReconciler extends AbstractReconciler {
         for (V1alpha1NodeMaintenance nodeMaintenance : targetNodes) {
             if (nodeMaintenance.getSpec().getTargetNodes().contains(node.getMetadata().getName())) {
                 var statusActions = nodeMaintenance.getStatus().getActions().stream()
-                        .filter(a -> a.getType().equals("drain") && a.getStatus().equals("PROGRESS"))
+                        .filter(a -> a.getType().equals(NodeMaintenanceConstants.NN_DRAIN)
+                                && a.getStatus().equals(NodeMaintenanceConstants.NN_PROGRESS))
                         .toList();
                 if (statusActions.isEmpty()) {
                     return new Result(false);
@@ -110,7 +112,7 @@ public class PodReconciler extends AbstractReconciler {
                 }
 
                 var specActions = nodeMaintenance.getSpec().getActions().stream()
-                        .filter(a -> a.getType().equals("drain")).toList();
+                        .filter(a -> a.getType().equals(NodeMaintenanceConstants.NN_DRAIN)).toList();
                 for (V1alpha1NodeMaintenanceAction action : specActions) {
                     if (isDaemonset) {
                         if (action.getIgnoreDaemonSets()) {
