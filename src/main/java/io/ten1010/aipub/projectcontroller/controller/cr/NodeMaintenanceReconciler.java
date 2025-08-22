@@ -6,7 +6,6 @@ import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.models.V1Node;
-import io.kubernetes.client.openapi.models.V1OwnerReference;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.ten1010.aipub.projectcontroller.controller.AbstractReconciler;
 import io.ten1010.aipub.projectcontroller.controller.BoundObjectResolver;

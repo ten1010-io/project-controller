@@ -63,4 +63,9 @@ public class MutatingConfiguration {
         return new ImageReviewReviewHandler(repositoryService, artifactService, sharedInformerFactory);
     }
 
+    @Bean
+    public NodeMaintenanceReviewHandler nodeMaintenanceReviewHandler(AipubProperties aipubProperties, SubjectResolver subjectResolver, SharedInformerFactory sharedInformerFactory) {
+        return new NodeMaintenanceReviewHandler(aipubProperties, subjectResolver, sharedInformerFactory);
+    }
+
 }

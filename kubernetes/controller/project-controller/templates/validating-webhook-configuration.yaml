@@ -1,0 +1,27 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: project-controller.project.aipub.ten1010.io
+webhooks:
+  - name: nodemaintenances.project-controller.project.aipub.ten1010.io
+    admissionReviewVersions: [ "v1" ]
+    clientConfig:
+      caBundle: <CA_BUNDLE>
+      service:
+        namespace: project-controller
+        name: project-controller
+        path: /api/v1/admissionreviews
+        port: 8080
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    namespaceSelector: { }
+    objectSelector: { }
+    rules:
+      - apiGroups: [ "project.aipub.ten1010.io" ]
+        apiVersions: [ "v1alpha1" ]
+        operations: [ "CREATE", "UPDATE" ]
+        resources: [ "nodemaintenances" ]
+        scope: "*"
+    sideEffects: None
+    timeoutSeconds: 10
+---

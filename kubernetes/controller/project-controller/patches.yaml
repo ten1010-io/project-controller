@@ -33,3 +33,12 @@ webhooks:
     clientConfig:
       caBundle: ### To be patched ###
 ---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: project-controller.project.aipub.ten1010.io
+webhooks:
+  - name: nodemaintenances.project-controller.project.aipub.ten1010.io
+    clientConfig:
+      caBundle: ### To be patched ###
+---
