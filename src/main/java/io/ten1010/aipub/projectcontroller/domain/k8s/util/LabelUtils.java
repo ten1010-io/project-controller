@@ -5,7 +5,7 @@ import java.util.Map;
 
 public class LabelUtils {
 
-    private static final String DELIMITER = "#";
+    private static final String DELIMITER = ":";
 
     public static String getLabelString(String key, String value) {
         return key + DELIMITER + value;
