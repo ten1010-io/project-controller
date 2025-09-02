@@ -16,13 +16,16 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.RoleUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
+@Slf4j
 public class AipubUserClusterRoleReconciler extends AbstractReconciler {
 
     private final KeyResolver keyResolver;
@@ -50,6 +53,7 @@ public class AipubUserClusterRoleReconciler extends AbstractReconciler {
 
     @Override
     protected Result reconcileInternal(Request request) throws ApiException {
+        log.info("AipubUserClusterRoleReconciler reconcile request");
         Optional<String> userNameOpt = this.roleNameResolver.resolveAipubUserName(request.getName());
         if (userNameOpt.isEmpty()) {
             return new Result(false);
@@ -65,7 +69,7 @@ public class AipubUserClusterRoleReconciler extends AbstractReconciler {
             if (roleOpt.isPresent()) {
                 V1ClusterRole role = roleOpt.get();
                 deleteRole(K8sObjectUtils.getName(role));
-                return new Result(false);
+                return new Result(true, Duration.ofSeconds(5));
             }
             return new Result(false);
         }
@@ -99,7 +103,7 @@ public class AipubUserClusterRoleReconciler extends AbstractReconciler {
                 .withAggregationRule(reconciledAggregationRule)
                 .build();
         createRole(role);
-        return new Result(false);
+        return new Result(true, Duration.ofSeconds(5));
     }
 
     private Result reconcileExistingRole(

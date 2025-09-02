@@ -26,12 +26,7 @@ import io.kubernetes.client.openapi.models.V1SecretList;
 import io.kubernetes.client.util.CallGeneratorParams;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageHub;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeGroup;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectMember;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ResourceSet;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.*;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.LabelUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.NodeGroupUtils;
@@ -72,6 +67,12 @@ public class SharedInformerFactoryProvider {
         registerRoleBindingInformer(informerFactory);
         registerResourceQuotaInformer(informerFactory);
         registerSecretInformer(informerFactory);
+        registerOperationInformer(informerFactory);
+        registerWorkspaceInformer(informerFactory);
+        registerAipubVolumeInformer(informerFactory);
+        registerAipubJobInformer(informerFactory);
+        registerSftpServerInformer(informerFactory);
+        registerFtpServerInformer(informerFactory);
         registerPodInformer(informerFactory);
         this.registrars.forEach(e -> e.registerInformer(informerFactory));
 
@@ -210,7 +211,7 @@ public class SharedInformerFactoryProvider {
 
     private void registerRoleInformer(SharedInformerFactory informerFactory) {
         ApiClient apiClient = this.k8sApiProvider.getApiClient();
-        informerFactory.sharedIndexInformerFor(
+        SharedIndexInformer<V1Role> informer = informerFactory.sharedIndexInformerFor(
                 (CallGeneratorParams params) -> new RbacAuthorizationV1Api(apiClient).listRoleForAllNamespaces()
                         .resourceVersion(params.resourceVersion)
                         .watch(params.watch)
@@ -218,11 +219,14 @@ public class SharedInformerFactoryProvider {
                         .buildCall(null),
                 V1Role.class,
                 V1RoleList.class);
+        informer.addIndexers(Map.of(
+                IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
+                obj -> List.of(K8sObjectUtils.getNamespace(obj))));
     }
 
     private void registerRoleBindingInformer(SharedInformerFactory informerFactory) {
         ApiClient apiClient = this.k8sApiProvider.getApiClient();
-        informerFactory.sharedIndexInformerFor(
+        SharedIndexInformer<V1RoleBinding> informer = informerFactory.sharedIndexInformerFor(
                 (CallGeneratorParams params) -> new RbacAuthorizationV1Api(apiClient).listRoleBindingForAllNamespaces()
                         .resourceVersion(params.resourceVersion)
                         .watch(params.watch)
@@ -230,6 +234,9 @@ public class SharedInformerFactoryProvider {
                         .buildCall(null),
                 V1RoleBinding.class,
                 V1RoleBindingList.class);
+        informer.addIndexers(Map.of(
+                IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
+                obj -> List.of(K8sObjectUtils.getNamespace(obj))));
     }
 
     private void registerResourceQuotaInformer(SharedInformerFactory informerFactory) {
@@ -254,6 +261,66 @@ public class SharedInformerFactoryProvider {
                         .buildCall(null),
                 V1Secret.class,
                 V1SecretList.class);
+    }
+
+    private void registerOperationInformer(SharedInformerFactory informerFactory) {
+        SharedIndexInformer<V1alpha1Operation> informer = informerFactory.sharedIndexInformerFor(
+                this.k8sApiProvider.getOperationApi(),
+                V1alpha1Operation.class,
+                DEFAULT_RESYNC_PERIOD);
+        informer.addIndexers(Map.of(
+                IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
+                obj -> List.of(K8sObjectUtils.getNamespace(obj))));
+    }
+
+    private void registerWorkspaceInformer(SharedInformerFactory informerFactory) {
+        SharedIndexInformer<V1Workspace> informer = informerFactory.sharedIndexInformerFor(
+                this.k8sApiProvider.getWorkspaceApi(),
+                V1Workspace.class,
+                DEFAULT_RESYNC_PERIOD);
+        informer.addIndexers(Map.of(
+                IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
+                obj -> List.of(K8sObjectUtils.getNamespace(obj))));
+    }
+
+    private void registerAipubVolumeInformer(SharedInformerFactory informerFactory) {
+        SharedIndexInformer<V1alpha1AipubVolume> informer = informerFactory.sharedIndexInformerFor(
+                this.k8sApiProvider.getAipubVolumeApi(),
+                V1alpha1AipubVolume.class,
+                DEFAULT_RESYNC_PERIOD);
+        informer.addIndexers(Map.of(
+                IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
+                obj -> List.of(K8sObjectUtils.getNamespace(obj))));
+    }
+
+    private void registerAipubJobInformer(SharedInformerFactory informerFactory) {
+        SharedIndexInformer<V1alpha1AipubJob> informer = informerFactory.sharedIndexInformerFor(
+                this.k8sApiProvider.getAipubJobApi(),
+                V1alpha1AipubJob.class,
+                DEFAULT_RESYNC_PERIOD);
+        informer.addIndexers(Map.of(
+                IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
+                obj -> List.of(K8sObjectUtils.getNamespace(obj))));
+    }
+
+    private void registerSftpServerInformer(SharedInformerFactory informerFactory) {
+        SharedIndexInformer<V1alpha1SftpServer> informer = informerFactory.sharedIndexInformerFor(
+                this.k8sApiProvider.getSftpServerApi(),
+                V1alpha1SftpServer.class,
+                DEFAULT_RESYNC_PERIOD);
+        informer.addIndexers(Map.of(
+                IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
+                obj -> List.of(K8sObjectUtils.getNamespace(obj))));
+    }
+
+    private void registerFtpServerInformer(SharedInformerFactory informerFactory) {
+        SharedIndexInformer<V1FtpServer> informer = informerFactory.sharedIndexInformerFor(
+                this.k8sApiProvider.getFtpServerApi(),
+                V1FtpServer.class,
+                DEFAULT_RESYNC_PERIOD);
+        informer.addIndexers(Map.of(
+                IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
+                obj -> List.of(K8sObjectUtils.getNamespace(obj))));
     }
 
     private void registerPodInformer(SharedInformerFactory informerFactory) {

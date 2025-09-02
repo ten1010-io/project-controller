@@ -16,6 +16,8 @@ import io.ten1010.aipub.projectcontroller.controller.namespaced.ImagePullSecretR
 import io.ten1010.aipub.projectcontroller.controller.namespaced.ResourceQuotaControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.rbac.aipub.AipubUserClusterRoleBindingControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.rbac.aipub.AipubUserClusterRoleControllerFactory;
+import io.ten1010.aipub.projectcontroller.controller.rbac.aipub.AipubUserRoleBindingControllerFactory;
+import io.ten1010.aipub.projectcontroller.controller.rbac.aipub.AipubUserRoleControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.rbac.member.ClusterRoleBindingControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.rbac.member.ClusterRoleControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.rbac.member.RoleBindingControllerFactory;
@@ -84,7 +86,23 @@ public class ControllerConfiguration {
     }
 
     @Bean
-    public Controller aodeGroupController(SharedInformerFactory sharedInformerFactory,
+    public Controller aipubUserRoleController(SharedInformerFactory sharedInformerFactory,
+                                                     K8sApiProvider k8sApiProvider,
+                                                     ReconciliationService reconciliationService) {
+        return new AipubUserRoleControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+                .createController();
+    }
+
+    @Bean
+    public Controller aipubUserRoleBindingController(SharedInformerFactory sharedInformerFactory,
+                                                            K8sApiProvider k8sApiProvider,
+                                                            ReconciliationService reconciliationService) {
+        return new AipubUserRoleBindingControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+                .createController();
+    }
+
+    @Bean
+    public Controller nodeGroupController(SharedInformerFactory sharedInformerFactory,
                                           K8sApiProvider k8sApiProvider,
                                           ReconciliationService reconciliationService) {
         return new NodeGroupControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)

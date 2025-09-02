@@ -1,0 +1,16 @@
+package io.ten1010.aipub.projectcontroller.domain.k8s.dto;
+
+import lombok.Data;
+import org.jspecify.annotations.Nullable;
+
+@Data
+public class V1WorkspaceSshEndpoint {
+
+    @Nullable
+    String host;
+    @Nullable
+    Integer port;
+    @Nullable
+    String user;
+
+}

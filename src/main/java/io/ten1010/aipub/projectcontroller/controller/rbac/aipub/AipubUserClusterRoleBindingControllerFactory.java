@@ -49,7 +49,7 @@ public class AipubUserClusterRoleBindingControllerFactory implements ControllerF
 
     private ControllerWatch<V1ClusterRoleBinding> createClusterRoleBindingWatch(WorkQueue<Request> workQueue) {
         DefaultControllerWatch<V1ClusterRoleBinding> watch = new DefaultControllerWatch<>(workQueue, V1ClusterRoleBinding.class);
-        watch.setOnUpdateFilter(this.onUpdateFilterFactory.clusterRoleBindingFilter());
+        watch.setOnUpdateFilter(this.onUpdateFilterFactory.aipubUserClusterRoleBindingFilter());
         return watch;
     }
 

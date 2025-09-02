@@ -3,10 +3,10 @@ package io.ten1010.aipub.projectcontroller.domain.k8s.dto;
 import io.kubernetes.client.common.KubernetesObject;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import lombok.Data;
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 
 @Data
-public class V1alpha1ResourceSet  implements KubernetesObject {
+public class V1alpha1ResourceSet implements KubernetesObject {
 
     @Nullable
     private String apiVersion;

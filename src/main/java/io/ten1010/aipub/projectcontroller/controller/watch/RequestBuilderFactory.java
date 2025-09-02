@@ -4,11 +4,23 @@ import io.kubernetes.client.common.KubernetesObject;
 import io.kubernetes.client.extended.controller.reconciler.Request;
 import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.informer.cache.Indexer;
-import io.kubernetes.client.openapi.models.*;
+import io.kubernetes.client.openapi.models.V1DaemonSet;
+import io.kubernetes.client.openapi.models.V1Namespace;
+import io.kubernetes.client.openapi.models.V1Node;
+import io.kubernetes.client.openapi.models.V1Pod;
+import io.kubernetes.client.openapi.models.V1ResourceQuota;
+import io.kubernetes.client.openapi.models.V1Secret;
 import io.ten1010.aipub.projectcontroller.controller.BoundObjectResolver;
-import io.ten1010.aipub.projectcontroller.domain.k8s.*;
+import io.ten1010.aipub.projectcontroller.domain.k8s.AipubUserRoleNameResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.ImagePullSecretNameResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceNameResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.ProjectRoleEnum;
+import io.ten1010.aipub.projectcontroller.domain.k8s.ResourceQuotaNameResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.RoleNameResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.*;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.AipubUserUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.UsernameUtils;
 import io.ten1010.aipub.projectcontroller.informer.IndexerConstants;
 
 import java.util.List;
@@ -80,7 +92,7 @@ public class RequestBuilderFactory {
                 .toList();
     }
 
-    public Function<V1alpha1Project, List<Request>> projectToRoles(boolean namespacedRole) {
+    public Function<V1alpha1Project, List<Request>> projectToProjectRoles(boolean namespacedRole) {
         return project -> {
             String projName = K8sObjectUtils.getName(project);
             String adminRole = this.roleNameResolver.resolveRoleName(projName, ProjectRoleEnum.PROJECT_MANAGER);
@@ -90,6 +102,19 @@ public class RequestBuilderFactory {
                 return List.of(new Request(namespace, adminRole), new Request(namespace, developerRole));
             }
             return List.of(new Request(adminRole), new Request(developerRole));
+        };
+    }
+
+    public Function<V1alpha1Project, List<Request>> projectToAipubUserRoles() {
+        return project -> {
+            String projName = K8sObjectUtils.getName(project);
+            String namespace = this.namespaceNameResolver.resolveNamespaceName(projName);
+            return this.boundObjectResolver.getAllBoundAipubUsers(project)
+                    .stream()
+                    .map(K8sObjectUtils::getName)
+                    .map(this.aipubUserRoleNameResolver::resolveRoleName)
+                    .map(roleName -> new Request(projName, roleName))
+                    .toList();
         };
     }
 
@@ -142,6 +167,17 @@ public class RequestBuilderFactory {
         };
     }
 
+    public Function<V1alpha1AipubUser, List<Request>> aipubUserToAipubUserRoles() {
+        return user -> {
+            String userName = K8sObjectUtils.getName(user);
+            String roleName = this.aipubUserRoleNameResolver.resolveRoleName(userName);
+            return AipubUserUtils.getAllBoundProjects(user)
+                    .stream()
+                    .map(projName -> new Request(projName, roleName))
+                    .toList();
+        };
+    }
+
     public Function<V1alpha1AipubUser, List<Request>> aipubUserToBoundProjects() {
         return aipubUser -> this.boundObjectResolver.getAllBoundProjects(aipubUser).stream()
                 .map(K8sObjectUtils::getName)
@@ -185,7 +221,7 @@ public class RequestBuilderFactory {
     }
 
     public Function<V1alpha1NodeGroup, List<Request>> nodeGroupToRoles(boolean namespacedRole) {
-        Function<V1alpha1Project, List<Request>> projectToRoles = projectToRoles(namespacedRole);
+        Function<V1alpha1Project, List<Request>> projectToRoles = projectToProjectRoles(namespacedRole);
         return nodeGroup -> this.boundObjectResolver.getAllBoundProjects(nodeGroup).stream()
                 .flatMap(project -> projectToRoles.apply(project).stream())
                 .toList();
@@ -199,7 +235,7 @@ public class RequestBuilderFactory {
     }
 
     public Function<V1alpha1ResourceSet, List<Request>> resourceSetToRoles() {
-        Function<V1alpha1Project, List<Request>> projectToRoles = projectToRoles(false);
+        Function<V1alpha1Project, List<Request>> projectToRoles = projectToProjectRoles(false);
         return resourceSet -> {
             List<V1Node> allBoundNodes = this.boundObjectResolver.getAllBoundNodes(resourceSet);
             return allBoundNodes.stream()
@@ -233,7 +269,7 @@ public class RequestBuilderFactory {
     }
 
     public Function<V1Node, List<Request>> nodeToRoles(boolean namespacedRole) {
-        Function<V1alpha1Project, List<Request>> projectToRoles = projectToRoles(namespacedRole);
+        Function<V1alpha1Project, List<Request>> projectToRoles = projectToProjectRoles(namespacedRole);
         return node -> this.boundObjectResolver.getAllBoundProjects(node).stream()
                 .flatMap(project -> projectToRoles.apply(project).stream())
                 .toList();
@@ -256,6 +292,84 @@ public class RequestBuilderFactory {
             return podsBoundToNode.stream()
                     .map(pod -> new Request(K8sObjectUtils.getNamespace(pod), K8sObjectUtils.getName(pod)))
                     .toList();
+        };
+    }
+
+    public Function<V1Workspace, List<Request>> workspaceToAipubUserRoles() {
+        return job -> {
+            String projName = K8sObjectUtils.getNamespace(job);
+            Optional<String> usernameOpt = UsernameUtils.getUsername(job);
+
+            if (usernameOpt.isPresent()) {
+                String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());
+                return List.of(new Request(projName, roleName));
+            }
+            return List.of();
+        };
+    }
+
+    public Function<V1alpha1AipubJob, List<Request>> aipubJobToAipubUserRoles() {
+        return job -> {
+            String projName = K8sObjectUtils.getNamespace(job);
+            Optional<String> usernameOpt = UsernameUtils.getUsername(job);
+
+            if (usernameOpt.isPresent()) {
+                String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());
+                return List.of(new Request(projName, roleName));
+            }
+            return List.of();
+        };
+    }
+
+    public Function<V1alpha1Operation, List<Request>> operationToAipubUserRoles() {
+        return operation -> {
+            String projName = K8sObjectUtils.getNamespace(operation);
+            Optional<String> usernameOpt = UsernameUtils.getUsername(operation);
+
+            if (usernameOpt.isPresent()) {
+                String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());
+                return List.of(new Request(projName, roleName));
+            }
+            return List.of();
+        };
+    }
+
+    public Function<V1alpha1AipubVolume, List<Request>> aipubVolumeToAipubUserRoles() {
+        return aipubVolume -> {
+            String projName = K8sObjectUtils.getNamespace(aipubVolume);
+            Optional<String> usernameOpt = UsernameUtils.getUsername(aipubVolume);
+
+            if (usernameOpt.isPresent()) {
+                String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());
+                return List.of(new Request(projName, roleName));
+            }
+            return List.of();
+        };
+    }
+
+    public Function<V1alpha1SftpServer, List<Request>> sftpServerToAipubUserRoles() {
+        return sftpServer -> {
+            String projName = K8sObjectUtils.getNamespace(sftpServer);
+            Optional<String> usernameOpt = UsernameUtils.getUsername(sftpServer);
+
+            if (usernameOpt.isPresent()) {
+                String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());
+                return List.of(new Request(projName, roleName));
+            }
+            return List.of();
+        };
+    }
+
+    public Function<V1FtpServer, List<Request>> ftpServerToAipubUserRoles() {
+        return ftpServer -> {
+            String projName = K8sObjectUtils.getNamespace(ftpServer);
+            Optional<String> usernameOpt = UsernameUtils.getUsername(ftpServer);
+
+            if (usernameOpt.isPresent()) {
+                String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());
+                return List.of(new Request(projName, roleName));
+            }
+            return List.of();
         };
     }
 

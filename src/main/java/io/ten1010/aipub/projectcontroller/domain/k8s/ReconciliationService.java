@@ -16,6 +16,8 @@ import java.util.stream.Collectors;
 public class ReconciliationService {
 
     private static final String REQUESTS_STORAGE_QUOTA_RESOURCE_NAME = "requests.storage";
+    private static final List<String> BASIC_VERBS = List.of("create", "get", "watch", "list");
+    private static final List<String> UPDATABLE_VERBS = List.of("update", "patch", "delete");
 
     private static List<V1OwnerReference> removeOwnerReferencesThatReferToProjectKind(List<V1OwnerReference> references) {
         return references.stream()
@@ -25,6 +27,10 @@ public class ReconciliationService {
     }
 
     private static List<V1OwnerReference> removeOwnerReferencesThatReferToAipubUserKind(List<V1OwnerReference> references) {
+        List<V1OwnerReference> list = references.stream()
+                .filter(e -> !(ProjectApiConstants.PROJECT_API_VERSION.equals(e.getApiVersion()) &&
+                        ProjectApiConstants.AIPUB_USER_RESOURCE_KIND.equals(e.getKind())))
+                .toList();
         return references.stream()
                 .filter(e -> !(ProjectApiConstants.PROJECT_API_VERSION.equals(e.getApiVersion()) &&
                         ProjectApiConstants.AIPUB_USER_RESOURCE_KIND.equals(e.getKind())))
@@ -217,6 +223,7 @@ public class ReconciliationService {
     private final DockerConfigJsonResolver dockerConfigJsonResolver;
     private final RoleNameResolver roleNameResolver;
     private final AipubUserRoleNameResolver aipubUserRoleNameResolver;
+    private final WorkloadResourceResolver workloadResourceResolver;
     private final Gson gson;
     private final ObjectMapper mapper;
 
@@ -225,6 +232,7 @@ public class ReconciliationService {
         this.dockerConfigJsonResolver = dockerConfigJsonResolver;
         this.roleNameResolver = new RoleNameResolver();
         this.aipubUserRoleNameResolver = new AipubUserRoleNameResolver();
+        this.workloadResourceResolver = new WorkloadResourceResolver();
         this.gson = new Gson();
         this.mapper = new ObjectMapperFactory().createObjectMapper();
     }
@@ -232,6 +240,7 @@ public class ReconciliationService {
     public List<V1OwnerReference> reconcileOwnerReferences(@Nullable KubernetesObject existing, @Nullable V1alpha1Project project) {
         List<V1OwnerReference> existingReferences = existing == null ? List.of() : K8sObjectUtils.getOwnerReferences(existing);
         List<V1OwnerReference> filtered = removeOwnerReferencesThatReferToProjectKind(existingReferences);
+        filtered = removeOwnerReferencesThatReferToAipubUserKind(filtered);
 
         if (project == null) {
             return filtered;
@@ -245,6 +254,7 @@ public class ReconciliationService {
     public List<V1OwnerReference> reconcileOwnerReferences(@Nullable KubernetesObject existing, @Nullable V1alpha1AipubUser user) {
         List<V1OwnerReference> existingReferences = existing == null ? List.of() : K8sObjectUtils.getOwnerReferences(existing);
         List<V1OwnerReference> filtered = removeOwnerReferencesThatReferToAipubUserKind(existingReferences);
+        filtered = removeOwnerReferencesThatReferToProjectKind(filtered);
 
         if (user == null) {
             return filtered;
@@ -411,11 +421,11 @@ public class ReconciliationService {
         return null;
     }
 
-    public List<V1PolicyRule> reconcileRoleRules(
+    public List<V1PolicyRule> reconcileProjectRoleRules(
             V1alpha1Project project,
             ProjectRoleEnum projectRoleEnum) {
         return switch (projectRoleEnum) {
-            case PROJECT_MANAGER, PROJECT_DEVELOPER -> {
+            case PROJECT_MANAGER -> {
                 V1PolicyRule coreApiRule = new V1PolicyRuleBuilder().withApiGroups("")
                         .withResources(
                                 "pods",
@@ -501,7 +511,119 @@ public class ReconciliationService {
                         aipubVolumesApiRule
                 );
             }
+
+            case PROJECT_DEVELOPER -> {
+                V1PolicyRule coreApiRule = new V1PolicyRuleBuilder().withApiGroups("")
+                        .withResources(
+                                "pods",
+                                "pods/log",
+                                "pods/exec",
+                                "services",
+                                "configmaps",
+                                "secrets",
+                                "persistentvolumeclaims",
+                                "serviceaccounts",
+                                "limitranges",
+                                "events",
+                                "replicationcontrollers",
+                                "endpoints")
+                        .withVerbs(BASIC_VERBS)
+                        .build();
+                V1PolicyRule eventApiRule = new V1PolicyRuleBuilder().withApiGroups("events.k8s.io")
+                        .withResources("events")
+                        .withVerbs(BASIC_VERBS)
+                        .build();
+                V1PolicyRule batchApiRule = new V1PolicyRuleBuilder().withApiGroups("batch")
+                        .withResources("jobs", "cronjobs")
+                        .withVerbs(BASIC_VERBS)
+                        .build();
+                V1PolicyRule appsApiRule = new V1PolicyRuleBuilder().withApiGroups("apps")
+                        .withResources("deployments", "statefulsets", "daemonsets", "replicasets")
+                        .withVerbs(BASIC_VERBS)
+                        .build();
+                V1PolicyRule networkingApiRule = new V1PolicyRuleBuilder().withApiGroups("networking.k8s.io")
+                        .withResources("ingresses")
+                        .withVerbs(BASIC_VERBS)
+                        .build();
+                V1PolicyRule autoscalingApiRule = new V1PolicyRuleBuilder().withApiGroups("autoscaling")
+                        .withResources("horizontalpodautoscalers")
+                        .withVerbs(BASIC_VERBS)
+                        .build();
+                V1PolicyRule poddisruptionbudgetApiRule = new V1PolicyRuleBuilder().withApiGroups("policy")
+                        .withResources("poddisruptionbudgets")
+                        .withVerbs(BASIC_VERBS)
+                        .build();
+
+                //todo --
+                V1PolicyRule aipubOperationApiRule = new V1PolicyRuleBuilder().withApiGroups("aipub.ten1010.io")
+                        .withResources("operations")
+                        .withVerbs(BASIC_VERBS)
+                        .build();
+                //todo --
+                V1PolicyRule aipubWorkspaceApiRule = new V1PolicyRuleBuilder().withApiGroups("aipub.ten1010.io")
+                        .withResources("workspaces")
+                        .withVerbs(BASIC_VERBS)
+                        .build();
+                V1PolicyRule aipubJobsApiRule = new V1PolicyRuleBuilder().withApiGroups("aipub.ten1010.io")
+                        .withResources("aipubjobs")
+                        .withVerbs(BASIC_VERBS)
+                        .build();
+                V1PolicyRule aipubOperationRevisionApiRule = new V1PolicyRuleBuilder().withApiGroups("aipub.ten1010.io")
+                        .withResources("operationrevisions")
+                        .withVerbs(BASIC_VERBS)
+                        .build();
+                V1PolicyRule aipubFtpServerApiRule = new V1PolicyRuleBuilder().withApiGroups("aipub.ten1010.io")
+                        .withResources("ftpservers")
+                        .withVerbs(BASIC_VERBS)
+                        .build();
+                V1PolicyRule aipubVolumesApiRule = new V1PolicyRuleBuilder().withApiGroups("aipub.ten1010.io")
+                        .withResources("aipubvolumes")
+                        .withVerbs(BASIC_VERBS)
+                        .build();
+                //todo --
+
+                yield List.of(
+                        coreApiRule,
+                        eventApiRule,
+                        batchApiRule,
+                        appsApiRule,
+                        networkingApiRule,
+                        autoscalingApiRule,
+                        poddisruptionbudgetApiRule,
+                        aipubOperationApiRule,
+                        aipubOperationRevisionApiRule,
+                        aipubWorkspaceApiRule,
+                        aipubJobsApiRule,
+                        aipubFtpServerApiRule,
+                        aipubVolumesApiRule
+                );
+            }
         };
+    }
+
+    public List<V1PolicyRule> reconcileAipubUserRoleRules(
+            V1alpha1AipubUser aipubUser,
+            V1alpha1Project project,
+            List<KubernetesObject> workloads) {
+
+        //todo --
+        ArrayList<V1PolicyRule> workloadRules = new ArrayList<>();
+        for (KubernetesObject workload : workloads) {
+            Optional<String> usernameOpt = UsernameUtils.getUsername(workload);
+            String workloadName = K8sObjectUtils.getName(workload);
+            if (usernameOpt.isPresent() && usernameOpt.get().equals(K8sObjectUtils.getName(aipubUser))) {
+                Optional<String> resourceOpt = this.workloadResourceResolver.resolveResource(workload);
+                if (resourceOpt.isPresent()) {
+                    V1PolicyRule rule = this.buildUpdateDeleteRoleRule(ProjectApiConstants.AIPUB_GROUP, resourceOpt.get(), workloadName);
+                    workloadRules.add(rule);
+                }
+
+            }
+        }
+
+        ArrayList<V1PolicyRule> reconciledRules = new ArrayList<>();
+        reconciledRules.addAll(workloadRules);
+        return reconciledRules;
     }
 
     public V1RoleRef reconcileClusterRoleRef(V1alpha1Project project, ProjectRoleEnum projRoleEnum) {
@@ -524,6 +646,15 @@ public class ReconciliationService {
 
     public V1RoleRef reconcileRoleRef(V1alpha1Project project, ProjectRoleEnum projRoleEnum) {
         String roleName = this.roleNameResolver.resolveRoleName(K8sObjectUtils.getName(project), projRoleEnum);
+        return new V1RoleRefBuilder()
+                .withApiGroup("rbac.authorization.k8s.io")
+                .withKind("Role")
+                .withName(roleName)
+                .build();
+    }
+
+    public V1RoleRef reconcileRoleRef(V1alpha1AipubUser user) {
+        String roleName = this.aipubUserRoleNameResolver.resolveRoleName(K8sObjectUtils.getName(user));
         return new V1RoleRefBuilder()
                 .withApiGroup("rbac.authorization.k8s.io")
                 .withKind("Role")
@@ -735,6 +866,15 @@ public class ReconciliationService {
         reconciled.add(ref);
 
         return reconciled;
+    }
+
+    // todo -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
+    private V1PolicyRule buildUpdateDeleteRoleRule(String apiGroup, String resource, String resourceName) {
+        return new V1PolicyRuleBuilder().withApiGroups(apiGroup)
+                .withResources(resource)
+                .withVerbs(UPDATABLE_VERBS)
+                .withResourceNames(resourceName)
+                .build();
     }
 
     private Map<String, String> buildBoundProjectsAnnotation(List<V1alpha1Project> boundProjects) {

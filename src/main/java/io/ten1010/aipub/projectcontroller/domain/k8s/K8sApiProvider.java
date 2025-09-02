@@ -13,7 +13,7 @@ public class K8sApiProvider {
                 V1alpha1Project.class,
                 V1alpha1ProjectList.class,
                 ProjectApiConstants.PROJECT_GROUP,
-                ProjectApiConstants.VERSION,
+                ProjectApiConstants.VERSION_V1ALPHA1,
                 ProjectApiConstants.PROJECT_RESOURCE_PLURAL,
                 apiClient);
     }
@@ -23,7 +23,7 @@ public class K8sApiProvider {
                 V1alpha1AipubUser.class,
                 V1alpha1AipubUserList.class,
                 ProjectApiConstants.PROJECT_GROUP,
-                ProjectApiConstants.VERSION,
+                ProjectApiConstants.VERSION_V1ALPHA1,
                 ProjectApiConstants.AIPUB_USER_RESOURCE_PLURAL,
                 apiClient);
     }
@@ -33,7 +33,7 @@ public class K8sApiProvider {
                 V1alpha1NodeGroup.class,
                 V1alpha1NodeGroupList.class,
                 ProjectApiConstants.PROJECT_GROUP,
-                ProjectApiConstants.VERSION,
+                ProjectApiConstants.VERSION_V1ALPHA1,
                 ProjectApiConstants.NODE_GROUP_RESOURCE_PLURAL,
                 apiClient);
     }
@@ -43,7 +43,7 @@ public class K8sApiProvider {
                 V1alpha1ImageHub.class,
                 V1alpha1ImageHubList.class,
                 ProjectApiConstants.PROJECT_GROUP,
-                ProjectApiConstants.VERSION,
+                ProjectApiConstants.VERSION_V1ALPHA1,
                 ProjectApiConstants.IMAGE_HUB_RESOURCE_PLURAL,
                 apiClient);
     }
@@ -53,8 +53,74 @@ public class K8sApiProvider {
                 V1alpha1ResourceSet.class,
                 V1alpha1ResourceSetList.class,
                 ProjectApiConstants.AIPUB_GROUP,
-                ProjectApiConstants.VERSION,
+                ProjectApiConstants.VERSION_V1ALPHA1,
                 ProjectApiConstants.RESOURCE_SET_RESOURCE_PLURAL,
+                apiClient
+        );
+    }
+
+    private static GenericKubernetesApi<V1Workspace, V1WorkspaceList> createWorkspaceApi(ApiClient apiClient) {
+        return new GenericKubernetesApi<>(
+                V1Workspace.class,
+                V1WorkspaceList.class,
+                ProjectApiConstants.AIPUB_GROUP,
+                ProjectApiConstants.VERSION_V1,
+                ProjectApiConstants.WORKSPACE_RESOURCE_PLURAL,
+                apiClient
+        );
+    }
+
+    private static GenericKubernetesApi<V1alpha1AipubJob, V1alpha1AipubJobList> createAipubJobApi(ApiClient apiClient) {
+        return new GenericKubernetesApi<>(
+                V1alpha1AipubJob.class,
+                V1alpha1AipubJobList.class,
+                ProjectApiConstants.AIPUB_GROUP,
+                ProjectApiConstants.VERSION_V1ALPHA1,
+                ProjectApiConstants.AIPUB_JOB_RESOURCE_PLURAL,
+                apiClient
+        );
+    }
+
+    private static GenericKubernetesApi<V1alpha1Operation, V1alpha1OperationList> createOperationApi(ApiClient apiClient) {
+        return new GenericKubernetesApi<>(
+                V1alpha1Operation.class,
+                V1alpha1OperationList.class,
+                ProjectApiConstants.AIPUB_GROUP,
+                ProjectApiConstants.VERSION_V1ALPHA1,
+                ProjectApiConstants.OPERATION_RESOURCE_PLURAL,
+                apiClient
+        );
+    }
+
+    private static GenericKubernetesApi<V1alpha1AipubVolume, V1alpha1AipubVolumeList> createAipubVolumeApi(ApiClient apiClient) {
+        return new GenericKubernetesApi<>(
+                V1alpha1AipubVolume.class,
+                V1alpha1AipubVolumeList.class,
+                ProjectApiConstants.AIPUB_GROUP,
+                ProjectApiConstants.VERSION_V1ALPHA1,
+                ProjectApiConstants.AIPUB_VOLUME_RESOURCE_PLURAL,
+                apiClient
+        );
+    }
+
+    private static GenericKubernetesApi<V1alpha1SftpServer, V1alpha1SftpServerList> createSftpServerApi(ApiClient apiClient) {
+        return new GenericKubernetesApi<>(
+                V1alpha1SftpServer.class,
+                V1alpha1SftpServerList.class,
+                ProjectApiConstants.AIPUB_GROUP,
+                ProjectApiConstants.VERSION_V1ALPHA1,
+                ProjectApiConstants.SFTP_SERVER_RESOURCE_PLURAL,
+                apiClient
+        );
+    }
+
+    private static GenericKubernetesApi<V1FtpServer, V1FtpServerList> createFtpServerApi(ApiClient apiClient) {
+        return new GenericKubernetesApi<>(
+                V1FtpServer.class,
+                V1FtpServerList.class,
+                ProjectApiConstants.AIPUB_GROUP,
+                ProjectApiConstants.VERSION_V1,
+                ProjectApiConstants.FTP_SERVER_RESOURCE_PLURAL,
                 apiClient
         );
     }
@@ -66,6 +132,12 @@ public class K8sApiProvider {
     private final GenericKubernetesApi<V1alpha1NodeGroup, V1alpha1NodeGroupList> nodeGroupApi;
     private final GenericKubernetesApi<V1alpha1ImageHub, V1alpha1ImageHubList> imageHubApi;
     private final GenericKubernetesApi<V1alpha1ResourceSet, V1alpha1ResourceSetList> resourceSetApi;
+    private final GenericKubernetesApi<V1Workspace, V1WorkspaceList> workspaceApi;
+    private final GenericKubernetesApi<V1alpha1AipubJob, V1alpha1AipubJobList> aipubJobApi;
+    private final GenericKubernetesApi<V1alpha1Operation, V1alpha1OperationList> operationApi;
+    private final GenericKubernetesApi<V1alpha1AipubVolume, V1alpha1AipubVolumeList> aipubVolumeApi;
+    private final GenericKubernetesApi<V1alpha1SftpServer, V1alpha1SftpServerList> sftpServerApi;
+    private final GenericKubernetesApi<V1FtpServer, V1FtpServerList> ftpServerApi;
 
     public K8sApiProvider(ApiClient apiClient) {
         this.apiClient = apiClient;
@@ -74,6 +146,12 @@ public class K8sApiProvider {
         this.nodeGroupApi = createNodeGroupApi(apiClient);
         this.imageHubApi = createImageHubApi(apiClient);
         this.resourceSetApi = createResourceSetApi(apiClient);
+        this.workspaceApi = createWorkspaceApi(apiClient);
+        this.aipubJobApi = createAipubJobApi(apiClient);
+        this.operationApi = createOperationApi(apiClient);
+        this.aipubVolumeApi = createAipubVolumeApi(apiClient);
+        this.sftpServerApi = createSftpServerApi(apiClient);
+        this.ftpServerApi = createFtpServerApi(apiClient);
     }
 
 }

@@ -5,10 +5,11 @@ public final class ProjectApiConstants {
     public static final String PROJECT_GROUP = "project.aipub.ten1010.io";
     public static final String AIPUB_GROUP = "aipub.ten1010.io";
     public static final String COASTER_GROUP = "coaster.ten1010.io";
-    public static final String VERSION = "v1alpha1";
-    public static final String PROJECT_API_VERSION = PROJECT_GROUP + "/" + VERSION;
-    public static final String AIPUB_API_VERSION = AIPUB_GROUP + "/" + VERSION;
-    public static final String COASTER_API_VERSION = COASTER_GROUP + "/" + VERSION;
+    public static final String VERSION_V1ALPHA1 = "v1alpha1";
+    public static final String VERSION_V1 = "v1";
+    public static final String PROJECT_API_VERSION = PROJECT_GROUP + "/" + VERSION_V1ALPHA1;
+    public static final String AIPUB_API_VERSION = AIPUB_GROUP + "/" + VERSION_V1ALPHA1;
+    public static final String COASTER_API_VERSION = COASTER_GROUP + "/" + VERSION_V1ALPHA1;
 
     public static final String PROJECT_RESOURCE_KIND = "Project";
     public static final String PROJECT_RESOURCE_PLURAL = "projects";
@@ -45,6 +46,24 @@ public final class ProjectApiConstants {
 
     public static final String GPU_CONFIG_RESOURCE_KIND = "GPUConfig";
     public static final String GPU_CONFIG_RESOURCE_PLURAL = "gpuconfigs";
+
+    public static final String WORKSPACE_RESOURCE_KIND = "Workspace";
+    public static final String WORKSPACE_RESOURCE_PLURAL = "workspaces";
+
+    public static final String AIPUB_JOB_RESOURCE_KIND = "AIPubJob";
+    public static final String AIPUB_JOB_RESOURCE_PLURAL = "aipubjobs";
+
+    public static final String OPERATION_RESOURCE_KIND = "Operation";
+    public static final String OPERATION_RESOURCE_PLURAL = "operations";
+
+    public static final String AIPUB_VOLUME_RESOURCE_KIND = "AIPubVolume";
+    public static final String AIPUB_VOLUME_RESOURCE_PLURAL = "aipubvolumes";
+
+    public static final String SFTP_SERVER_RESOURCE_KIND = "SFTPServer";
+    public static final String SFTP_SERVER_RESOURCE_PLURAL = "sftpservers";
+
+    public static final String FTP_SERVER_RESOURCE_KIND = "FtpServer";
+    public static final String FTP_SERVER_RESOURCE_PLURAL = "ftpservers";
 
     private ProjectApiConstants() {
     }

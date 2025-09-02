@@ -17,6 +17,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.RoleUtils;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -71,7 +72,7 @@ public class RoleReconciler extends AbstractReconciler {
         }
 
         List<V1OwnerReference> reconciledReferences = this.reconciliationService.reconcileOwnerReferences(roleOpt.orElse(null), projectOpt.get());
-        List<V1PolicyRule> reconciledRules = this.reconciliationService.reconcileRoleRules(projectOpt.get(), projRoleEnum);
+        List<V1PolicyRule> reconciledRules = this.reconciliationService.reconcileProjectRoleRules(projectOpt.get(), projRoleEnum);
 
         if (roleOpt.isPresent()) {
             String projNameFromRoleName = K8sObjectUtils.getName(projectOpt.get());

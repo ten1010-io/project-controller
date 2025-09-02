@@ -50,7 +50,7 @@ public class AipubUserClusterRoleControllerFactory implements ControllerFactory 
 
     private ControllerWatch<V1ClusterRole> createClusterRoleWatch(WorkQueue<Request> workQueue) {
         DefaultControllerWatch<V1ClusterRole> watch = new DefaultControllerWatch<>(workQueue, V1ClusterRole.class);
-        watch.setOnUpdateFilter(this.onUpdateFilterFactory.clusterRoleFilter());
+        watch.setOnUpdateFilter(this.onUpdateFilterFactory.aipubUserClusterRoleFilter());
         return watch;
     }
 

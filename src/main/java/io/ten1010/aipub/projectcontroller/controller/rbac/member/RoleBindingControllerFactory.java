@@ -58,7 +58,7 @@ public class RoleBindingControllerFactory implements ControllerFactory {
     private ControllerWatch<V1alpha1Project> createProjectWatch(WorkQueue<Request> workQueue) {
         DefaultControllerWatch<V1alpha1Project> watch = new DefaultControllerWatch<>(workQueue, V1alpha1Project.class);
         watch.setOnUpdateFilter(this.onUpdateFilterFactory.projectSpecFieldFilter());
-        watch.setRequestBuilder(this.requestBuilderFactory.projectToRoles(true));
+        watch.setRequestBuilder(this.requestBuilderFactory.projectToProjectRoles(true));
         return watch;
     }
 
