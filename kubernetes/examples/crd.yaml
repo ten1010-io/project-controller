@@ -142,3 +142,139 @@ spec:
       storage: true
       subresources:
         status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: noderesourcestatuses.coaster.ten1010.io
+spec:
+  conversion:
+    strategy: None
+  group: coaster.ten1010.io
+  names:
+    categories:
+      - all
+    kind: NodeResourceStatus
+    listKind: NodeResourceStatusList
+    plural: noderesourcestatuses
+    singular: noderesourcestatus
+  scope: Cluster
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .allocatable
+          name: ALLOCATABLE
+          type: string
+        - jsonPath: .allocated
+          name: ALLOCATED
+          type: string
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            allocatable:
+              additionalProperties:
+                type: string
+              nullable: true
+              type: object
+            allocated:
+              additionalProperties:
+                type: string
+              nullable: true
+              type: object
+            metadata:
+              type: object
+          required:
+            - metadata
+          type: object
+      served: true
+      storage: true
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: resourcesets.aipub.ten1010.io
+spec:
+  conversion:
+    strategy: None
+  group: aipub.ten1010.io
+  names:
+    categories:
+      - all
+    kind: ResourceSet
+    listKind: ResourceSetList
+    plural: resourcesets
+    shortNames:
+      - rss
+    singular: resourceset
+  scope: Cluster
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .spec.cpu
+          name: CPU
+          type: string
+        - jsonPath: .spec.memory
+          name: MEMORY
+          type: string
+        - jsonPath: .spec.gpu
+          name: GPU
+          type: string
+        - jsonPath: .status.category
+          name: CATEGORY
+          type: string
+        - jsonPath: .status.ready
+          name: READY
+          type: boolean
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            metadata:
+              type: object
+            spec:
+              properties:
+                cpu:
+                  type: string
+                gpu:
+                  type: string
+                memory:
+                  type: string
+                nodes:
+                  items:
+                    properties:
+                      nodeName:
+                        type: string
+                      resourcesetCount:
+                        type: integer
+                    type: object
+                  type: array
+              required:
+                - cpu
+                - memory
+              type: object
+            status:
+              properties:
+                category:
+                  type: string
+                nodes:
+                  items:
+                    properties:
+                      nodeName:
+                        type: string
+                      resourcesetCount:
+                        type: integer
+                    type: object
+                  type: array
+                ready:
+                  type: boolean
+                resourceName:
+                  type: string
+              type: object
+          required:
+            - metadata
+            - spec
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
