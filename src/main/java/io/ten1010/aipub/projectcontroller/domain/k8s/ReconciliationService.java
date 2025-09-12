@@ -298,7 +298,7 @@ public class ReconciliationService {
         };
 
         List<String> nodes = bindingNodes.stream()
-                .map(NodeResourceStatusUtils::getName)
+                .map(K8sObjectUtils::getName)
                 .toList();
         V1PolicyRule nodeApiRule = switch (projectRoleEnum) {
             case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()

@@ -211,17 +211,6 @@ public class RequestBuilderFactory {
         };
     }
 
-    public Function<V1alpha1NodeResourceStatus, List<Request>> nodeResourceStatusToRoles() {
-        Function<V1alpha1Project, List<Request>> projectToRoles = projectToRoles(false);
-        return nodeResourceStatus -> {
-            V1Node node = this.sharedInformerFactory.getExistingSharedIndexInformer(V1Node.class).getIndexer().getByKey(K8sObjectUtils.getName(nodeResourceStatus));
-            return this.boundObjectResolver.getAllBoundProjects(node).stream()
-                    .flatMap(project -> projectToRoles.apply(project).stream())
-                    .toList();
-        };
-    }
-
-
     public Function<V1alpha1ImageHub, List<Request>> imageHubToBoundProjects() {
         return imgHub -> this.boundObjectResolver.getAllBoundProjects(imgHub).stream()
                 .map(K8sObjectUtils::getName)

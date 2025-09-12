@@ -14,7 +14,6 @@ public final class IndexerConstants {
     public static final String NODE_NAME_TO_NODE_GROUPS_INDEXER_NAME = "NODE_NAME_TO_NODE_GROUPS";
 
     public static final String NODE_NAME_TO_RESOURCE_SETS_INDEXER_NAME = "NODE_NAME_TO_RESOURCE_SETS_INDEXER_NAME";
-    public static final String NODE_NAME_TO_NODE_RESOURCE_STATUSES_INDEXER_NAME = "NODE_NAME_TO_NODE_RESOURCE_STATUSES_INDEXER_NAME";
 
     public static final String NODE_NAME_TO_POD_INDEXER_NAME = "NODE_NAME_TO_POD";
 

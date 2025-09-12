@@ -5,12 +5,39 @@ import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.apis.RbacAuthorizationV1Api;
-import io.kubernetes.client.openapi.models.*;
+import io.kubernetes.client.openapi.models.V1ClusterRole;
+import io.kubernetes.client.openapi.models.V1ClusterRoleBinding;
+import io.kubernetes.client.openapi.models.V1ClusterRoleBindingList;
+import io.kubernetes.client.openapi.models.V1ClusterRoleList;
+import io.kubernetes.client.openapi.models.V1Namespace;
+import io.kubernetes.client.openapi.models.V1NamespaceList;
+import io.kubernetes.client.openapi.models.V1Node;
+import io.kubernetes.client.openapi.models.V1NodeList;
+import io.kubernetes.client.openapi.models.V1Pod;
+import io.kubernetes.client.openapi.models.V1PodList;
+import io.kubernetes.client.openapi.models.V1ResourceQuota;
+import io.kubernetes.client.openapi.models.V1ResourceQuotaList;
+import io.kubernetes.client.openapi.models.V1Role;
+import io.kubernetes.client.openapi.models.V1RoleBinding;
+import io.kubernetes.client.openapi.models.V1RoleBindingList;
+import io.kubernetes.client.openapi.models.V1RoleList;
+import io.kubernetes.client.openapi.models.V1Secret;
+import io.kubernetes.client.openapi.models.V1SecretList;
 import io.kubernetes.client.util.CallGeneratorParams;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.*;
-import io.ten1010.aipub.projectcontroller.domain.k8s.util.*;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageHub;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeGroup;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectMember;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ResourceSet;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.LabelUtils;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.NodeGroupUtils;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.ProjectUtils;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.ResourceSetUtils;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.WorkloadUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -37,7 +64,6 @@ public class SharedInformerFactoryProvider {
         registerNodeGroupInformer(informerFactory);
         registerImageHubInformer(informerFactory);
         registerResourceSetInformer(informerFactory);
-        registerNodeResourceStatusInformer(informerFactory);
         registerNamespaceInformer(informerFactory);
         registerNodeInformer(informerFactory);
         registerClusterRoleInformer(informerFactory);
@@ -126,13 +152,6 @@ public class SharedInformerFactoryProvider {
         informer.addIndexers(Map.of(
                 IndexerConstants.NODE_NAME_TO_RESOURCE_SETS_INDEXER_NAME,
                 ResourceSetUtils::getSpecNodeNames));
-    }
-
-    private void registerNodeResourceStatusInformer(SharedInformerFactory informerFactory) {
-        informerFactory.sharedIndexInformerFor(
-                this.k8sApiProvider.getNodeResourceStatusApi(),
-                V1alpha1NodeResourceStatus.class,
-                DEFAULT_RESYNC_PERIOD);
     }
 
     private void registerNamespaceInformer(SharedInformerFactory informerFactory) {

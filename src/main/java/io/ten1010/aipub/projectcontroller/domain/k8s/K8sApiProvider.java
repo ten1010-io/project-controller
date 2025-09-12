@@ -59,17 +59,6 @@ public class K8sApiProvider {
         );
     }
 
-    private static GenericKubernetesApi<V1alpha1NodeResourceStatus, V1alpha1NodeResourceStatusList> createNodeResourceStatusApi(ApiClient apiClient) {
-        return new GenericKubernetesApi<>(
-                V1alpha1NodeResourceStatus.class,
-                V1alpha1NodeResourceStatusList.class,
-                ProjectApiConstants.COASTER_GROUP,
-                ProjectApiConstants.VERSION,
-                ProjectApiConstants.NODE_RESOURCE_STATUS_RESOURCE_PLURAL,
-                apiClient
-        );
-    }
-
     private final ApiClient apiClient;
 
     private final GenericKubernetesApi<V1alpha1Project, V1alpha1ProjectList> projectApi;
@@ -77,7 +66,6 @@ public class K8sApiProvider {
     private final GenericKubernetesApi<V1alpha1NodeGroup, V1alpha1NodeGroupList> nodeGroupApi;
     private final GenericKubernetesApi<V1alpha1ImageHub, V1alpha1ImageHubList> imageHubApi;
     private final GenericKubernetesApi<V1alpha1ResourceSet, V1alpha1ResourceSetList> resourceSetApi;
-    private final GenericKubernetesApi<V1alpha1NodeResourceStatus, V1alpha1NodeResourceStatusList> nodeResourceStatusApi;
 
     public K8sApiProvider(ApiClient apiClient) {
         this.apiClient = apiClient;
@@ -86,7 +74,6 @@ public class K8sApiProvider {
         this.nodeGroupApi = createNodeGroupApi(apiClient);
         this.imageHubApi = createImageHubApi(apiClient);
         this.resourceSetApi = createResourceSetApi(apiClient);
-        this.nodeResourceStatusApi = createNodeResourceStatusApi(apiClient);
     }
 
 }

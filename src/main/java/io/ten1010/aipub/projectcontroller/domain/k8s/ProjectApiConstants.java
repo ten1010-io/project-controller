@@ -31,9 +31,6 @@ public final class ProjectApiConstants {
     public static final String NODE_RESOURCE_RESOURCE_KIND = "NodeResources";
     public static final String NODE_RESOURCE_RESOURCE_PLURAL = "noderesources";
 
-    public static final String NODE_RESOURCE_STATUS_RESOURCE_KIND = "NodeResourceStatus";
-    public static final String NODE_RESOURCE_STATUS_RESOURCE_PLURAL = "noderesourcestatuses";
-
     public static final String TCP_PORT_VALIDATORS_RESOURCE_KIND = "TCPPortValidator";
     public static final String TCP_PORT_VALIDATORS_RESOURCE_PLURAL = "tcpportvalidators";
 
