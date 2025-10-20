@@ -14,11 +14,11 @@ app:
   k8s:
     verify-ssl: false
     kube-config:
-      mode: file
-      kube-config-path: /users/joon/.kube/config
+      mode: in_cluster
+      # kube-config-path: /users/user/.kube/config
   aipub:
     enabled: false
-    server-url: "https://aipub.cluster6.idc1.ten1010.io"
+    server-url: "https://aipub.example.com"
     verifying-ssl: false
     username: "testuser"
     password: "asdasdasd"
