@@ -373,10 +373,19 @@ public class ReconciliationService {
                     .withVerbs("create")
                     .build();
         };
+
+        V1PolicyRule ingressHostPathValidatorsApiRule = switch (projectRoleEnum) {
+            case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+                    .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
+                    .withResources(ProjectApiConstants.INGRESS_HOST_PATH_VALIDATORS_RESOURCE_PLURAL)
+                    .withVerbs("create")
+                    .build();
+        };
         //todo --
 
         return List.of(projectApiRule, namespaceApiRule, nodeGroupApiRule, nodeApiRule, resourceSetApiRule,
-                nodeResourcesApiRule, gpuConfigsApiRule, tcpPortValidatorsApiRule, storageClassesApiRule, ingressClassesApiRule);
+                nodeResourcesApiRule, gpuConfigsApiRule, tcpPortValidatorsApiRule, storageClassesApiRule,
+                ingressClassesApiRule, ingressHostPathValidatorsApiRule);
     }
 
     public List<V1PolicyRule> reconcileClusterRoleRules(V1alpha1AipubUser aipubUser) {
