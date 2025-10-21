@@ -271,6 +271,8 @@ public class ReconciliationService {
             List<V1alpha1NodeGroup> bindingNodeGroups,
             List<V1Node> bindingNodes,
             List<V1alpha1ResourceSet> bindingResourceSets) {
+        List<V1PolicyRule> reconciled = new ArrayList<>();
+
         V1PolicyRule projectApiRule = switch (projectRoleEnum) {
             case PROJECT_MANAGER -> new V1PolicyRuleBuilder()
                     .withApiGroups(ProjectApiConstants.PROJECT_GROUP)
@@ -285,6 +287,7 @@ public class ReconciliationService {
                     .withVerbs("get")
                     .build();
         };
+        reconciled.add(projectApiRule);
 
         V1PolicyRule namespaceApiRule = switch (projectRoleEnum) {
             case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
@@ -294,30 +297,38 @@ public class ReconciliationService {
                     .withVerbs("get")
                     .build();
         };
+        reconciled.add(namespaceApiRule);
 
         List<String> nodeGroups = bindingNodeGroups.stream()
                 .map(K8sObjectUtils::getName)
                 .toList();
-        V1PolicyRule nodeGroupApiRule = switch (projectRoleEnum) {
-            case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
-                    .withApiGroups(ProjectApiConstants.PROJECT_GROUP)
-                    .withResources(ProjectApiConstants.NODE_GROUP_RESOURCE_PLURAL)
-                    .withResourceNames(nodeGroups)
-                    .withVerbs("get")
-                    .build();
-        };
+        if (nodeGroups != null && nodeGroups.size() > 0) {
+            V1PolicyRule nodeGroupApiRule = switch (projectRoleEnum) {
+                case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+                        .withApiGroups(ProjectApiConstants.PROJECT_GROUP)
+                        .withResources(ProjectApiConstants.NODE_GROUP_RESOURCE_PLURAL)
+                        .withResourceNames(nodeGroups)
+                        .withVerbs("get")
+                        .build();
+            };
+            reconciled.add(nodeGroupApiRule);
+        }
 
         List<String> nodes = bindingNodes.stream()
                 .map(K8sObjectUtils::getName)
                 .toList();
-        V1PolicyRule nodeApiRule = switch (projectRoleEnum) {
-            case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
-                    .withApiGroups("")
-                    .withResources("nodes")
-                    .withResourceNames(nodes)
-                    .withVerbs("get")
-                    .build();
-        };
+        if (nodes != null && nodes.size() > 0) {
+            V1PolicyRule nodeApiRule = switch (projectRoleEnum) {
+                case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+                        .withApiGroups("")
+                        .withResources("nodes")
+                        .withResourceNames(nodes)
+                        .withVerbs("get")
+                        .build();
+            };
+            reconciled.add(nodeApiRule);
+        }
+
 
         //todo --
         V1PolicyRule storageClassesApiRule = switch (projectRoleEnum) {
@@ -327,6 +338,7 @@ public class ReconciliationService {
                     .withVerbs("get", "list")
                     .build();
         };
+        reconciled.add(storageClassesApiRule);
 
         V1PolicyRule ingressClassesApiRule = switch (projectRoleEnum) {
             case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
@@ -335,6 +347,7 @@ public class ReconciliationService {
                     .withVerbs("get", "list")
                     .build();
         };
+        reconciled.add(ingressClassesApiRule);
 
         V1PolicyRule nodeResourcesApiRule = switch (projectRoleEnum) {
             case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
@@ -344,6 +357,7 @@ public class ReconciliationService {
                     .withVerbs("get")
                     .build();
         };
+        reconciled.add(nodeResourcesApiRule);
 
         V1PolicyRule gpuConfigsApiRule = switch (projectRoleEnum) {
             case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
@@ -353,18 +367,22 @@ public class ReconciliationService {
                     .withVerbs("get")
                     .build();
         };
+        reconciled.add(gpuConfigsApiRule);
 
         List<String> resourceSetNames = bindingResourceSets.stream()
                 .map(K8sObjectUtils::getName)
                 .toList();
-        V1PolicyRule resourceSetApiRule = switch (projectRoleEnum) {
-            case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
-                    .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
-                    .withResources(ProjectApiConstants.RESOURCE_SET_RESOURCE_PLURAL)
-                    .withResourceNames(resourceSetNames)
-                    .withVerbs("get")
-                    .build();
-        };
+        if (resourceSetNames != null && resourceSetNames.size() > 0) {
+            V1PolicyRule resourceSetApiRule = switch (projectRoleEnum) {
+                case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+                        .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
+                        .withResources(ProjectApiConstants.RESOURCE_SET_RESOURCE_PLURAL)
+                        .withResourceNames(resourceSetNames)
+                        .withVerbs("get")
+                        .build();
+            };
+            reconciled.add(resourceSetApiRule);
+        }
 
         V1PolicyRule tcpPortValidatorsApiRule = switch (projectRoleEnum) {
             case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
@@ -373,6 +391,7 @@ public class ReconciliationService {
                     .withVerbs("create")
                     .build();
         };
+        reconciled.add(tcpPortValidatorsApiRule);
 
         V1PolicyRule ingressHostPathValidatorsApiRule = switch (projectRoleEnum) {
             case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
@@ -381,11 +400,10 @@ public class ReconciliationService {
                     .withVerbs("create")
                     .build();
         };
+        reconciled.add(ingressHostPathValidatorsApiRule);
         //todo --
 
-        return List.of(projectApiRule, namespaceApiRule, nodeGroupApiRule, nodeApiRule, resourceSetApiRule,
-                nodeResourcesApiRule, gpuConfigsApiRule, tcpPortValidatorsApiRule, storageClassesApiRule,
-                ingressClassesApiRule, ingressHostPathValidatorsApiRule);
+        return reconciled;
     }
 
     public List<V1PolicyRule> reconcileClusterRoleRules(V1alpha1AipubUser aipubUser) {
