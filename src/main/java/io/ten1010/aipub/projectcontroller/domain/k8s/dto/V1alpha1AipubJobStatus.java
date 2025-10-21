@@ -4,6 +4,7 @@ import lombok.Data;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.List;
 
 @Data
 public class V1alpha1AipubJobStatus {
@@ -13,13 +14,13 @@ public class V1alpha1AipubJobStatus {
     @Nullable
     private V1alpha1AipubJobPodState lastExecutionPods;
     @Nullable
-    private ArrayList<V1alpha1AipubJobInfo> failed;
+    private List<V1alpha1AipubJobInfo> failed;
     @Nullable
-    private ArrayList<V1alpha1AipubJobInfo> pending;
+    private List<V1alpha1AipubJobInfo> pending;
     @Nullable
-    private ArrayList<V1alpha1AipubJobInfo> running;
+    private List<V1alpha1AipubJobInfo> running;
     @Nullable
-    private ArrayList<V1alpha1AipubJobInfo> succeeded;
+    private List<V1alpha1AipubJobInfo> succeeded;
     @Nullable
     private V1alpha1AipubJobPodState state;
 

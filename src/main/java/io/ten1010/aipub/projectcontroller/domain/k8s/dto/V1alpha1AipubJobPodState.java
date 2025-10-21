@@ -7,10 +7,12 @@ import org.jspecify.annotations.Nullable;
 public class V1alpha1AipubJobPodState {
 
     @Nullable
-    private Long failed;
+    private String message;
     @Nullable
-    private Long scheduled;
+    private String reason;
     @Nullable
-    private Long succeeded;
+    private String timestamp;
+    @Nullable
+    private String type;
 
 }
