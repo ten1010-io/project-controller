@@ -2,7 +2,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: kibana-dashboard-ids
-  namespace: efk
+  namespace: aipub-efk
 rules:
   - apiGroups: [ "" ]
     resources: [ "configmaps" ]
@@ -13,13 +13,13 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: kibana-dashboard-ids
-  namespace: efk
+  namespace: aipub-efk
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: kibana-dashboard-ids
 subjects:
   - kind: Group
-    name: aipub-member
+    name: oidc:aipub-member
     apiGroup: rbac.authorization.k8s.io
 ---
