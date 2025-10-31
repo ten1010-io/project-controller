@@ -1,4 +1,4 @@
-namespace: efk
+namespace: aipub-efk
 generatorOptions:
   disableNameSuffixHash: true
 resources:
