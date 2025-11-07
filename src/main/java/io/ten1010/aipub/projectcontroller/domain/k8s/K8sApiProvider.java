@@ -2,8 +2,6 @@ package io.ten1010.aipub.projectcontroller.domain.k8s;
 
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.util.generic.GenericKubernetesApi;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1FtpServer;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1FtpServerList;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1WorkspaceList;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubJob;
@@ -40,7 +38,6 @@ public class K8sApiProvider {
   private final GenericKubernetesApi<V1alpha1Operation, V1alpha1OperationList> operationApi;
   private final GenericKubernetesApi<V1alpha1AipubVolume, V1alpha1AipubVolumeList> aipubVolumeApi;
   private final GenericKubernetesApi<V1alpha1SftpServer, V1alpha1SftpServerList> sftpServerApi;
-  private final GenericKubernetesApi<V1FtpServer, V1FtpServerList> ftpServerApi;
 
   public K8sApiProvider(ApiClient apiClient) {
     this.apiClient = apiClient;
@@ -54,7 +51,6 @@ public class K8sApiProvider {
     this.operationApi = createOperationApi(apiClient);
     this.aipubVolumeApi = createAipubVolumeApi(apiClient);
     this.sftpServerApi = createSftpServerApi(apiClient);
-    this.ftpServerApi = createFtpServerApi(apiClient);
   }
 
   private static GenericKubernetesApi<V1alpha1Project, V1alpha1ProjectList> createProjectApi(
@@ -169,18 +165,6 @@ public class K8sApiProvider {
         ProjectApiConstants.AIPUB_GROUP,
         ProjectApiConstants.VERSION_V1ALPHA1,
         ProjectApiConstants.SFTP_SERVER_RESOURCE_PLURAL,
-        apiClient
-    );
-  }
-
-  private static GenericKubernetesApi<V1FtpServer, V1FtpServerList> createFtpServerApi(
-      ApiClient apiClient) {
-    return new GenericKubernetesApi<>(
-        V1FtpServer.class,
-        V1FtpServerList.class,
-        ProjectApiConstants.AIPUB_GROUP,
-        ProjectApiConstants.VERSION_V1,
-        ProjectApiConstants.FTP_SERVER_RESOURCE_PLURAL,
         apiClient
     );
   }

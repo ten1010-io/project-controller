@@ -17,7 +17,6 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceNameResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ProjectRoleEnum;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ResourceQuotaNameResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.RoleNameResolver;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1FtpServer;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubJob;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
@@ -374,19 +373,6 @@ public class RequestBuilderFactory {
     return sftpServer -> {
       String projName = K8sObjectUtils.getNamespace(sftpServer);
       Optional<String> usernameOpt = UsernameUtils.getUsername(sftpServer);
-
-      if (usernameOpt.isPresent()) {
-        String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());
-        return List.of(new Request(projName, roleName));
-      }
-      return List.of();
-    };
-  }
-
-  public Function<V1FtpServer, List<Request>> ftpServerToAipubUserRoles() {
-    return ftpServer -> {
-      String projName = K8sObjectUtils.getNamespace(ftpServer);
-      Optional<String> usernameOpt = UsernameUtils.getUsername(ftpServer);
 
       if (usernameOpt.isPresent()) {
         String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());

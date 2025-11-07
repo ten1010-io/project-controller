@@ -20,7 +20,6 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceNameResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
 import io.ten1010.aipub.projectcontroller.domain.k8s.RoleNameResolver;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1FtpServer;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubJob;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
@@ -54,7 +53,6 @@ public class AipubUserRoleReconciler extends AbstractReconciler {
   private final Indexer<V1alpha1Operation> operationIndexer;
   private final Indexer<V1alpha1AipubVolume> aipubVolumeIndexer;
   private final Indexer<V1alpha1SftpServer> sftpServerIndexer;
-  private final Indexer<V1FtpServer> ftpServerIndexer;
   private final BoundObjectResolver boundObjectResolver;
   private final RbacAuthorizationV1Api rbacAuthorizationV1Api;
 
@@ -91,9 +89,6 @@ public class AipubUserRoleReconciler extends AbstractReconciler {
         .getIndexer();
     this.sftpServerIndexer = sharedInformerFactory
         .getExistingSharedIndexInformer(V1alpha1SftpServer.class)
-        .getIndexer();
-    this.ftpServerIndexer = sharedInformerFactory
-        .getExistingSharedIndexInformer(V1FtpServer.class)
         .getIndexer();
     this.boundObjectResolver = new BoundObjectResolver(sharedInformerFactory);
     this.rbacAuthorizationV1Api = new RbacAuthorizationV1Api(k8sApiProvider.getApiClient());
@@ -146,14 +141,11 @@ public class AipubUserRoleReconciler extends AbstractReconciler {
         IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME, request.getNamespace());
     List<V1alpha1SftpServer> sftpServers = this.sftpServerIndexer.byIndex(
         IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME, request.getNamespace());
-    List<V1FtpServer> ftpServers = this.ftpServerIndexer.byIndex(
-        IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME, request.getNamespace());
     workloads.addAll(workspaces);
     workloads.addAll(aipubJobs);
     workloads.addAll(operations);
     workloads.addAll(aipubVolumes);
     workloads.addAll(sftpServers);
-    workloads.addAll(ftpServers);
 
     List<V1OwnerReference> reconciledReferences = this.reconciliationService.reconcileOwnerReferences(
         roleOpt.orElse(null), userOpt.get());

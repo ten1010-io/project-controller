@@ -65,9 +65,6 @@ public final class ProjectApiConstants {
   public static final String SFTP_SERVER_RESOURCE_KIND = "SFTPServer";
   public static final String SFTP_SERVER_RESOURCE_PLURAL = "sftpservers";
 
-  public static final String FTP_SERVER_RESOURCE_KIND = "FtpServer";
-  public static final String FTP_SERVER_RESOURCE_PLURAL = "ftpservers";
-
   private ProjectApiConstants() {
   }
 

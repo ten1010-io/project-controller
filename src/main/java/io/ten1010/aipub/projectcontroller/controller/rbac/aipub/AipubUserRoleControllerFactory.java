@@ -13,7 +13,6 @@ import io.ten1010.aipub.projectcontroller.controller.watch.OnUpdateFilterFactory
 import io.ten1010.aipub.projectcontroller.controller.watch.RequestBuilderFactory;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1FtpServer;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubJob;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
@@ -64,8 +63,6 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
             V1alpha1AipubVolume.class)::hasSynced)
         .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
             V1alpha1SftpServer.class)::hasSynced)
-        .withReadyFunc(
-            this.sharedInformerFactory.getExistingSharedIndexInformer(V1FtpServer.class)::hasSynced)
         .watch(this::createRoleWatch)
         .watch(this::createProjectWatch)
         .watch(this::createAipubUserWatch)
@@ -74,7 +71,6 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
         .watch(this::createOperationWatch)
         .watch(this::createAipubVolumeWatch)
         .watch(this::createSftpServerWatch)
-        .watch(this::createFtpServerWatch)
         .withReconciler(new AipubUserRoleReconciler(this.sharedInformerFactory, this.k8sApiProvider,
             this.reconciliationService))
         .build();
@@ -143,14 +139,6 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
         V1alpha1SftpServer.class);
     watch.setOnUpdateFilter(this.onUpdateFilterFactory.alwaysTrueFilter());
     watch.setRequestBuilder(this.requestBuilderFactory.sftpServerToAipubUserRoles());
-    return watch;
-  }
-
-  private ControllerWatch<V1FtpServer> createFtpServerWatch(WorkQueue<Request> workQueue) {
-    DefaultControllerWatch<V1FtpServer> watch = new DefaultControllerWatch<>(workQueue,
-        V1FtpServer.class);
-    watch.setOnUpdateFilter(this.onUpdateFilterFactory.alwaysTrueFilter());
-    watch.setRequestBuilder(this.requestBuilderFactory.ftpServerToAipubUserRoles());
     return watch;
   }
 

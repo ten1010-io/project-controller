@@ -26,7 +26,6 @@ import io.kubernetes.client.openapi.models.V1SecretList;
 import io.kubernetes.client.util.CallGeneratorParams;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1FtpServer;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubJob;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
@@ -84,7 +83,6 @@ public class SharedInformerFactoryProvider {
     registerAipubVolumeInformer(informerFactory);
     registerAipubJobInformer(informerFactory);
     registerSftpServerInformer(informerFactory);
-    registerFtpServerInformer(informerFactory);
     registerPodInformer(informerFactory);
     this.registrars.forEach(e -> e.registerInformer(informerFactory));
 
@@ -322,16 +320,6 @@ public class SharedInformerFactoryProvider {
     SharedIndexInformer<V1alpha1SftpServer> informer = informerFactory.sharedIndexInformerFor(
         this.k8sApiProvider.getSftpServerApi(),
         V1alpha1SftpServer.class,
-        DEFAULT_RESYNC_PERIOD);
-    informer.addIndexers(Map.of(
-        IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
-        obj -> List.of(K8sObjectUtils.getNamespace(obj))));
-  }
-
-  private void registerFtpServerInformer(SharedInformerFactory informerFactory) {
-    SharedIndexInformer<V1FtpServer> informer = informerFactory.sharedIndexInformerFor(
-        this.k8sApiProvider.getFtpServerApi(),
-        V1FtpServer.class,
         DEFAULT_RESYNC_PERIOD);
     informer.addIndexers(Map.of(
         IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
