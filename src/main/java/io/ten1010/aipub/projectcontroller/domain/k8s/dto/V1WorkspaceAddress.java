@@ -6,11 +6,10 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1WorkspaceAddress {
 
-    @Nullable
-    String address;
-    @Nullable
-    Integer port;
+  @Nullable
+  String address;
+  @Nullable
+  Integer port;
 
-    
 
 }

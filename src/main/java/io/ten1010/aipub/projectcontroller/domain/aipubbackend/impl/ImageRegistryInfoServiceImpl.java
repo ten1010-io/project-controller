@@ -8,23 +8,23 @@ import okhttp3.Call;
 
 public class ImageRegistryInfoServiceImpl implements ImageRegistryInfoService {
 
-    private static final TypeToken<ImageRegistryInfo> IMAGE_REGISTRY_INFO_TYPE_TOKEN = new TypeToken<>() {
-    };
+  private static final TypeToken<ImageRegistryInfo> IMAGE_REGISTRY_INFO_TYPE_TOKEN = new TypeToken<>() {
+  };
 
-    private final ApiClient aipubBackendClient;
-    private final CallHelper callHelper;
+  private final ApiClient aipubBackendClient;
+  private final CallHelper callHelper;
 
-    public ImageRegistryInfoServiceImpl(ApiClient aipubBackendClient) {
-        this.aipubBackendClient = aipubBackendClient;
-        this.callHelper = new CallHelper(aipubBackendClient);
-    }
+  public ImageRegistryInfoServiceImpl(ApiClient aipubBackendClient) {
+    this.aipubBackendClient = aipubBackendClient;
+    this.callHelper = new CallHelper(aipubBackendClient);
+  }
 
-    @Override
-    public ImageRegistryInfo getImageRegistryInfo() {
-        Call call = this.aipubBackendClient.buildCall(
-                "/imageregistryinfo",
-                "GET");
-        return this.callHelper.executeCall(call, IMAGE_REGISTRY_INFO_TYPE_TOKEN).orElseThrow();
-    }
+  @Override
+  public ImageRegistryInfo getImageRegistryInfo() {
+    Call call = this.aipubBackendClient.buildCall(
+        "/imageregistryinfo",
+        "GET");
+    return this.callHelper.executeCall(call, IMAGE_REGISTRY_INFO_TYPE_TOKEN).orElseThrow();
+  }
 
 }

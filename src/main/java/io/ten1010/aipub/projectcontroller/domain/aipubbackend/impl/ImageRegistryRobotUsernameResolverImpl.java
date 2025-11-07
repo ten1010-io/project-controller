@@ -4,11 +4,11 @@ import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobot
 
 public class ImageRegistryRobotUsernameResolverImpl implements ImageRegistryRobotUsernameResolver {
 
-    private static final String PREFIX = "robot$project-aipub-ten1010-io-";
+  private static final String PREFIX = "robot$project-aipub-ten1010-io-";
 
-    @Override
-    public String resolve(String projectName) {
-        return PREFIX + projectName;
-    }
+  @Override
+  public String resolve(String projectName) {
+    return PREFIX + projectName;
+  }
 
 }

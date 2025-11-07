@@ -6,9 +6,9 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1alpha1SftpServerSsh {
 
-    @Nullable
-    Integer port;
-    @Nullable
-    String publicKey;
+  @Nullable
+  Integer port;
+  @Nullable
+  String publicKey;
 
 }

@@ -2,36 +2,36 @@ package io.ten1010.aipub.projectcontroller.controller;
 
 import io.kubernetes.client.extended.controller.reconciler.Request;
 import io.ten1010.aipub.projectcontroller.domain.ExceptionLogMessageFactory;
+import java.util.function.Function;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.function.Function;
-
 public class ReconcileRequestLogMessageFactory {
 
-    private static String createExceptionOccurredMessage(String requestDescription) {
-        return String.format("Exception occurred Processing reconcile request [%s]", requestDescription);
-    }
+  private final ExceptionLogMessageFactory exceptionLogMessageFactory;
+  @Getter
+  @Setter
+  private Function<Request, String> requestDescriptionFactory;
 
-    private static String createRequestDescription(Request request) {
-        return String.format("namespace=%s name=%s", request.getNamespace(), request.getName());
-    }
+  public ReconcileRequestLogMessageFactory() {
+    this.exceptionLogMessageFactory = new ExceptionLogMessageFactory();
+    this.requestDescriptionFactory = ReconcileRequestLogMessageFactory::createRequestDescription;
+  }
 
-    private final ExceptionLogMessageFactory exceptionLogMessageFactory;
-    @Getter
-    @Setter
-    private Function<Request, String> requestDescriptionFactory;
+  private static String createExceptionOccurredMessage(String requestDescription) {
+    return String.format("Exception occurred Processing reconcile request [%s]",
+        requestDescription);
+  }
 
-    public ReconcileRequestLogMessageFactory() {
-        this.exceptionLogMessageFactory = new ExceptionLogMessageFactory();
-        this.requestDescriptionFactory = ReconcileRequestLogMessageFactory::createRequestDescription;
-    }
+  private static String createRequestDescription(Request request) {
+    return String.format("namespace=%s name=%s", request.getNamespace(), request.getName());
+  }
 
-    public String createMessage(Request request, Exception e, boolean includeStackTrace) {
-        String requestDescription = this.requestDescriptionFactory.apply(request);
-        return createExceptionOccurredMessage(requestDescription) +
-                "\n" +
-                this.exceptionLogMessageFactory.createExceptionLogMessage(e, includeStackTrace);
-    }
+  public String createMessage(Request request, Exception e, boolean includeStackTrace) {
+    String requestDescription = this.requestDescriptionFactory.apply(request);
+    return createExceptionOccurredMessage(requestDescription) +
+        "\n" +
+        this.exceptionLogMessageFactory.createExceptionLogMessage(e, includeStackTrace);
+  }
 
 }

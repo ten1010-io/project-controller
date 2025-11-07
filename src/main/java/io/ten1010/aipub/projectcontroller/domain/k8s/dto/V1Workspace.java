@@ -8,15 +8,15 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1Workspace implements KubernetesObject {
 
-    @Nullable
-    private String apiVersion;
-    @Nullable
-    private String kind;
-    @Nullable
-    private V1ObjectMeta metadata;
-    @Nullable
-    private V1WorkspaceSpec spec;
-    @Nullable
-    private V1WorkspaceStatus status;
+  @Nullable
+  private String apiVersion;
+  @Nullable
+  private String kind;
+  @Nullable
+  private V1ObjectMeta metadata;
+  @Nullable
+  private V1WorkspaceSpec spec;
+  @Nullable
+  private V1WorkspaceStatus status;
 
 }

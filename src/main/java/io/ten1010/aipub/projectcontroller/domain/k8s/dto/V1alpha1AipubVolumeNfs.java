@@ -6,11 +6,11 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1alpha1AipubVolumeNfs {
 
-    @Nullable
-    private String path;
-    @Nullable
-    private Boolean readOnly;
-    @Nullable
-    private String server;
+  @Nullable
+  private String path;
+  @Nullable
+  private Boolean readOnly;
+  @Nullable
+  private String server;
 
 }

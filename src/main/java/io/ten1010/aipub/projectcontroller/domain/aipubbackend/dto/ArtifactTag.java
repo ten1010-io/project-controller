@@ -6,19 +6,19 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class ArtifactTag {
 
-    @Nullable
-    private String id;
-    @Nullable
-    private String repositoryId;
-    @Nullable
-    private String artifactId;
-    @Nullable
-    private String name;
-    @Nullable
-    private Long pushTime;
-    @Nullable
-    private Long pullTime;
-    @Nullable
-    private Boolean immutable;
+  @Nullable
+  private String id;
+  @Nullable
+  private String repositoryId;
+  @Nullable
+  private String artifactId;
+  @Nullable
+  private String name;
+  @Nullable
+  private Long pushTime;
+  @Nullable
+  private Long pullTime;
+  @Nullable
+  private Boolean immutable;
 
 }

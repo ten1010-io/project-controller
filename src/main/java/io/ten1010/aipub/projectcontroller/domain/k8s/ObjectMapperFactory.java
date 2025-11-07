@@ -5,11 +5,11 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 public class ObjectMapperFactory {
 
-    public ObjectMapper createObjectMapper() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
+  public ObjectMapper createObjectMapper() {
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.registerModule(new JavaTimeModule());
 
-        return mapper;
-    }
+    return mapper;
+  }
 
 }

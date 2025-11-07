@@ -6,13 +6,13 @@ import org.springframework.lang.Nullable;
 @Data
 public class V1WorkspacePodReadyCondition {
 
-    @Nullable
-    String message;
-    @Nullable
-    String reason;
-    @Nullable
-    Boolean status;
-    @Nullable
-    String timestamp;
+  @Nullable
+  String message;
+  @Nullable
+  String reason;
+  @Nullable
+  Boolean status;
+  @Nullable
+  String timestamp;
 
 }

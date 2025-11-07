@@ -6,7 +6,7 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1alpha1ImageHubSpec {
 
-    @Nullable
-    private String id;
+  @Nullable
+  private String id;
 
 }

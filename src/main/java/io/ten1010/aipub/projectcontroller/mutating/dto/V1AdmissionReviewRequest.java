@@ -7,21 +7,21 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1AdmissionReviewRequest {
 
-    @Nullable
-    private String uid;
-    @Nullable
-    private V1Kind kind;
-    @Nullable
-    private V1Resource resource;
-    @Nullable
-    private String name;
-    @Nullable
-    private String namespace;
-    @Nullable
-    private String operation;
-    @Nullable
-    private V1UserInfo userInfo;
-    @Nullable
-    private JsonNode object;
+  @Nullable
+  private String uid;
+  @Nullable
+  private V1Kind kind;
+  @Nullable
+  private V1Resource resource;
+  @Nullable
+  private String name;
+  @Nullable
+  private String namespace;
+  @Nullable
+  private String operation;
+  @Nullable
+  private V1UserInfo userInfo;
+  @Nullable
+  private JsonNode object;
 
 }

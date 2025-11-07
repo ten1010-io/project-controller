@@ -6,11 +6,11 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1alpha1OperationScale {
 
-    @Nullable
-    Integer maxScalingSizeAtOnce;
-    @Nullable
-    Integer periodSeconds;
-    @Nullable
-    Integer stabilizationWindowSeconds;
+  @Nullable
+  Integer maxScalingSizeAtOnce;
+  @Nullable
+  Integer periodSeconds;
+  @Nullable
+  Integer stabilizationWindowSeconds;
 
 }

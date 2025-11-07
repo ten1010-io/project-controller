@@ -6,9 +6,9 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1alpha1AipubJobCron {
 
-    @Nullable
-    private String schedule;
-    @Nullable
-    private String timeZone;
+  @Nullable
+  private String schedule;
+  @Nullable
+  private String timeZone;
 
 }

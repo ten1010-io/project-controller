@@ -8,26 +8,26 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @Data
 public class K8sProperties {
 
-    public enum KubeConfigMode {
+  @Nullable
+  private Boolean verifySsl;
+  @Nullable
+  private KubeConfigProperty kubeConfig;
 
-        IN_CLUSTER, FILE
 
-    }
+  public enum KubeConfigMode {
 
-    @Data
-    public static class KubeConfigProperty {
+    IN_CLUSTER, FILE
 
-        @Nullable
-        private KubeConfigMode mode;
-        @Nullable
-        private String kubeConfigPath;
+  }
 
-    }
-
+  @Data
+  public static class KubeConfigProperty {
 
     @Nullable
-    private Boolean verifySsl;
+    private KubeConfigMode mode;
     @Nullable
-    private KubeConfigProperty kubeConfig;
+    private String kubeConfigPath;
+
+  }
 
 }

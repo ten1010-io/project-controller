@@ -1,45 +1,44 @@
 package io.ten1010.aipub.projectcontroller.domain.k8s;
 
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectMember;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 @AllArgsConstructor
 @Getter
 public enum ProjectRoleEnum {
 
-    PROJECT_MANAGER("project-manager"), PROJECT_DEVELOPER("project-developer");
+  PROJECT_MANAGER("project-manager"), PROJECT_DEVELOPER("project-developer");
 
-    private static final Map<String, ProjectRoleEnum> STR_TO_ENUM;
+  private static final Map<String, ProjectRoleEnum> STR_TO_ENUM;
 
-    static {
-        STR_TO_ENUM = new HashMap<>();
-        for (ProjectRoleEnum e : ProjectRoleEnum.values()) {
-            STR_TO_ENUM.put(e.getStr(), e);
-        }
+  static {
+    STR_TO_ENUM = new HashMap<>();
+    for (ProjectRoleEnum e : ProjectRoleEnum.values()) {
+      STR_TO_ENUM.put(e.getStr(), e);
+    }
+  }
+
+  private final String str;
+
+  public static Optional<ProjectRoleEnum> getEnum(String str) {
+    ProjectRoleEnum parsed = STR_TO_ENUM.get(str.toLowerCase());
+    return Optional.ofNullable(parsed);
+  }
+
+  public static boolean memberHasRole(V1alpha1ProjectMember member, ProjectRoleEnum projRoleEnum) {
+    if (member.getRole() == null) {
+      return false;
+    }
+    Optional<ProjectRoleEnum> enumOpt = ProjectRoleEnum.getEnum(member.getRole());
+    if (enumOpt.isEmpty()) {
+      return false;
     }
 
-    public static Optional<ProjectRoleEnum> getEnum(String str) {
-        ProjectRoleEnum parsed = STR_TO_ENUM.get(str.toLowerCase());
-        return Optional.ofNullable(parsed);
-    }
-
-    public static boolean memberHasRole(V1alpha1ProjectMember member, ProjectRoleEnum projRoleEnum) {
-        if (member.getRole() == null) {
-            return false;
-        }
-        Optional<ProjectRoleEnum> enumOpt = ProjectRoleEnum.getEnum(member.getRole());
-        if (enumOpt.isEmpty()) {
-            return false;
-        }
-
-        return enumOpt.get().equals(projRoleEnum);
-    }
-
-    private final String str;
+    return enumOpt.get().equals(projRoleEnum);
+  }
 
 }

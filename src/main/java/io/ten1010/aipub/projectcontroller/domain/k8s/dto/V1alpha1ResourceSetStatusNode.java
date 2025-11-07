@@ -6,9 +6,9 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1alpha1ResourceSetStatusNode {
 
-    @Nullable
-    private String nodeName;
-    @Nullable
-    private Long resourcesetCount;
+  @Nullable
+  private String nodeName;
+  @Nullable
+  private Long resourcesetCount;
 
 }

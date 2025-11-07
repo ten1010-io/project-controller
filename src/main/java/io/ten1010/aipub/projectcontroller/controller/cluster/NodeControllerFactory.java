@@ -18,56 +18,62 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 
 public class NodeControllerFactory implements ControllerFactory {
 
-    private final SharedInformerFactory sharedInformerFactory;
-    private final OnUpdateFilterFactory onUpdateFilterFactory;
-    private final RequestBuilderFactory requestBuilderFactory;
-    private final K8sApiProvider k8sApiProvider;
-    private final ReconciliationService reconciliationService;
+  private final SharedInformerFactory sharedInformerFactory;
+  private final OnUpdateFilterFactory onUpdateFilterFactory;
+  private final RequestBuilderFactory requestBuilderFactory;
+  private final K8sApiProvider k8sApiProvider;
+  private final ReconciliationService reconciliationService;
 
-    public NodeControllerFactory(
-            SharedInformerFactory sharedInformerFactory,
-            K8sApiProvider k8sApiProvider,
-            ReconciliationService reconciliationService) {
-        this.sharedInformerFactory = sharedInformerFactory;
-        this.onUpdateFilterFactory = new OnUpdateFilterFactory();
-        this.requestBuilderFactory = new RequestBuilderFactory(sharedInformerFactory);
-        this.k8sApiProvider = k8sApiProvider;
-        this.reconciliationService = reconciliationService;
-    }
+  public NodeControllerFactory(
+      SharedInformerFactory sharedInformerFactory,
+      K8sApiProvider k8sApiProvider,
+      ReconciliationService reconciliationService) {
+    this.sharedInformerFactory = sharedInformerFactory;
+    this.onUpdateFilterFactory = new OnUpdateFilterFactory();
+    this.requestBuilderFactory = new RequestBuilderFactory(sharedInformerFactory);
+    this.k8sApiProvider = k8sApiProvider;
+    this.reconciliationService = reconciliationService;
+  }
 
-    @Override
-    public Controller createController() {
-        return ControllerBuilder.defaultBuilder(this.sharedInformerFactory)
-                .withName("node-controller")
-                .withWorkerCount(1)
-                .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1Node.class)::hasSynced)
-                .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1alpha1Project.class)::hasSynced)
-                .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1alpha1NodeGroup.class)::hasSynced)
-                .watch(this::createNodeWatch)
-                .watch(this::createProjectWatch)
-                .watch(this::createNodeGroupWatch)
-                .withReconciler(new NodeReconciler(this.sharedInformerFactory, this.k8sApiProvider, this.reconciliationService))
-                .build();
-    }
+  @Override
+  public Controller createController() {
+    return ControllerBuilder.defaultBuilder(this.sharedInformerFactory)
+        .withName("node-controller")
+        .withWorkerCount(1)
+        .withReadyFunc(
+            this.sharedInformerFactory.getExistingSharedIndexInformer(V1Node.class)::hasSynced)
+        .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
+            V1alpha1Project.class)::hasSynced)
+        .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
+            V1alpha1NodeGroup.class)::hasSynced)
+        .watch(this::createNodeWatch)
+        .watch(this::createProjectWatch)
+        .watch(this::createNodeGroupWatch)
+        .withReconciler(new NodeReconciler(this.sharedInformerFactory, this.k8sApiProvider,
+            this.reconciliationService))
+        .build();
+  }
 
-    private ControllerWatch<V1Node> createNodeWatch(WorkQueue<Request> workQueue) {
-        DefaultControllerWatch<V1Node> watch = new DefaultControllerWatch<>(workQueue, V1Node.class);
-        watch.setOnUpdateFilter(this.onUpdateFilterFactory.nodeFilter());
-        return watch;
-    }
+  private ControllerWatch<V1Node> createNodeWatch(WorkQueue<Request> workQueue) {
+    DefaultControllerWatch<V1Node> watch = new DefaultControllerWatch<>(workQueue, V1Node.class);
+    watch.setOnUpdateFilter(this.onUpdateFilterFactory.nodeFilter());
+    return watch;
+  }
 
-    private ControllerWatch<V1alpha1Project> createProjectWatch(WorkQueue<Request> workQueue) {
-        DefaultControllerWatch<V1alpha1Project> watch = new DefaultControllerWatch<>(workQueue, V1alpha1Project.class);
-        watch.setOnUpdateFilter(this.onUpdateFilterFactory.projectSpecBindingFieldFilter());
-        watch.setRequestBuilder(this.requestBuilderFactory.projectToBoundNodes());
-        return watch;
-    }
+  private ControllerWatch<V1alpha1Project> createProjectWatch(WorkQueue<Request> workQueue) {
+    DefaultControllerWatch<V1alpha1Project> watch = new DefaultControllerWatch<>(workQueue,
+        V1alpha1Project.class);
+    watch.setOnUpdateFilter(this.onUpdateFilterFactory.projectSpecBindingFieldFilter());
+    watch.setRequestBuilder(this.requestBuilderFactory.projectToBoundNodes());
+    return watch;
+  }
 
-    private ControllerWatch<V1alpha1NodeGroup> createNodeGroupWatch(WorkQueue<Request> workQueue) {
-        DefaultControllerWatch<V1alpha1NodeGroup> watch = new DefaultControllerWatch<>(workQueue, V1alpha1NodeGroup.class);
-        watch.setOnUpdateFilter(this.onUpdateFilterFactory.nodeGroupSpecFieldFilter());
-        watch.setRequestBuilder(this.requestBuilderFactory.nodeGroupToBoundNodes());
-        return watch;
-    }
+  private ControllerWatch<V1alpha1NodeGroup> createNodeGroupWatch(WorkQueue<Request> workQueue) {
+    DefaultControllerWatch<V1alpha1NodeGroup> watch = new DefaultControllerWatch<>(workQueue,
+        V1alpha1NodeGroup.class);
+    watch.setOnUpdateFilter(this.onUpdateFilterFactory.nodeGroupSpecFieldFilter());
+    watch.setRequestBuilder(this.requestBuilderFactory.nodeGroupToBoundNodes());
+    return watch;
+  }
 
 }

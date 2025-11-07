@@ -6,9 +6,9 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1WorkspacePort {
 
-    @Nullable
-    String name;
-    @Nullable
-    Integer port;
+  @Nullable
+  String name;
+  @Nullable
+  Integer port;
 
 }

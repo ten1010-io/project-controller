@@ -6,7 +6,7 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class ImageRegistryRobotSecret {
 
-    @Nullable
-    private String secret;
+  @Nullable
+  private String secret;
 
 }

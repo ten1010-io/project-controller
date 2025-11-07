@@ -8,15 +8,15 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1alpha1ImageReview implements KubernetesObject {
 
-    @Nullable
-    private String apiVersion;
-    @Nullable
-    private String kind;
-    @Nullable
-    private V1ObjectMeta metadata;
-    @Nullable
-    private V1alpha1ImageReviewSpec spec;
-    @Nullable
-    private V1alpha1ImageReviewStatus status;
+  @Nullable
+  private String apiVersion;
+  @Nullable
+  private String kind;
+  @Nullable
+  private V1ObjectMeta metadata;
+  @Nullable
+  private V1alpha1ImageReviewSpec spec;
+  @Nullable
+  private V1alpha1ImageReviewStatus status;
 
 }

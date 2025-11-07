@@ -4,6 +4,6 @@ import io.kubernetes.client.informer.SharedInformerFactory;
 
 public interface InformerRegistrar {
 
-    void registerInformer(SharedInformerFactory informerFactory);
+  void registerInformer(SharedInformerFactory informerFactory);
 
 }

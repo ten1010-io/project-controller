@@ -6,9 +6,9 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1alpha1ImageReviewSpec {
 
-    @Nullable
-    private String imgHub;
-    @Nullable
-    private String repo;
+  @Nullable
+  private String imgHub;
+  @Nullable
+  private String repo;
 
 }

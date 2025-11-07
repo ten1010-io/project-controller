@@ -6,13 +6,13 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1alpha1OperationPort {
 
-    @Nullable
-    String host;
-    @Nullable
-    String name;
-    @Nullable
-    String path;
-    @Nullable
-    Integer port;
+  @Nullable
+  String host;
+  @Nullable
+  String name;
+  @Nullable
+  String path;
+  @Nullable
+  Integer port;
 
 }

@@ -10,35 +10,34 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.informer.IndexerConstants;
 import io.ten1010.aipub.projectcontroller.informer.InformerRegistrar;
-
 import java.util.List;
 import java.util.Map;
 
 public class CronJobInformerRegistrar implements InformerRegistrar {
 
-    private final BatchV1Api batchV1Api;
+  private final BatchV1Api batchV1Api;
 
-    public CronJobInformerRegistrar(K8sApiProvider k8sApiProvider) {
-        this.batchV1Api = new BatchV1Api(k8sApiProvider.getApiClient());
-    }
+  public CronJobInformerRegistrar(K8sApiProvider k8sApiProvider) {
+    this.batchV1Api = new BatchV1Api(k8sApiProvider.getApiClient());
+  }
 
-    @Override
-    public void registerInformer(SharedInformerFactory informerFactory) {
-        registerCronJobInformer(informerFactory);
-    }
+  @Override
+  public void registerInformer(SharedInformerFactory informerFactory) {
+    registerCronJobInformer(informerFactory);
+  }
 
-    private void registerCronJobInformer(SharedInformerFactory informerFactory) {
-        SharedIndexInformer<V1CronJob> informer = informerFactory.sharedIndexInformerFor(
-                (CallGeneratorParams params) -> this.batchV1Api.listCronJobForAllNamespaces()
-                        .resourceVersion(params.resourceVersion)
-                        .watch(params.watch)
-                        .timeoutSeconds(params.timeoutSeconds)
-                        .buildCall(null),
-                V1CronJob.class,
-                V1CronJobList.class);
-        informer.addIndexers(Map.of(
-                IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
-                obj -> List.of(K8sObjectUtils.getNamespace(obj))));
-    }
+  private void registerCronJobInformer(SharedInformerFactory informerFactory) {
+    SharedIndexInformer<V1CronJob> informer = informerFactory.sharedIndexInformerFor(
+        (CallGeneratorParams params) -> this.batchV1Api.listCronJobForAllNamespaces()
+            .resourceVersion(params.resourceVersion)
+            .watch(params.watch)
+            .timeoutSeconds(params.timeoutSeconds)
+            .buildCall(null),
+        V1CronJob.class,
+        V1CronJobList.class);
+    informer.addIndexers(Map.of(
+        IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
+        obj -> List.of(K8sObjectUtils.getNamespace(obj))));
+  }
 
 }

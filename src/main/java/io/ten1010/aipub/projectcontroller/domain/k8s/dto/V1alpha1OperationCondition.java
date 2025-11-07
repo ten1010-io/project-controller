@@ -6,13 +6,13 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1alpha1OperationCondition {
 
-    @Nullable
-    String lastTransitionTime;
-    @Nullable
-    String message;
-    @Nullable
-    String reason;
-    @Nullable
-    Boolean status;
+  @Nullable
+  String lastTransitionTime;
+  @Nullable
+  String message;
+  @Nullable
+  String reason;
+  @Nullable
+  Boolean status;
 
 }

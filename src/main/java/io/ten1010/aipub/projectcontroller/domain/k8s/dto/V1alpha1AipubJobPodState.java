@@ -6,13 +6,13 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1alpha1AipubJobPodState {
 
-    @Nullable
-    private String message;
-    @Nullable
-    private String reason;
-    @Nullable
-    private String timestamp;
-    @Nullable
-    private String type;
+  @Nullable
+  private String message;
+  @Nullable
+  private String reason;
+  @Nullable
+  private String timestamp;
+  @Nullable
+  private String type;
 
 }

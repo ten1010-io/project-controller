@@ -6,7 +6,7 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class OpenidProviderInfo {
 
-    @Nullable
-    private String issuerUri;
+  @Nullable
+  private String issuerUri;
 
 }

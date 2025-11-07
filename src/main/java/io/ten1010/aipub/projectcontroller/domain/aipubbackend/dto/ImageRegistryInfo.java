@@ -6,7 +6,7 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class ImageRegistryInfo {
 
-    @Nullable
-    private String uri;
+  @Nullable
+  private String uri;
 
 }

@@ -6,9 +6,9 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1alpha1OperationStatusAddress {
 
-    @Nullable
-    String address;
-    @Nullable
-    Integer port;
+  @Nullable
+  String address;
+  @Nullable
+  Integer port;
 
 }

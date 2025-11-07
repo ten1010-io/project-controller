@@ -4,6 +4,6 @@ import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryI
 
 public interface ImageRegistryInfoService {
 
-    ImageRegistryInfo getImageRegistryInfo();
+  ImageRegistryInfo getImageRegistryInfo();
 
 }

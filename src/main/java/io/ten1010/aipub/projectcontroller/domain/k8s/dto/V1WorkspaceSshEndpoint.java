@@ -6,11 +6,11 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1WorkspaceSshEndpoint {
 
-    @Nullable
-    String host;
-    @Nullable
-    Integer port;
-    @Nullable
-    String user;
+  @Nullable
+  String host;
+  @Nullable
+  Integer port;
+  @Nullable
+  String user;
 
 }

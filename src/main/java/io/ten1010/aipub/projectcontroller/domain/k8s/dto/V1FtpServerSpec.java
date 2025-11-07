@@ -7,9 +7,9 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1FtpServerSpec {
 
-    @Nullable
-    V1FtpServer ssh;
-    @Nullable
-    V1PodTemplateSpec template;
+  @Nullable
+  V1FtpServer ssh;
+  @Nullable
+  V1PodTemplateSpec template;
 
 }

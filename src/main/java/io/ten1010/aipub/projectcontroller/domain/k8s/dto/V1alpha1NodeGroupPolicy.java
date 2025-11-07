@@ -6,7 +6,7 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1alpha1NodeGroupPolicy {
 
-    @Nullable
-    private V1alpha1NodeGroupDaemonSetPolicy daemonSet;
+  @Nullable
+  private V1alpha1NodeGroupDaemonSetPolicy daemonSet;
 
 }

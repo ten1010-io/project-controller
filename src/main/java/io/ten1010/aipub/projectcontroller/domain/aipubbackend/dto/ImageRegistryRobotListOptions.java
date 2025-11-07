@@ -8,4 +8,5 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
 public class ImageRegistryRobotListOptions extends ListOptions {
+
 }

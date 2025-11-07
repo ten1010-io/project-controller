@@ -6,13 +6,13 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1alpha1AipubVolumeCondition {
 
-    @Nullable
-    private String message;
-    @Nullable
-    private String reason;
-    @Nullable
-    private Boolean status;
-    @Nullable
-    private String timestamp;
+  @Nullable
+  private String message;
+  @Nullable
+  private String reason;
+  @Nullable
+  private Boolean status;
+  @Nullable
+  private String timestamp;
 
 }

@@ -4,6 +4,6 @@ import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.OpenidProvider
 
 public interface OpenidProviderInfoService {
 
-    OpenidProviderInfo getOpenidProviderInfo();
+  OpenidProviderInfo getOpenidProviderInfo();
 
 }

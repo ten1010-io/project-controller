@@ -10,57 +10,57 @@ import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
 import io.ten1010.aipub.projectcontroller.controller.ControllerFactory;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sObjectType;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
-
 import java.util.function.Function;
 
-public abstract class WorkloadControllerFactory<T extends KubernetesObject> implements ControllerFactory {
+public abstract class WorkloadControllerFactory<T extends KubernetesObject> implements
+    ControllerFactory {
 
-    protected final DefaultControllerBuilder builder;
-    protected final SharedInformerFactory sharedInformerFactory;
-    protected final ReconciliationService reconciliationService;
+  protected final DefaultControllerBuilder builder;
+  protected final SharedInformerFactory sharedInformerFactory;
+  protected final ReconciliationService reconciliationService;
 
-    public WorkloadControllerFactory(
-            SharedInformerFactory sharedInformerFactory,
-            ReconciliationService reconciliationService) {
-        this.builder = ControllerBuilder.defaultBuilder(sharedInformerFactory);
-        this.sharedInformerFactory = sharedInformerFactory;
-        this.reconciliationService = reconciliationService;
-    }
+  public WorkloadControllerFactory(
+      SharedInformerFactory sharedInformerFactory,
+      ReconciliationService reconciliationService) {
+    this.builder = ControllerBuilder.defaultBuilder(sharedInformerFactory);
+    this.sharedInformerFactory = sharedInformerFactory;
+    this.reconciliationService = reconciliationService;
+  }
 
-    @Override
-    public Controller createController() {
-        configureControllerName();
-        configureReadyFunc();
-        configureWatch();
-        this.builder.withWorkerCount(1);
-        this.builder.withReconciler(createReconciler());
-        this.builder.withReconciler(createReconciler());
+  @Override
+  public Controller createController() {
+    configureControllerName();
+    configureReadyFunc();
+    configureWatch();
+    this.builder.withWorkerCount(1);
+    this.builder.withReconciler(createReconciler());
+    this.builder.withReconciler(createReconciler());
 
-        return this.builder.build();
-    }
+    return this.builder.build();
+  }
 
-    public abstract K8sObjectType<T> getObjectType();
+  public abstract K8sObjectType<T> getObjectType();
 
-    public abstract WorkloadControllerNodesResolver getWorkloadNodesResolver();
+  public abstract WorkloadControllerNodesResolver getWorkloadNodesResolver();
 
-    protected abstract void configureControllerName();
+  protected abstract void configureControllerName();
 
-    protected abstract void configureReadyFunc();
+  protected abstract void configureReadyFunc();
 
-    protected abstract void configureWatch();
+  protected abstract void configureWatch();
 
-    protected abstract Function<KubernetesObject, V1PodTemplateSpec> getPodTemplateSpecResolver();
+  protected abstract Function<KubernetesObject, V1PodTemplateSpec> getPodTemplateSpecResolver();
 
-    protected abstract ControllerObjectReconciler getObjectReconciler();
+  protected abstract ControllerObjectReconciler getObjectReconciler();
 
-    private Reconciler createReconciler() {
-        return new WorkloadControllerReconciler(
-                this.sharedInformerFactory,
-                this.reconciliationService,
-                getObjectType().getObjClass(),
-                getPodTemplateSpecResolver(),
-                getObjectReconciler(),
-                getWorkloadNodesResolver());
-    }
+  private Reconciler createReconciler() {
+    return new WorkloadControllerReconciler(
+        this.sharedInformerFactory,
+        this.reconciliationService,
+        getObjectType().objClass(),
+        getPodTemplateSpecResolver(),
+        getObjectReconciler(),
+        getWorkloadNodesResolver());
+  }
 
 }

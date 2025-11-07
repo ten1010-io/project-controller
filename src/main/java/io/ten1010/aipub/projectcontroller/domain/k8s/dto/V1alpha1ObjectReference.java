@@ -6,9 +6,9 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1alpha1ObjectReference {
 
-    @Nullable
-    private String namespace;
-    @Nullable
-    private String name;
+  @Nullable
+  private String namespace;
+  @Nullable
+  private String name;
 
 }

@@ -6,15 +6,15 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1alpha1OperationAutoScale {
 
-    @Nullable
-    Integer maxReplicas;
-    @Nullable
-    Integer minReplicas;
-    @Nullable
-    String rps;
-    @Nullable
-    V1alpha1OperationScale scaleDown;
-    @Nullable
-    V1alpha1OperationScale scaleUp;
+  @Nullable
+  Integer maxReplicas;
+  @Nullable
+  Integer minReplicas;
+  @Nullable
+  String rps;
+  @Nullable
+  V1alpha1OperationScale scaleDown;
+  @Nullable
+  V1alpha1OperationScale scaleUp;
 
 }

@@ -6,13 +6,13 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1FtpServerCondition {
 
-    @Nullable
-    String message;
-    @Nullable
-    String reason;
-    @Nullable
-    Boolean status;
-    @Nullable
-    String timestamp;
+  @Nullable
+  String message;
+  @Nullable
+  String reason;
+  @Nullable
+  Boolean status;
+  @Nullable
+  String timestamp;
 
 }

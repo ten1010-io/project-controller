@@ -1,49 +1,50 @@
 package io.ten1010.aipub.projectcontroller.domain.aipubbackend.impl;
 
 import io.ten1010.common.apiclient.ApiResponse;
-import lombok.Getter;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import lombok.Getter;
 
 @Getter
 public class AipubBackendResponseException extends RuntimeException {
 
-    private static final List<String> STRING_TYPES = List.of("application/json", "text/html", "text/plain", "text/xml");
+  private static final List<String> STRING_TYPES = List.of("application/json", "text/html",
+      "text/plain", "text/xml");
+  private final ApiResponse response;
 
-    private static String buildMessage(ApiResponse response) {
-        String template = "statusCode=%d, headers=%s, body=%s";
+  public AipubBackendResponseException(ApiResponse response) {
+    super(buildMessage(response));
+    this.response = response;
+  }
 
-        if (response.getBody() == null) {
-            return String.format(template, response.getStatusCode(), response.getHeaders(), null);
-        }
+  private static String buildMessage(ApiResponse response) {
+    String template = "statusCode=%d, headers=%s, body=%s";
 
-        if (hasStringContext(response)) {
-            return String.format(template, response.getStatusCode(), response.getHeaders(), response.getBodyAsString().orElseThrow());
-        }
-
-        return String.format(template, response.getStatusCode(), response.getHeaders(), Arrays.toString(response.getBody()));
+    if (response.getBody() == null) {
+      return String.format(template, response.getStatusCode(), response.getHeaders(), null);
     }
 
-    private static boolean hasStringContext(ApiResponse response) {
-        Optional<String> headerOpt = getContentTypeHeader(response);
-        return headerOpt.filter(STRING_TYPES::contains).isPresent();
+    if (hasStringContext(response)) {
+      return String.format(template, response.getStatusCode(), response.getHeaders(),
+          response.getBodyAsString().orElseThrow());
     }
 
-    private static Optional<String> getContentTypeHeader(ApiResponse response) {
-        List<String> contentTypeHeaders = response.getHeaders().get("content-type");
-        if (contentTypeHeaders.isEmpty()) {
-            return Optional.empty();
-        }
-        return Optional.of(contentTypeHeaders.get(0));
-    }
+    return String.format(template, response.getStatusCode(), response.getHeaders(),
+        Arrays.toString(response.getBody()));
+  }
 
-    private final ApiResponse response;
+  private static boolean hasStringContext(ApiResponse response) {
+    Optional<String> headerOpt = getContentTypeHeader(response);
+    return headerOpt.filter(STRING_TYPES::contains).isPresent();
+  }
 
-    public AipubBackendResponseException(ApiResponse response) {
-        super(buildMessage(response));
-        this.response = response;
+  private static Optional<String> getContentTypeHeader(ApiResponse response) {
+    List<String> contentTypeHeaders = response.getHeaders().get("content-type");
+    if (contentTypeHeaders.isEmpty()) {
+      return Optional.empty();
     }
+    return Optional.of(contentTypeHeaders.get(0));
+  }
 
 }

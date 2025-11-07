@@ -6,9 +6,9 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1WorkspaceSsh {
 
-    @Nullable
-    Integer port;
-    @Nullable
-    String publicKey;
+  @Nullable
+  Integer port;
+  @Nullable
+  String publicKey;
 
 }

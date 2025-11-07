@@ -6,9 +6,9 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class ListOptions {
 
-    @Nullable
-    private Integer pageOffset;
-    @Nullable
-    private Integer pageSize;
+  @Nullable
+  private Integer pageOffset;
+  @Nullable
+  private Integer pageSize;
 
 }

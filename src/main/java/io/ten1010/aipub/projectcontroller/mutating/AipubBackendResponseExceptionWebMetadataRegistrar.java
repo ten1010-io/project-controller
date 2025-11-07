@@ -15,12 +15,14 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class AipubBackendResponseExceptionWebMetadataRegistrar implements WebMetadataRegistrar {
 
-    @Override
-    public void register(ExceptionMetadataRegistry<WebRequest, WebResponse> registry) {
-        LogLevelResolver<WebRequest> logLevelResolver = (request, e) -> LogLevelEnum.ERROR;
-        ResponseFactory<WebRequest, WebResponse> responseFactory =
-                (request, e) -> new WebResponse(e, 500, new WebResponseBody("AIPUB_BACKEND_RESPONSE_ERROR", null));
-        registry.register(AipubBackendResponseException.class, new ExceptionMetadata<>(logLevelResolver, responseFactory));
-    }
+  @Override
+  public void register(ExceptionMetadataRegistry<WebRequest, WebResponse> registry) {
+    LogLevelResolver<WebRequest> logLevelResolver = (request, e) -> LogLevelEnum.ERROR;
+    ResponseFactory<WebRequest, WebResponse> responseFactory =
+        (request, e) -> new WebResponse(e, 500,
+            new WebResponseBody("AIPUB_BACKEND_RESPONSE_ERROR", null));
+    registry.register(AipubBackendResponseException.class,
+        new ExceptionMetadata<>(logLevelResolver, responseFactory));
+  }
 
 }

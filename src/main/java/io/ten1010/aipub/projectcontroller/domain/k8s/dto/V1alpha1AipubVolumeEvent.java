@@ -6,11 +6,11 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1alpha1AipubVolumeEvent {
 
-    @Nullable
-    private String created;
-    @Nullable
-    private String deleted;
-    @Nullable
-    private String updated;
+  @Nullable
+  private String created;
+  @Nullable
+  private String deleted;
+  @Nullable
+  private String updated;
 
 }

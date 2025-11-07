@@ -6,15 +6,14 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1WorkspaceTerminationState {
 
-    @Nullable
-    Integer exitCode;
-    @Nullable
-    String message;
-    @Nullable
-    String reason;
-    @Nullable
-    String timestamp;
+  @Nullable
+  Integer exitCode;
+  @Nullable
+  String message;
+  @Nullable
+  String reason;
+  @Nullable
+  String timestamp;
 
-    
 
 }

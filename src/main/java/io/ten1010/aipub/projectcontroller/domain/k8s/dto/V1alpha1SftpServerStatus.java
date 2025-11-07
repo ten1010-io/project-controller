@@ -6,9 +6,9 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1alpha1SftpServerStatus {
 
-    @Nullable
-    V1alpha1SftpServerCondition availableCondition;
-    @Nullable
-    V1alpha1SftpServerSshEndpoint sshEndpoint;
+  @Nullable
+  V1alpha1SftpServerCondition availableCondition;
+  @Nullable
+  V1alpha1SftpServerSshEndpoint sshEndpoint;
 
 }

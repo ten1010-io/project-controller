@@ -12,36 +12,39 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class AdmissionReviewExceptionWebMetadataRegistrar implements WebMetadataRegistrar {
 
-    private final ExceptionMetadataRegistry<WebRequest, WebResponse> metadataRegistry;
+  private final ExceptionMetadataRegistry<WebRequest, WebResponse> metadataRegistry;
 
-    @Override
-    public void register(ExceptionMetadataRegistry<WebRequest, WebResponse> registry) {
-        ExceptionMetadata<WebRequest, WebResponse> metadata = new ExceptionMetadata<>(createLogLevelResolver(), createResponseFactory());
-        registry.register(AdmissionReviewException.class, metadata);
-    }
+  @Override
+  public void register(ExceptionMetadataRegistry<WebRequest, WebResponse> registry) {
+    ExceptionMetadata<WebRequest, WebResponse> metadata = new ExceptionMetadata<>(
+        createLogLevelResolver(), createResponseFactory());
+    registry.register(AdmissionReviewException.class, metadata);
+  }
 
-    private LogLevelResolver<WebRequest> createLogLevelResolver() {
-        return (request, e) -> {
-            if (e instanceof AdmissionReviewException reviewException) {
-                Exception cause = reviewException.getCause();
-                ExceptionMetadata<WebRequest, WebResponse> metadata = metadataRegistry.getCompatibleMetadata(cause.getClass()).orElseThrow();
-                return metadata.getLogLevelResolver().resolve(request, cause);
-            }
-            throw new IllegalArgumentException();
-        };
-    }
+  private LogLevelResolver<WebRequest> createLogLevelResolver() {
+    return (request, e) -> {
+      if (e instanceof AdmissionReviewException reviewException) {
+        Exception cause = reviewException.getCause();
+        ExceptionMetadata<WebRequest, WebResponse> metadata = metadataRegistry.getCompatibleMetadata(
+            cause.getClass()).orElseThrow();
+        return metadata.getLogLevelResolver().resolve(request, cause);
+      }
+      throw new IllegalArgumentException();
+    };
+  }
 
-    private ResponseFactory<WebRequest, WebResponse> createResponseFactory() {
-        return (request, e) -> {
-            if (e instanceof AdmissionReviewException reviewException) {
-                Exception cause = reviewException.getCause();
-                ExceptionMetadata<WebRequest, WebResponse> metadata = metadataRegistry.getCompatibleMetadata(cause.getClass()).orElseThrow();
-                WebResponse response = metadata.getResponseFactory().create(request, cause);
+  private ResponseFactory<WebRequest, WebResponse> createResponseFactory() {
+    return (request, e) -> {
+      if (e instanceof AdmissionReviewException reviewException) {
+        Exception cause = reviewException.getCause();
+        ExceptionMetadata<WebRequest, WebResponse> metadata = metadataRegistry.getCompatibleMetadata(
+            cause.getClass()).orElseThrow();
+        WebResponse response = metadata.getResponseFactory().create(request, cause);
 
-                return new WebResponse(e, response.getHttpStatus(), response.getBody());
-            }
-            throw new IllegalArgumentException();
-        };
-    }
+        return new WebResponse(e, response.getHttpStatus(), response.getBody());
+      }
+      throw new IllegalArgumentException();
+    };
+  }
 
 }

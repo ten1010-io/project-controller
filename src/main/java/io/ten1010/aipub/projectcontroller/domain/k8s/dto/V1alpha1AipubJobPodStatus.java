@@ -6,7 +6,7 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1alpha1AipubJobPodStatus {
 
-    @Nullable
-    private V1alpha1AipubJobInfo pods;
+  @Nullable
+  private V1alpha1AipubJobInfo pods;
 
 }

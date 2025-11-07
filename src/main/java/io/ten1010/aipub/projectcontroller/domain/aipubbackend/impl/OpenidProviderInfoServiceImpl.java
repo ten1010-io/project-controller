@@ -8,23 +8,23 @@ import okhttp3.Call;
 
 public class OpenidProviderInfoServiceImpl implements OpenidProviderInfoService {
 
-    private static final TypeToken<OpenidProviderInfo> OPENID_PROVIDER_INFO_TYPE_TOKEN = new TypeToken<>() {
-    };
+  private static final TypeToken<OpenidProviderInfo> OPENID_PROVIDER_INFO_TYPE_TOKEN = new TypeToken<>() {
+  };
 
-    private final ApiClient aipubBackendClient;
-    private final CallHelper callHelper;
+  private final ApiClient aipubBackendClient;
+  private final CallHelper callHelper;
 
-    public OpenidProviderInfoServiceImpl(ApiClient aipubBackendClient) {
-        this.aipubBackendClient = aipubBackendClient;
-        this.callHelper = new CallHelper(aipubBackendClient);
-    }
+  public OpenidProviderInfoServiceImpl(ApiClient aipubBackendClient) {
+    this.aipubBackendClient = aipubBackendClient;
+    this.callHelper = new CallHelper(aipubBackendClient);
+  }
 
-    @Override
-    public OpenidProviderInfo getOpenidProviderInfo() {
-        Call call = this.aipubBackendClient.buildCall(
-                "/openidproviderinfo",
-                "GET");
-        return this.callHelper.executeCall(call, OPENID_PROVIDER_INFO_TYPE_TOKEN).orElseThrow();
-    }
+  @Override
+  public OpenidProviderInfo getOpenidProviderInfo() {
+    Call call = this.aipubBackendClient.buildCall(
+        "/openidproviderinfo",
+        "GET");
+    return this.callHelper.executeCall(call, OPENID_PROVIDER_INFO_TYPE_TOKEN).orElseThrow();
+  }
 
 }

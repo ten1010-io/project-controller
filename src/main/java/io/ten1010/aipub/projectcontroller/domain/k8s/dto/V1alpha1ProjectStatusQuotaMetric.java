@@ -6,9 +6,9 @@ import org.jspecify.annotations.Nullable;
 @Data
 public class V1alpha1ProjectStatusQuotaMetric {
 
-    @Nullable
-    private String limit;
-    @Nullable
-    private String used;
+  @Nullable
+  private String limit;
+  @Nullable
+  private String used;
 
 }
