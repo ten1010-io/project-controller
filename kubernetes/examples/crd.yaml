@@ -2233,238 +2233,103 @@ kind: CustomResourceDefinition
 metadata:
   name: sftpservers.aipub.ten1010.io
 spec:
-  conversion:
-    strategy: None
-  group: aipub.ten1010.io
+  scope: Namespaced
   names:
-    categories:
-      - all
     kind: SFTPServer
-    listKind: SFTPServerList
     plural: sftpservers
+    singular: sftpserver
     shortNames:
       - sftp
-    singular: sftpserver
-  scope: Namespaced
+    categories:
+      - all
+  group: aipub.ten1010.io
   versions:
-    - additionalPrinterColumns:
-        - jsonPath: .status.availableCondition.status
-          name: AVAILABLE
+    - name: v1alpha1
+      served: true
+      storage: true
+      additionalPrinterColumns:
+        - name: AVAILABLE
           type: boolean
-        - jsonPath: .status.sshEndpoint.host
-          name: SSH-HOST
+          jsonPath: .status.availableCondition.status
+        - name: POD-NAME
           type: string
-        - jsonPath: .status.sshEndpoint.port
-          name: SSH-PORT
-          type: integer
-      name: v1alpha1
+          jsonPath: .status.podName
+        - name: SERVICE-NAME
+          type: string
+          jsonPath: .status.serviceName
+        - name: ADDRESS
+          type: string
+          jsonPath: .status.address
+      subresources:
+        status: {}
       schema:
         openAPIV3Schema:
+          type: object
+          required:
+            - metadata
+            - spec
           properties:
             metadata:
-              properties:
-                name:
-                  maxLength: 63
-                  minLength: 1
-                  pattern: ^[a-z]([-a-z0-9]*[a-z0-9])?$
-                  type: string
               type: object
             spec:
-              properties:
-                ssh:
-                  properties:
-                    port:
-                      type: integer
-                      x-kubernetes-validations:
-                        - message: Port number must be between 1 and 65535
-                          rule: self >= 1 && self <= 65535
-                    publicKey:
-                      type: string
-                  required:
-                    - publicKey
-                    - port
-                  type: object
-                template:
-                  properties:
-                    metadata:
-                      properties:
-                        annotations:
-                          type: object
-                          x-kubernetes-preserve-unknown-fields: true
-                        labels:
-                          additionalProperties:
-                            maxLength: 63
-                            pattern: ^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$
-                            type: string
-                          type: object
-                          x-kubernetes-preserve-unknown-fields: true
-                      type: object
-                      x-kubernetes-preserve-unknown-fields: true
-                    spec:
-                      properties:
-                        containers:
-                          items:
-                            properties:
-                              args:
-                                items:
-                                  type: string
-                                type: array
-                              command:
-                                items:
-                                  type: string
-                                type: array
-                              env:
-                                items:
-                                  properties:
-                                    name:
-                                      minLength: 1
-                                      type: string
-                                    value:
-                                      type: string
-                                    valueFrom:
-                                      properties:
-                                        configMapKeyRef:
-                                          properties:
-                                            key:
-                                              minLength: 1
-                                              type: string
-                                            name:
-                                              minLength: 1
-                                              type: string
-                                            optional:
-                                              type: boolean
-                                          required:
-                                            - name
-                                            - key
-                                          type: object
-                                        fieldRef:
-                                          type: object
-                                          x-kubernetes-preserve-unknown-fields: true
-                                        resourceFieldRef:
-                                          type: object
-                                          x-kubernetes-preserve-unknown-fields: true
-                                        secretKeyRef:
-                                          properties:
-                                            key:
-                                              minLength: 1
-                                              type: string
-                                            name:
-                                              minLength: 1
-                                              type: string
-                                            optional:
-                                              type: boolean
-                                          required:
-                                            - name
-                                            - key
-                                          type: object
-                                      type: object
-                                  required:
-                                    - name
-                                  type: object
-                                type: array
-                              image:
-                                minLength: 1
-                                type: string
-                              name:
-                                minLength: 1
-                                type: string
-                              resources:
-                                properties:
-                                  claims:
-                                    items:
-                                      properties:
-                                        name:
-                                          minLength: 1
-                                          type: string
-                                      type: object
-                                    type: array
-                                  limits:
-                                    type: object
-                                    x-kubernetes-preserve-unknown-fields: true
-                                  requests:
-                                    type: object
-                                    x-kubernetes-preserve-unknown-fields: true
-                                type: object
-                              volumeMounts:
-                                items:
-                                  properties:
-                                    mountPath:
-                                      minLength: 1
-                                      pattern: ^[^:]*$
-                                      type: string
-                                    name:
-                                      minLength: 1
-                                      type: string
-                                  required:
-                                    - name
-                                    - mountPath
-                                  type: object
-                                type: array
-                              workingDir:
-                                minLength: 1
-                                type: string
-                            type: object
-                          maxItems: 1
-                          minItems: 1
-                          type: array
-                          x-kubernetes-preserve-unknown-fields: true
-                        hostname:
-                          maxLength: 63
-                          minLength: 1
-                          type: string
-                        volumes:
-                          items:
-                            properties:
-                              name:
-                                minLength: 1
-                                type: string
-                            required:
-                              - name
-                            type: object
-                            x-kubernetes-preserve-unknown-fields: true
-                          type: array
-                      type: object
-                      x-kubernetes-preserve-unknown-fields: true
-                  required:
-                    - spec
-                  type: object
-              required:
-                - ssh
-                - template
               type: object
+              required:
+                - volumeAndMounts
+                - publicKey
+              properties:
+                volumeAndMounts:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      persistentVolumeClaim:
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
+                      mountPath:
+                        type: string
+                port:
+                  type: integer
+                  nullable: true
+                publicKey:
+                  type: object
+                  oneOf:
+                    - required: ["value"]
+                    - required: ["valueFrom"]
+                  properties:
+                    value:
+                      type: string
+                    valueFrom:
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
             status:
+              type: object
               default:
                 availableCondition:
                   status: false
               properties:
                 availableCondition:
+                  type: object
                   properties:
-                    message:
-                      type: string
-                    reason:
-                      type: string
                     status:
                       type: boolean
+                    reason:
+                      type: string
+                    message:
+                      type: string
                     timestamp:
                       type: string
+                podName:
+                  type: string
+                serviceName:
+                  type: string
+                address:
+                  type: string
+                event:
                   type: object
-                sshEndpoint:
                   properties:
-                    host:
+                    created:
                       type: string
-                    port:
-                      type: integer
-                    user:
+                    updated:
                       type: string
-                  type: object
-              type: object
-          type: object
-          x-kubernetes-validations:
-            - message: Exactly one container must be defined.
-              rule: self.spec.template.spec.containers.size() == 1
-            - message: Container name must match metadata.name of the SFTPServer.
-              rule: self.spec.template.spec.containers[0].name == self.metadata.name
-      served: true
-      storage: true
-      subresources:
-        status: {}
+                    deleted:
+                      type: string
