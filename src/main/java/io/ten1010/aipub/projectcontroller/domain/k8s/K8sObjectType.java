@@ -1,9 +1,7 @@
 package io.ten1010.aipub.projectcontroller.domain.k8s;
 
 import io.kubernetes.client.common.KubernetesObject;
-import lombok.AllArgsConstructor;
 
-@AllArgsConstructor
 public record K8sObjectType<T extends KubernetesObject>(K8sObjectTypeKey typeKey,
                                                         Class<T> objClass) {
 
