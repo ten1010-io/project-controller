@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 public class ReconciliationService {
 
     private static final String REQUESTS_STORAGE_QUOTA_RESOURCE_NAME = "requests.storage";
+    private static final String EXTENDED_RESOURCE_HARD_PREFIX = "requests.";
 
     private static List<V1OwnerReference> removeOwnerReferencesThatReferToProjectKind(List<V1OwnerReference> references) {
         return references.stream()
@@ -455,6 +456,10 @@ public class ReconciliationService {
         V1ResourceQuotaSpecBuilder builder = new V1ResourceQuotaSpecBuilder();
         Optional<String> pvcStorageQuotaOpt = ProjectUtils.getSpecPvcStorageQuota(project);
         pvcStorageQuotaOpt.ifPresent(quota -> builder.addToHard(REQUESTS_STORAGE_QUOTA_RESOURCE_NAME, Quantity.fromString(quota)));
+        Map<String, String> extendedResourcesQuota = ProjectUtils.getSpecExtendedResourcesQuota(project);
+        for (Map.Entry<String, String> e : extendedResourcesQuota.entrySet()) {
+            builder.addToHard(EXTENDED_RESOURCE_HARD_PREFIX + e.getKey(), Quantity.fromString(e.getValue()));
+        }
 
         return builder.build();
     }

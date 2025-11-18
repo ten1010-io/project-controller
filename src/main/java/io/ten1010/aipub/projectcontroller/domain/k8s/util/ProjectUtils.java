@@ -7,10 +7,7 @@ import io.kubernetes.client.openapi.models.V1ObjectMetaBuilder;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ProjectRoleEnum;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 public abstract class ProjectUtils {
 
@@ -60,6 +57,14 @@ public abstract class ProjectUtils {
     public static Optional<String> getSpecPvcStorageQuota(V1alpha1Project object) {
         Optional<V1alpha1ProjectSpecQuota> quotaOpt = getSpecQuota(object);
         return quotaOpt.map(V1alpha1ProjectSpecQuota::getPvcStorage);
+    }
+
+    public static Map<String, String> getSpecExtendedResourcesQuota(V1alpha1Project object) {
+        Optional<V1alpha1ProjectSpecQuota> quotaOpt = getSpecQuota(object);
+        if (quotaOpt.isEmpty() || quotaOpt.get().getExtendedResources() == null) {
+            return new HashMap<>();
+        }
+        return quotaOpt.get().getExtendedResources();
     }
 
     public static Optional<V1alpha1ProjectBinding> getSpecBinding(V1alpha1Project object) {
