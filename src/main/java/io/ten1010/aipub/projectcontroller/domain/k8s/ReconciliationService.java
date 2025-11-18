@@ -54,10 +54,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 
-@Slf4j
 public class ReconciliationService {
 
   private static final String REQUESTS_STORAGE_QUOTA_RESOURCE_NAME = "requests.storage";
@@ -801,6 +799,7 @@ public class ReconciliationService {
         .orElse(List.of());
   }
 
+
   public V1ResourceQuotaSpec reconcileQuotaSpec(V1alpha1Project project) {
     V1ResourceQuotaSpecBuilder builder = new V1ResourceQuotaSpecBuilder();
     Optional<String> pvcStorageQuotaOpt = ProjectUtils.getSpecPvcStorageQuota(project);
@@ -853,7 +852,8 @@ public class ReconciliationService {
     return reconciled;
   }
 
-  public Map<String, String> reconcileNamespaceLabels(@Nullable V1Namespace namespace, @Nullable V1alpha1Project project) {
+  public Map<String, String> reconcileNamespaceLabels(@Nullable V1Namespace namespace,
+      @Nullable V1alpha1Project project) {
     Map<String, String> existingLabels = new HashMap<>();
     if (namespace != null) {
       existingLabels.putAll(K8sObjectUtils.getLabels(namespace));
