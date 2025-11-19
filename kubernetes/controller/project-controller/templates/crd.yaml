@@ -56,6 +56,10 @@ spec:
                     pvcStorage:
                       type: string
                       pattern: '^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$'
+                    extendedResources:
+                      type: object
+                      additionalProperties:
+                        type: string
                 binding:
                   type: object
                   properties:
