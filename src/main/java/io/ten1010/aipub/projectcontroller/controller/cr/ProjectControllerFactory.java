@@ -19,6 +19,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageHub;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeGroup;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
+import java.util.List;
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
@@ -29,16 +30,19 @@ public class ProjectControllerFactory implements ControllerFactory {
   private final ReconciliationService reconciliationService;
   private final OnUpdateFilterFactory onUpdateFilterFactory;
   private final RequestBuilderFactory requestBuilderFactory;
+  private final List<String> reservedName;
 
   public ProjectControllerFactory(
       SharedInformerFactory sharedInformerFactory,
       K8sApiProvider k8sApiProvider,
-      ReconciliationService reconciliationService) {
+      ReconciliationService reconciliationService,
+      List<String> reservedName) {
     this.sharedInformerFactory = sharedInformerFactory;
     this.k8sApiProvider = k8sApiProvider;
     this.reconciliationService = reconciliationService;
     this.onUpdateFilterFactory = new OnUpdateFilterFactory();
     this.requestBuilderFactory = new RequestBuilderFactory(sharedInformerFactory);
+    this.reservedName = reservedName;
   }
 
   @Override
@@ -69,7 +73,7 @@ public class ProjectControllerFactory implements ControllerFactory {
         .watch(this::createImageHubWatch)
         .withReconciler(
             new ProjectReconciler(this.reconciliationService, this.sharedInformerFactory,
-                this.k8sApiProvider))
+                this.k8sApiProvider, this.reservedName))
         .build();
   }
 

@@ -74,9 +74,10 @@ public class ControllerConfiguration {
   @Bean
   public Controller projectController(SharedInformerFactory sharedInformerFactory,
       K8sApiProvider k8sApiProvider,
-      ReconciliationService reconciliationService) {
+      ReconciliationService reconciliationService,
+      AipubProperties aipubProperties) {
     return new ProjectControllerFactory(sharedInformerFactory, k8sApiProvider,
-        reconciliationService)
+        reconciliationService, aipubProperties.getReservedNamespace())
         .createController();
   }
 

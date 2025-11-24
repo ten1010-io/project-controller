@@ -46,11 +46,13 @@ public class ProjectReconciler extends AbstractReconciler {
   private final StatusPatchHelper<V1alpha1Project> statusPatchHelper;
   private final KeyResolver keyResolver;
   private final NamespaceNameResolver namespaceNameResolver;
+  private final List<String> reservedName;
 
   public ProjectReconciler(
       ReconciliationService reconciliationService,
       SharedInformerFactory sharedInformerFactory,
-      K8sApiProvider k8sApiProvider) {
+      K8sApiProvider k8sApiProvider,
+      List<String> reservedName) {
     this.reconciliationService = reconciliationService;
     this.projectIndexer = sharedInformerFactory
         .getExistingSharedIndexInformer(V1alpha1Project.class)
@@ -69,6 +71,7 @@ public class ProjectReconciler extends AbstractReconciler {
         ProjectApiConstants.PROJECT_RESOURCE_PLURAL);
     this.keyResolver = new KeyResolver();
     this.namespaceNameResolver = new NamespaceNameResolver();
+    this.reservedName = reservedName;
   }
 
   @Override

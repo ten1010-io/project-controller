@@ -47,8 +47,9 @@ public class DomainConfiguration {
 
   @Bean
   public ReconciliationService reconciliationService(SubjectResolver subjectResolver,
-      DockerConfigJsonResolver dockerConfigJsonResolver) {
-    return new ReconciliationService(subjectResolver, dockerConfigJsonResolver);
+      DockerConfigJsonResolver dockerConfigJsonResolver, AipubProperties aipubProperties) {
+    return new ReconciliationService(subjectResolver, dockerConfigJsonResolver,
+        aipubProperties.getReservedNamespace());
   }
 
 }

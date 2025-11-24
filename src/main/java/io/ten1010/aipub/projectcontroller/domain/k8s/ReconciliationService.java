@@ -53,8 +53,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 
+@Slf4j
 public class ReconciliationService {
 
   private static final String REQUESTS_STORAGE_QUOTA_RESOURCE_NAME = "requests.storage";
@@ -68,9 +70,10 @@ public class ReconciliationService {
   private final WorkloadResourceResolver workloadResourceResolver;
   private final Gson gson;
   private final ObjectMapper mapper;
+  private final List<String> reservedNamespaces;
 
   public ReconciliationService(SubjectResolver subjectResolver,
-      DockerConfigJsonResolver dockerConfigJsonResolver) {
+      DockerConfigJsonResolver dockerConfigJsonResolver, List<String> reservedNamespaces) {
     this.subjectResolver = subjectResolver;
     this.dockerConfigJsonResolver = dockerConfigJsonResolver;
     this.roleNameResolver = new RoleNameResolver();
@@ -78,6 +81,7 @@ public class ReconciliationService {
     this.workloadResourceResolver = new WorkloadResourceResolver();
     this.gson = new Gson();
     this.mapper = new ObjectMapperFactory().createObjectMapper();
+    this.reservedNamespaces = reservedNamespaces;
   }
 
   private static List<V1OwnerReference> removeOwnerReferencesThatReferToProjectKind(
@@ -300,6 +304,10 @@ public class ReconciliationService {
     filtered = removeOwnerReferencesThatReferToAipubUserKind(filtered);
 
     if (project == null) {
+      return filtered;
+    }
+    if (reservedNamespaces.contains(K8sObjectUtils.getName(project))) {
+      log.debug("filtered out {} because it is reserved", K8sObjectUtils.getName(project));
       return filtered;
     }
 

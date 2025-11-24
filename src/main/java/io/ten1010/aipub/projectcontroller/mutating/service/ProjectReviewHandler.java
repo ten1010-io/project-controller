@@ -58,8 +58,7 @@ public class ProjectReviewHandler extends AbstractReviewHandler<V1alpha1Project>
         V1AdmissionReviewUtils.allow(review);
         return;
       }
-      log.debug("Project name {} is reserved, not allowed to create or update for aipub admin",
-          projName);
+      log.debug("Project name {} is reserved", projName);
       V1AdmissionReviewUtils.reject(review, HttpStatus.FORBIDDEN.value(),
           String.format("%s is reserved name", projName));
       return;

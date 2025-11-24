@@ -44,15 +44,15 @@ public class NamespaceReviewHandler extends AbstractReviewHandler<V1Namespace> {
         this.keyResolver.resolveKey(getNamespaceName(review)));
     String namespaceName = K8sObjectUtils.getName(namespace);
     if (isReservedName(namespaceName)) {
-      log.debug("Namespace {} is reserved", namespaceName);
       V1UserInfo userInfo = review.getRequest().getUserInfo();
       if (userInfo.getGroups() != null &&
-          (userInfo.getGroups().contains(K8sGroupConstants.SYSTEM_MASTERS_GROUP_NAME)
-              && !userInfo.getGroups().contains(K8sGroupConstants.AIPUB_ADMIN_GROUP_NAME))) {
-        log.debug("Allowed namespace {} delete because requester is system admin", namespaceName);
+          (userInfo.getGroups().contains(K8sGroupConstants.SYSTEM_MASTERS_GROUP_NAME)) &&
+          !(userInfo.getGroups().contains(K8sGroupConstants.AIPUB_ADMIN_GROUP_NAME))) {
+        log.debug("Allowed namespace {} deletion because requester is system admin", namespaceName);
         V1AdmissionReviewUtils.allow(review);
         return;
       }
+      log.debug("Namespace {} is reserved", namespaceName);
       V1AdmissionReviewUtils.reject(review, HttpStatus.FORBIDDEN.value(),
           String.format("%s is reserved name", namespaceName));
       return;
