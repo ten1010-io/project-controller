@@ -59,7 +59,7 @@ public class ProjectReviewHandler extends AbstractReviewHandler<V1alpha1Project>
         return;
       }
       log.debug("Project name {} is reserved", projName);
-      V1AdmissionReviewUtils.reject(review, HttpStatus.FORBIDDEN.value(),
+      V1AdmissionReviewUtils.reject(review, HttpStatus.CONFLICT.value(),
           String.format("%s is reserved name", projName));
       return;
     }

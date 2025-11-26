@@ -53,7 +53,7 @@ public class NamespaceReviewHandler extends AbstractReviewHandler<V1Namespace> {
         return;
       }
       log.debug("Namespace {} is reserved", namespaceName);
-      V1AdmissionReviewUtils.reject(review, HttpStatus.FORBIDDEN.value(),
+      V1AdmissionReviewUtils.reject(review, HttpStatus.CONFLICT.value(),
           String.format("%s is reserved name", namespaceName));
       return;
     }
