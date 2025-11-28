@@ -46,7 +46,8 @@ public class NamespaceReviewHandler extends AbstractReviewHandler<V1Namespace> {
     if (isReservedName(namespaceName)) {
       V1UserInfo userInfo = review.getRequest().getUserInfo();
       if (userInfo.getGroups() != null &&
-          (userInfo.getGroups().contains(K8sGroupConstants.SYSTEM_MASTERS_GROUP_NAME)) &&
+          (userInfo.getGroups().contains(K8sGroupConstants.SYSTEM_MASTERS_GROUP_NAME) ||
+              userInfo.getGroups().contains(K8sGroupConstants.CLUSTER_ADMINS_GROUP_NAME)) &&
           !(userInfo.getGroups().contains(K8sGroupConstants.AIPUB_ADMIN_GROUP_NAME))) {
         log.debug("Allowed namespace {} deletion because requester is system admin", namespaceName);
         V1AdmissionReviewUtils.allow(review);

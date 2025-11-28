@@ -52,7 +52,8 @@ public class ProjectReviewHandler extends AbstractReviewHandler<V1alpha1Project>
     String projName = K8sObjectUtils.getName(proj);
     if (isReservedName(projName)) {
       if (userInfo.getGroups() != null &&
-          userInfo.getGroups().contains(K8sGroupConstants.SYSTEM_MASTERS_GROUP_NAME) &&
+          (userInfo.getGroups().contains(K8sGroupConstants.SYSTEM_MASTERS_GROUP_NAME) ||
+              userInfo.getGroups().contains(K8sGroupConstants.CLUSTER_ADMINS_GROUP_NAME)) &&
           !userInfo.getGroups().contains(K8sGroupConstants.AIPUB_ADMIN_GROUP_NAME)) {
         log.debug("Project name {} is reserved, but allowed for system admin", projName);
         V1AdmissionReviewUtils.allow(review);
@@ -65,8 +66,9 @@ public class ProjectReviewHandler extends AbstractReviewHandler<V1alpha1Project>
     }
 
     if (userInfo.getGroups() != null &&
-        (userInfo.getGroups().contains(K8sGroupConstants.SYSTEM_MASTERS_GROUP_NAME)
-            || userInfo.getGroups().contains(K8sGroupConstants.AIPUB_ADMIN_GROUP_NAME))) {
+        userInfo.getGroups().contains(K8sGroupConstants.SYSTEM_MASTERS_GROUP_NAME) ||
+        userInfo.getGroups().contains(K8sGroupConstants.CLUSTER_ADMINS_GROUP_NAME) ||
+        userInfo.getGroups().contains(K8sGroupConstants.AIPUB_ADMIN_GROUP_NAME)) {
       V1AdmissionReviewUtils.allow(review);
       return;
     }
