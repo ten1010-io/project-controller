@@ -205,9 +205,11 @@ public class AipubUserRoleReconciler extends AbstractReconciler {
       List<V1PolicyRule> reconciledRules) throws ApiException {
     boolean ownersEqual = Set.copyOf(K8sObjectUtils.getOwnerReferences(role))
         .equals(Set.copyOf(reconciledReferences));
-    boolean rulesEqual = java.util.Objects.equals(role.getRules(), role);
-
+    boolean rulesEqual = new java.util.HashSet<>(
+        Optional.ofNullable(role.getRules()).orElse(List.of()))
+        .equals(new java.util.HashSet<>(reconciledRules));
     if (ownersEqual && rulesEqual) {
+      log.debug("present one, reconciled one equals - requeue false");
       return new Result(false);
     }
     V1Role edited = new V1RoleBuilder(role)
