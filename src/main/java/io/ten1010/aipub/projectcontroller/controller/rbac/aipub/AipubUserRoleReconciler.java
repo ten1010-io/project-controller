@@ -116,7 +116,6 @@ public class AipubUserRoleReconciler extends AbstractReconciler {
     if (userOpt.isEmpty()) {
       if (roleOpt.isPresent()) {
         deleteRole(roleOpt.get());
-        log.info("requeue point 1");
         return new Result(true, Duration.ofSeconds(5));
       }
       return new Result(false);
@@ -195,7 +194,6 @@ public class AipubUserRoleReconciler extends AbstractReconciler {
         .withRules(reconciledRules)
         .build();
     createRole(namespace, role);
-    log.info("requeue point 3");
     return new Result(true, Duration.ofSeconds(5));
   }
 
@@ -205,8 +203,9 @@ public class AipubUserRoleReconciler extends AbstractReconciler {
       List<V1PolicyRule> reconciledRules) throws ApiException {
     boolean ownersEqual = Set.copyOf(K8sObjectUtils.getOwnerReferences(role))
         .equals(Set.copyOf(reconciledReferences));
-    boolean rulesEqual = java.util.Objects.equals(role.getRules(), role);
-
+    boolean rulesEqual =
+        new java.util.HashSet<>(Optional.ofNullable(role.getRules()).orElse(List.of()))
+            .equals(new java.util.HashSet<>(reconciledRules));
     if (ownersEqual && rulesEqual) {
       return new Result(false);
     }

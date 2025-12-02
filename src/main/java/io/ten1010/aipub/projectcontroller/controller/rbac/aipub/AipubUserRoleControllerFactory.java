@@ -86,7 +86,7 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
   private ControllerWatch<V1alpha1Project> createProjectWatch(WorkQueue<Request> workQueue) {
     DefaultControllerWatch<V1alpha1Project> watch = new DefaultControllerWatch<>(workQueue,
         V1alpha1Project.class);
-    watch.setOnUpdateFilter(this.onUpdateFilterFactory.alwaysTrueFilter());
+    watch.setOnUpdateFilter(this.onUpdateFilterFactory.projectSpecFieldFilter());
     watch.setRequestBuilder(this.requestBuilderFactory.projectToAipubUserRoles());
 
     return watch;
@@ -104,7 +104,7 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
   private ControllerWatch<V1Workspace> createWorkspaceWatch(WorkQueue<Request> workQueue) {
     DefaultControllerWatch<V1Workspace> watch = new DefaultControllerWatch<>(workQueue,
         V1Workspace.class);
-    watch.setOnUpdateFilter(this.onUpdateFilterFactory.alwaysTrueFilter());
+    watch.setOnUpdateFilter(this.onUpdateFilterFactory.workspaceFilter());
     watch.setRequestBuilder(this.requestBuilderFactory.workspaceToAipubUserRoles());
     return watch;
   }
@@ -112,7 +112,7 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
   private ControllerWatch<V1alpha1AipubJob> createAipubJobWatch(WorkQueue<Request> workQueue) {
     DefaultControllerWatch<V1alpha1AipubJob> watch = new DefaultControllerWatch<>(workQueue,
         V1alpha1AipubJob.class);
-    watch.setOnUpdateFilter(this.onUpdateFilterFactory.alwaysTrueFilter());
+    watch.setOnUpdateFilter(this.onUpdateFilterFactory.aipubJobFilter());
     watch.setRequestBuilder(this.requestBuilderFactory.aipubJobToAipubUserRoles());
     return watch;
   }
@@ -120,7 +120,7 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
   private ControllerWatch<V1alpha1Operation> createOperationWatch(WorkQueue<Request> workQueue) {
     DefaultControllerWatch<V1alpha1Operation> watch = new DefaultControllerWatch<>(workQueue,
         V1alpha1Operation.class);
-    watch.setOnUpdateFilter(this.onUpdateFilterFactory.alwaysTrueFilter());
+    watch.setOnUpdateFilter(this.onUpdateFilterFactory.operationFilter());
     watch.setRequestBuilder(this.requestBuilderFactory.operationToAipubUserRoles());
     return watch;
   }
@@ -129,7 +129,7 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
       WorkQueue<Request> workQueue) {
     DefaultControllerWatch<V1alpha1AipubVolume> watch = new DefaultControllerWatch<>(workQueue,
         V1alpha1AipubVolume.class);
-    watch.setOnUpdateFilter(this.onUpdateFilterFactory.alwaysTrueFilter());
+    watch.setOnUpdateFilter(this.onUpdateFilterFactory.aipubVolumeFilter());
     watch.setRequestBuilder(this.requestBuilderFactory.aipubVolumeToAipubUserRoles());
     return watch;
   }
@@ -137,7 +137,7 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
   private ControllerWatch<V1alpha1SftpServer> createSftpServerWatch(WorkQueue<Request> workQueue) {
     DefaultControllerWatch<V1alpha1SftpServer> watch = new DefaultControllerWatch<>(workQueue,
         V1alpha1SftpServer.class);
-    watch.setOnUpdateFilter(this.onUpdateFilterFactory.alwaysTrueFilter());
+    watch.setOnUpdateFilter(this.onUpdateFilterFactory.sftpServerFilter());
     watch.setRequestBuilder(this.requestBuilderFactory.sftpServerToAipubUserRoles());
     return watch;
   }
