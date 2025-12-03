@@ -5,10 +5,12 @@ import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.models.V1OwnerReference;
 import io.kubernetes.client.openapi.models.V1OwnerReferenceBuilder;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ArtifactService;
+import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageHubService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.RepositoryService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.Artifact;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ArtifactListOptions;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ArtifactTag;
+import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageHub;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.Repository;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.RepositoryListOptions;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sObjectTypeConstants;
@@ -44,7 +46,7 @@ public class ImageReviewReviewHandler extends AbstractReviewHandler<V1alpha1Imag
       .withController(false)
       .withBlockOwnerDeletion(false)
       .build();
-
+  private final ImageHubService imageHubService;
   private final RepositoryService repositoryService;
   private final ArtifactService artifactService;
   private final UserInfoAnalyzer userInfoAnalyzer;
@@ -52,9 +54,10 @@ public class ImageReviewReviewHandler extends AbstractReviewHandler<V1alpha1Imag
   private final KeyResolver keyResolver;
 
   public ImageReviewReviewHandler(
-      RepositoryService repositoryService, ArtifactService artifactService,
-      SharedInformerFactory sharedInformerFactory) {
+      ImageHubService imageHubService, RepositoryService repositoryService,
+      ArtifactService artifactService, SharedInformerFactory sharedInformerFactory) {
     super(K8sObjectTypeConstants.IMAGE_REVIEW_V1ALPHA1);
+    this.imageHubService = imageHubService;
     this.repositoryService = repositoryService;
     this.artifactService = artifactService;
     this.userInfoAnalyzer = new UserInfoAnalyzer(sharedInformerFactory);
@@ -98,6 +101,19 @@ public class ImageReviewReviewHandler extends AbstractReviewHandler<V1alpha1Imag
       return true;
     }
     V1alpha1AipubUser aipubUser = analysis.getAipubUser().orElseThrow();
+
+    V1alpha1ImageHub imageHub = this.imageHubIndexer.getByKey(targetImgHub);
+    String hubId = ImageHubUtils.getSpecId(imageHub);
+    Optional<ImageHub> imageHubOpt = this.imageHubService.getImageHubProject(hubId);
+    if (imageHubOpt.isEmpty()) {
+      V1AdmissionReviewUtils.reject(review, HttpStatus.FORBIDDEN.value(),
+          String.format("ImageHub with name[%s] not found", targetImgHub));
+      return true;
+    }
+    if (imageHubOpt.get().get_public()) {
+      return false;
+    }
+
     List<String> boundImageHubs = AipubUserUtils.getAllBoundImageHubs(aipubUser);
     if (boundImageHubs.stream().noneMatch(e -> e.equals(targetImgHub))) {
       V1AdmissionReviewUtils.reject(review, HttpStatus.FORBIDDEN.value(),

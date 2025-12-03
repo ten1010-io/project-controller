@@ -4,6 +4,7 @@ import io.kubernetes.client.informer.SharedInformerFactory;
 import io.ten1010.aipub.projectcontroller.controller.workload.PodNodesResolver;
 import io.ten1010.aipub.projectcontroller.controller.workload.WorkloadControllerNodesResolver;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ArtifactService;
+import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageHubService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.RepositoryService;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
 import io.ten1010.aipub.projectcontroller.domain.k8s.SubjectResolver;
@@ -69,9 +70,10 @@ public class MutatingConfiguration {
 
   @Bean
   public ImageReviewReviewHandler imageReviewReviewHandler(
-      RepositoryService repositoryService, ArtifactService artifactService,
-      SharedInformerFactory sharedInformerFactory) {
-    return new ImageReviewReviewHandler(repositoryService, artifactService, sharedInformerFactory);
+      ImageHubService imageHubService, RepositoryService repositoryService,
+      ArtifactService artifactService, SharedInformerFactory sharedInformerFactory) {
+    return new ImageReviewReviewHandler(imageHubService, repositoryService, artifactService,
+        sharedInformerFactory);
   }
 
 }

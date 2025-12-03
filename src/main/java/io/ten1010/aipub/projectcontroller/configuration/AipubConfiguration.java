@@ -6,11 +6,13 @@ import io.ten1010.aipub.projectcontroller.controller.ImageRegistryRobotControlle
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.AipubDockerConfigJsonResolver;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.AipubSubjectResolver;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ArtifactService;
+import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageHubService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryInfoService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotUsernameResolver;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.RepositoryService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.impl.ArtifactServiceImpl;
+import io.ten1010.aipub.projectcontroller.domain.aipubbackend.impl.ImageHubServiceImpl;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.impl.ImageRegistryInfoServiceImpl;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.impl.ImageRegistryRobotServiceImpl;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.impl.ImageRegistryRobotUsernameResolverImpl;
@@ -24,6 +26,7 @@ import io.ten1010.common.apiclient.Authentication;
 import io.ten1010.common.apiclient.HttpBasicAuthentication;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import lombok.Getter;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.annotation.Bean;
@@ -80,6 +83,15 @@ public class AipubConfiguration {
       return new AipubDockerConfigJsonResolver(infoService, robotService, usernameResolver);
     }
     return new DefaultDockerConfigJsonResolver();
+  }
+
+  @Bean
+  public ImageHubService imageHubService() {
+    if (this.aipubEnabled) {
+      Objects.requireNonNull(this.aipubBackendClient);
+      return new ImageHubServiceImpl(this.aipubBackendClient);
+    }
+    return (hubId) -> Optional.empty();
   }
 
   @Bean
