@@ -17,12 +17,16 @@ import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1StatefulSet;
 import io.ten1010.aipub.projectcontroller.domain.k8s.AipubUserRoleNameResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.RoleNameResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1Workspace;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubJob;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubVolume;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageHub;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeGroup;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Operation;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ResourceSet;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1SftpServer;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.AipubUserUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.NodeUtils;
@@ -32,6 +36,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.util.WorkloadUtils;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiPredicate;
+import lombok.extern.slf4j.Slf4j;
 
 public class OnUpdateFilterFactory {
 
@@ -275,6 +280,44 @@ public class OnUpdateFilterFactory {
   }
 
   public BiPredicate<V1StatefulSet, V1StatefulSet> statefulSetFilter() {
+    return (oldObj, newObj) ->
+        !K8sObjectUtils.getOwnerReferences(oldObj).equals(K8sObjectUtils.getOwnerReferences(newObj))
+            ||
+            !WorkloadUtils.getPodTemplateSpec(oldObj)
+                .equals(WorkloadUtils.getPodTemplateSpec(newObj));
+  }
+
+  public BiPredicate<V1Workspace, V1Workspace> workspaceFilter() {
+    return (oldObj, newObj) ->
+        !K8sObjectUtils.getOwnerReferences(oldObj).equals(K8sObjectUtils.getOwnerReferences(newObj))
+            ||
+            !WorkloadUtils.getPodTemplateSpec(oldObj)
+                .equals(WorkloadUtils.getPodTemplateSpec(newObj));
+  }
+
+  public BiPredicate<V1alpha1AipubJob, V1alpha1AipubJob> aipubJobFilter() {
+    return (oldObj, newObj) ->
+        !K8sObjectUtils.getOwnerReferences(oldObj).equals(K8sObjectUtils.getOwnerReferences(newObj))
+            ||
+            !WorkloadUtils.getPodTemplateSpec(oldObj)
+                .equals(WorkloadUtils.getPodTemplateSpec(newObj));
+  }
+
+  public BiPredicate<V1alpha1Operation, V1alpha1Operation> operationFilter() {
+    return (oldObj, newObj) ->
+        !K8sObjectUtils.getOwnerReferences(oldObj).equals(K8sObjectUtils.getOwnerReferences(newObj))
+            ||
+            !WorkloadUtils.getPodTemplateSpec(oldObj)
+                .equals(WorkloadUtils.getPodTemplateSpec(newObj));
+  }
+
+  public BiPredicate<V1alpha1AipubVolume, V1alpha1AipubVolume> aipubVolumeFilter() {
+    return (oldObj, newObj) ->
+        !K8sObjectUtils.getOwnerReferences(oldObj)
+            .equals(K8sObjectUtils.getOwnerReferences(newObj));
+  }
+
+  public BiPredicate<V1alpha1SftpServer, V1alpha1SftpServer> sftpServerFilter() {
     return (oldObj, newObj) ->
         !K8sObjectUtils.getOwnerReferences(oldObj).equals(K8sObjectUtils.getOwnerReferences(newObj))
             ||

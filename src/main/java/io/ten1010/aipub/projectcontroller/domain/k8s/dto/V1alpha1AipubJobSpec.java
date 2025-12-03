@@ -1,5 +1,6 @@
 package io.ten1010.aipub.projectcontroller.domain.k8s.dto;
 
+import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
 import lombok.Data;
 import org.jspecify.annotations.Nullable;
 
@@ -7,7 +8,7 @@ import org.jspecify.annotations.Nullable;
 public class V1alpha1AipubJobSpec {
 
   @Nullable
-  Object template;
+  private V1PodTemplateSpec template;
   @Nullable
   private Long activeDeadlineSeconds;
   @Nullable
