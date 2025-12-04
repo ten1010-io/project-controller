@@ -35,9 +35,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 public class RequestBuilderFactory {
 
   private final SharedInformerFactory sharedInformerFactory;
@@ -121,7 +119,6 @@ public class RequestBuilderFactory {
     return project -> {
       String projName = K8sObjectUtils.getName(project);
       String namespace = this.namespaceNameResolver.resolveNamespaceName(projName);
-      log.info("projectToAipubUserRoles - project: {}, namespace: {}", projName, namespace);
       return this.boundObjectResolver.getAllBoundAipubUsers(project)
           .stream()
           .map(K8sObjectUtils::getName)
@@ -187,7 +184,6 @@ public class RequestBuilderFactory {
 
   public Function<V1alpha1AipubUser, List<Request>> aipubUserToAipubUserRoles() {
     return user -> {
-      log.info("aipubUserToAipubUserRoles - user: {}", user);
       String userName = K8sObjectUtils.getName(user);
       String roleName = this.aipubUserRoleNameResolver.resolveRoleName(userName);
       return AipubUserUtils.getAllBoundProjects(user)
@@ -326,7 +322,6 @@ public class RequestBuilderFactory {
       String projName = K8sObjectUtils.getNamespace(job);
       Optional<String> usernameOpt = UsernameUtils.getUsername(job);
       if (usernameOpt.isPresent()) {
-        log.info("workspaceToAipubUserRoles - projName: {}, username: {}", projName, usernameOpt.get());
         String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());
         return List.of(new Request(projName, roleName));
       }
@@ -340,7 +335,6 @@ public class RequestBuilderFactory {
       Optional<String> usernameOpt = UsernameUtils.getUsername(job);
 
       if (usernameOpt.isPresent()) {
-        log.info("aipubJobToAipubUserRoles - projName: {}, username: {}", projName, usernameOpt.get());
         String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());
         return List.of(new Request(projName, roleName));
       }
@@ -354,7 +348,6 @@ public class RequestBuilderFactory {
       Optional<String> usernameOpt = UsernameUtils.getUsername(operation);
 
       if (usernameOpt.isPresent()) {
-        log.info("operationToAipubUserRoles - projName: {}, username: {}", projName, usernameOpt.get());
         String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());
         return List.of(new Request(projName, roleName));
       }
@@ -368,7 +361,6 @@ public class RequestBuilderFactory {
       Optional<String> usernameOpt = UsernameUtils.getUsername(aipubVolume);
 
       if (usernameOpt.isPresent()) {
-        log.info("aipubVolumeToAipubUserRoles - projName: {}, username: {}", projName, usernameOpt.get());
         String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());
         return List.of(new Request(projName, roleName));
       }
@@ -382,7 +374,6 @@ public class RequestBuilderFactory {
       Optional<String> usernameOpt = UsernameUtils.getUsername(sftpServer);
 
       if (usernameOpt.isPresent()) {
-        log.info("sftpServerToAipubUserRoles - projName: {}, username: {}", projName, usernameOpt.get());
         String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());
         return List.of(new Request(projName, roleName));
       }

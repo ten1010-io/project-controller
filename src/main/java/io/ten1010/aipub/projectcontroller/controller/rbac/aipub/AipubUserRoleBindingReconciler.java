@@ -28,9 +28,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 public class AipubUserRoleBindingReconciler extends AbstractReconciler {
 
   private final KeyResolver keyResolver;
@@ -66,7 +64,6 @@ public class AipubUserRoleBindingReconciler extends AbstractReconciler {
 
   @Override
   protected Result reconcileInternal(Request request) throws ApiException {
-    log.info("AipubUserRoleBindingReconciler reconcile request");
     String roleKey = new RequestHelper(this.keyResolver).resolveKey(request);
     Optional<V1RoleBinding> roleBindingOpt = Optional.ofNullable(
         this.RoleBindingIndexer.getByKey(roleKey));
@@ -87,7 +84,6 @@ public class AipubUserRoleBindingReconciler extends AbstractReconciler {
     if (userOpt.isEmpty()) {
       if (roleBindingOpt.isPresent()) {
         deleteRoleBinding(roleBindingOpt.get());
-        log.info("point 1");
         return new Result(true, Duration.ofSeconds(5));
       }
       return new Result(false);
@@ -95,7 +91,6 @@ public class AipubUserRoleBindingReconciler extends AbstractReconciler {
 
     if (projectOpt.isEmpty()) {
       if (roleBindingOpt.isPresent()) {
-        log.info("point 2");
         deleteRoleBinding(roleBindingOpt.get());
         return new Result(false);
       }
@@ -112,7 +107,6 @@ public class AipubUserRoleBindingReconciler extends AbstractReconciler {
       String roleNamespace = K8sObjectUtils.getNamespace(roleBindingOpt.get());
       String projNameFromNamespace = this.namespaceNameResolver.resolveProjectName(roleNamespace);
       if (!projNameFromRoleName.equals(projNameFromNamespace)) {
-        log.info("point 3");
         deleteRoleBinding(roleBindingOpt.get());
         return new Result(false);
       }
@@ -120,10 +114,8 @@ public class AipubUserRoleBindingReconciler extends AbstractReconciler {
       if (ProjectUtils.getStatusAllBoundAipubUsers(projectOpt.get()).stream()
           .noneMatch(e -> e.equals(username))) {
         deleteRoleBinding(roleBindingOpt.get());
-        log.info("point 4");
         return new Result(false);
       }
-      log.info("point 5");
       return reconcileExistingRoleBinding(roleBindingOpt.get(), reconciledReferences,
           reconciledRoleRef, subjects);
     }
@@ -132,7 +124,6 @@ public class AipubUserRoleBindingReconciler extends AbstractReconciler {
       if (roleBindingOpt.isEmpty()) {
         if (ProjectUtils.getStatusAllBoundAipubUsers(projectOpt.get()).stream()
             .anyMatch(e -> e.equals(username))) {
-          log.info("point 6");
           return reconcileNoExistingRoleBinding(request.getNamespace(), request.getName(),
               reconciledReferences, reconciledRoleRef, subjects);
         }
@@ -157,7 +148,6 @@ public class AipubUserRoleBindingReconciler extends AbstractReconciler {
         .withSubjects(subjects)
         .build();
     createRoleBinding(namespace, roleBinding);
-    log.info("point 7");
     return new Result(true, Duration.ofSeconds(5));
   }
 
@@ -173,7 +163,6 @@ public class AipubUserRoleBindingReconciler extends AbstractReconciler {
         .equals(Set.copyOf(reconciledSubjects));
 
     if (ownersEqual && roleRefEqual && subjectsEqual) {
-      log.info("point 8");
       return new Result(false);
     }
     V1RoleBinding edited = new V1RoleBindingBuilder(roleBinding)
@@ -183,7 +172,6 @@ public class AipubUserRoleBindingReconciler extends AbstractReconciler {
         .withRoleRef(reconciledRoleRef)
         .withSubjects(reconciledSubjects)
         .build();
-    log.info("point 9");
     updateRoleBinding(K8sObjectUtils.getNamespace(roleBinding), K8sObjectUtils.getName(roleBinding),
         edited);
     return new Result(false);

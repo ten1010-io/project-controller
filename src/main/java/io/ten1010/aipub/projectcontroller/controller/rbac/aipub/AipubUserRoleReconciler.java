@@ -37,7 +37,6 @@ import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 public class AipubUserRoleReconciler extends AbstractReconciler {
 
   private final KeyResolver keyResolver;
@@ -96,7 +95,6 @@ public class AipubUserRoleReconciler extends AbstractReconciler {
 
   @Override
   protected Result reconcileInternal(Request request) throws ApiException {
-    log.info("AipubUserRoleReconciler reconcile request");
     String roleKey = new RequestHelper(this.keyResolver).resolveKey(request);
     Optional<V1Role> roleOpt = Optional.ofNullable(this.roleIndexer.getByKey(roleKey));
     String projKey = this.keyResolver.resolveKey(

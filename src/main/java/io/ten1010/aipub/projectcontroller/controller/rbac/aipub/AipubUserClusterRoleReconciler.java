@@ -25,10 +25,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 
-@Slf4j
 public class AipubUserClusterRoleReconciler extends AbstractReconciler {
 
   private final KeyResolver keyResolver;
@@ -56,7 +54,6 @@ public class AipubUserClusterRoleReconciler extends AbstractReconciler {
 
   @Override
   protected Result reconcileInternal(Request request) throws ApiException {
-    log.info("AipubUserClusterRoleReconciler reconcile request");
     Optional<String> userNameOpt = this.roleNameResolver.resolveAipubUserName(request.getName());
     if (userNameOpt.isEmpty()) {
       return new Result(false);

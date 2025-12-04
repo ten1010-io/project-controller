@@ -24,9 +24,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 public class AipubUserClusterRoleBindingReconciler extends AbstractReconciler {
 
   private final KeyResolver keyResolver;
@@ -54,7 +52,6 @@ public class AipubUserClusterRoleBindingReconciler extends AbstractReconciler {
 
   @Override
   protected Result reconcileInternal(Request request) throws ApiException {
-    log.info("AipubUserClusterRoleBindingReconciler reconcile request");
     Optional<String> userNameOpt = this.roleNameResolver.resolveAipubUserName(request.getName());
     if (userNameOpt.isEmpty()) {
       return new Result(false);
