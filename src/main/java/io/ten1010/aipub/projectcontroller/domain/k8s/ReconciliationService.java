@@ -299,13 +299,15 @@ public class ReconciliationService {
       @Nullable V1alpha1Project project) {
     List<V1OwnerReference> existingReferences =
         existing == null ? List.of() : K8sObjectUtils.getOwnerReferences(existing);
+
+    if (project == null) {
+      return existingReferences;
+    }
+
     List<V1OwnerReference> filtered = removeOwnerReferencesThatReferToProjectKind(
         existingReferences);
     filtered = removeOwnerReferencesThatReferToAipubUserKind(filtered);
 
-    if (project == null) {
-      return filtered;
-    }
     if (reservedNamespaces.contains(K8sObjectUtils.getName(project))) {
       log.debug("filtered out {} because it is reserved", K8sObjectUtils.getName(project));
       return filtered;
