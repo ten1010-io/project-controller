@@ -9,6 +9,7 @@ import io.kubernetes.client.openapi.models.RbacV1Subject;
 import io.kubernetes.client.openapi.models.V1AggregationRule;
 import io.kubernetes.client.openapi.models.V1LocalObjectReference;
 import io.kubernetes.client.openapi.models.V1LocalObjectReferenceBuilder;
+import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1Node;
 import io.kubernetes.client.openapi.models.V1NodeSelectorRequirement;
 import io.kubernetes.client.openapi.models.V1NodeSelectorRequirementBuilder;
@@ -839,6 +840,22 @@ public class ReconciliationService {
       }
     }
 
+    return reconciled;
+  }
+
+  public Map<String, String> reconcileNamespaceLabels(@Nullable V1Namespace namespace, @Nullable V1alpha1Project project) {
+    Map<String, String> existingLabels = new HashMap<>();
+    if (namespace != null) {
+      existingLabels.putAll(K8sObjectUtils.getLabels(namespace));
+    }
+    Map<String, String> reconciled = new HashMap<>(existingLabels);
+    reconciled.remove(LabelConstants.PROJECT_LABEL_KEY);
+
+    if (project == null) {
+      return reconciled;
+    }
+
+    reconciled.put(LabelConstants.PROJECT_LABEL_KEY, K8sObjectUtils.getName(project));
     return reconciled;
   }
 

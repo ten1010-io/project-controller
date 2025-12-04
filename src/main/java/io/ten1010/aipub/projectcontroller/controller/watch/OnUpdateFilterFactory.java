@@ -36,7 +36,6 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.util.WorkloadUtils;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiPredicate;
-import lombok.extern.slf4j.Slf4j;
 
 public class OnUpdateFilterFactory {
 
@@ -48,9 +47,10 @@ public class OnUpdateFilterFactory {
     return (oldObj, newObj) -> false;
   }
 
-  public <T extends KubernetesObject> BiPredicate<T, T> ownerReferencesFilter() {
-    return (oldObj, newObj) -> !K8sObjectUtils.getOwnerReferences(oldObj)
-        .equals(K8sObjectUtils.getOwnerReferences(newObj));
+  public <T extends KubernetesObject> BiPredicate<T, T> projectNamespaceFilter() {
+    return (oldObj, newObj) ->
+        !K8sObjectUtils.getOwnerReferences(oldObj).equals(K8sObjectUtils.getOwnerReferences(newObj))
+            || !K8sObjectUtils.getLabels(oldObj).equals(K8sObjectUtils.getLabels(newObj));
   }
 
   public BiPredicate<V1alpha1Project, V1alpha1Project> projectSpecFieldFilter() {

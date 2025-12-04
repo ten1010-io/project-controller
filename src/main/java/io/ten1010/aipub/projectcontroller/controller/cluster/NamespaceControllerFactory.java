@@ -53,7 +53,7 @@ public class NamespaceControllerFactory implements ControllerFactory {
   private ControllerWatch<V1Namespace> createNamespaceWatch(WorkQueue<Request> workQueue) {
     DefaultControllerWatch<V1Namespace> watch = new DefaultControllerWatch<>(workQueue,
         V1Namespace.class);
-    watch.setOnUpdateFilter(this.onUpdateFilterFactory.ownerReferencesFilter());
+    watch.setOnUpdateFilter(this.onUpdateFilterFactory.projectNamespaceFilter());
     return watch;
   }
 
