@@ -50,6 +50,9 @@ public final class ProjectApiConstants {
   public static final String GPU_CONFIG_RESOURCE_KIND = "GPUConfig";
   public static final String GPU_CONFIG_RESOURCE_PLURAL = "gpuconfigs";
 
+  public static final String NODE_GPU_USAGE_RESOURCE_KIND = "NodeGPUUsage";
+  public static final String NODE_GPU_USAGE_RESOURCE_PLURAL = "nodegpuusages";
+
   public static final String WORKSPACE_RESOURCE_KIND = "Workspace";
   public static final String WORKSPACE_RESOURCE_PLURAL = "workspaces";
 

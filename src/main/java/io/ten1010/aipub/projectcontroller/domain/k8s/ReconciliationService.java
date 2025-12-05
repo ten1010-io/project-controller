@@ -469,6 +469,16 @@ public class ReconciliationService {
           .build();
     };
     reconciled.add(ingressHostPathValidatorsApiRule);
+
+    V1PolicyRule nodeGpuUsagesApiRule = switch (projectRoleEnum) {
+      case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+          .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
+          .withResources(ProjectApiConstants.NODE_GPU_USAGE_RESOURCE_PLURAL)
+          .withResourceNames(nodes)
+          .withVerbs("get")
+          .build();
+    };
+    reconciled.add(nodeGpuUsagesApiRule);
     //todo --
 
     return reconciled;
