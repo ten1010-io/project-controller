@@ -6,6 +6,8 @@ import io.kubernetes.client.extended.controller.ControllerManager;
 import io.kubernetes.client.extended.controller.builder.ControllerBuilder;
 import io.kubernetes.client.extended.controller.builder.ControllerManagerBuilder;
 import io.kubernetes.client.informer.SharedInformerFactory;
+import io.ten1010.aipub.projectcontroller.controller.CudEventPublishingControllerFactory;
+import io.ten1010.aipub.projectcontroller.controller.ProjectCudEventPublishingReconciler;
 import io.ten1010.aipub.projectcontroller.controller.cluster.NamespaceControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cluster.NodeControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cr.AipubUserControllerFactory;
@@ -24,6 +26,7 @@ import io.ten1010.aipub.projectcontroller.controller.workload.*;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sObjectType;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -56,6 +59,16 @@ public class ControllerConfiguration {
                                         K8sApiProvider k8sApiProvider,
                                         ReconciliationService reconciliationService) {
         return new ProjectControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+                .createController();
+    }
+
+    @Bean
+    public Controller projectCudEventPublishingController(
+            SharedInformerFactory sharedInformerFactory, K8sApiProvider k8sApiProvider) {
+        String controllerName = "project-cud-event-publishing-controller";
+        ProjectCudEventPublishingReconciler reconciler = new ProjectCudEventPublishingReconciler(controllerName, k8sApiProvider);
+        return new CudEventPublishingControllerFactory<>(
+                controllerName, V1alpha1Project.class, reconciler, sharedInformerFactory)
                 .createController();
     }
 
