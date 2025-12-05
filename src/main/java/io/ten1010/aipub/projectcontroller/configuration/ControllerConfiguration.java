@@ -85,15 +85,6 @@ public class ControllerConfiguration {
   }
 
   @Bean
-  public Controller projectController(SharedInformerFactory sharedInformerFactory,
-      K8sApiProvider k8sApiProvider,
-      ReconciliationService reconciliationService) {
-    return new ProjectControllerFactory(sharedInformerFactory, k8sApiProvider,
-        reconciliationService)
-        .createController();
-  }
-
-  @Bean
   public Controller projectCudEventPublishingController(
       SharedInformerFactory sharedInformerFactory, K8sApiProvider k8sApiProvider) {
     String controllerName = "project-cud-event-publishing-controller";

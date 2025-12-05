@@ -54,8 +54,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 
+@Slf4j
 public class ReconciliationService {
 
   private static final String REQUESTS_STORAGE_QUOTA_RESOURCE_NAME = "requests.storage";

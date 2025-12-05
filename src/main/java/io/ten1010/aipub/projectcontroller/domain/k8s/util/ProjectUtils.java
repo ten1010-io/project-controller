@@ -85,20 +85,6 @@ public abstract class ProjectUtils {
     }
     return Optional.ofNullable(object.getSpec().getBinding());
   }
-    public static Map<String, String> getSpecExtendedResourcesQuota(V1alpha1Project object) {
-        Optional<V1alpha1ProjectSpecQuota> quotaOpt = getSpecQuota(object);
-        if (quotaOpt.isEmpty() || quotaOpt.get().getExtendedResources() == null) {
-            return new HashMap<>();
-        }
-        return quotaOpt.get().getExtendedResources();
-    }
-
-    public static Optional<V1alpha1ProjectBinding> getSpecBinding(V1alpha1Project object) {
-        if (object.getSpec() == null) {
-            return Optional.empty();
-        }
-        return Optional.ofNullable(object.getSpec().getBinding());
-    }
 
   public static List<String> getSpecBindingNodeGroups(V1alpha1Project object) {
     Optional<V1alpha1ProjectBinding> bindingOpt = getSpecBinding(object);
