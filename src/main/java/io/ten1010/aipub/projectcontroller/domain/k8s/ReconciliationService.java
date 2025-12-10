@@ -608,6 +608,11 @@ public class ReconciliationService {
             .withResources("aipubvolumes")
             .withVerbs("*")
             .build();
+        V1PolicyRule resourceQuotaApiRule = new V1PolicyRuleBuilder()
+            .withApiGroups("")
+            .withResources("resourcequotas")
+            .withVerbs("get", "list")
+            .build();
         //todo --
 
         yield List.of(
@@ -623,7 +628,8 @@ public class ReconciliationService {
             aipubWorkspaceApiRule,
             aipubJobsApiRule,
             aipubSFtpServerApiRule,
-            aipubVolumesApiRule
+            aipubVolumesApiRule,
+            resourceQuotaApiRule
         );
       }
 
@@ -701,6 +707,11 @@ public class ReconciliationService {
             .withResources("aipubvolumes")
             .withVerbs(BASIC_VERBS)
             .build();
+        V1PolicyRule resourceQuotaApiRule = new V1PolicyRuleBuilder()
+            .withApiGroups("")
+            .withResources("resourcequotas")
+            .withVerbs("get", "list")
+            .build();
         //todo --
 
         yield List.of(
@@ -716,7 +727,8 @@ public class ReconciliationService {
             aipubWorkspaceApiRule,
             aipubJobsApiRule,
             aipubSFtpServerApiRule,
-            aipubVolumesApiRule
+            aipubVolumesApiRule,
+            resourceQuotaApiRule
         );
       }
     };
