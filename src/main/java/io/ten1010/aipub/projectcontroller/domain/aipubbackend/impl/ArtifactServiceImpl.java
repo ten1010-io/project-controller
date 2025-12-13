@@ -5,6 +5,7 @@ import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ArtifactService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.Artifact;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ArtifactListOptions;
 import io.ten1010.common.apiclient.ApiClient;
+import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,11 +30,19 @@ public class ArtifactServiceImpl implements ArtifactService {
     Map<String, String> queryParams = new HashMap<>();
     ListOptionsUtils.applyArtifactListOptions(queryParams, options);
 
-    Call call = this.aipubBackendClient.buildCall(
-        "/imagehubs/" + hubId + "/repositories/" + repositoryName + "/artifacts",
-        "GET",
-        queryParams);
-    return this.callHelper.executeCall(call, ARTIFACT_LIST_TYPE_TOKEN).orElseThrow();
+    String encodedName;
+    try {
+      String encode = URLEncoder.encode(repositoryName, "UTF-8");
+      encodedName = URLEncoder.encode(encode, "UTF-8");
+
+      Call call = this.aipubBackendClient.buildCall(
+          "/imagehubs/" + hubId + "/repositories/" + encodedName + "/artifacts",
+          "GET",
+          queryParams);
+      return this.callHelper.executeCall(call, ARTIFACT_LIST_TYPE_TOKEN).orElseThrow();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
 }
