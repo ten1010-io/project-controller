@@ -6,6 +6,12 @@ spring:
   web:
     resources:
       add-mappings: false
+  http:
+    converters:
+      preferred-json-mapper: jackson2
+  jackson:
+    use-jackson2-defaults: true
+
 
 server:
   forward-headers-strategy: framework

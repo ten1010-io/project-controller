@@ -11,13 +11,15 @@ import org.springframework.web.util.ContentCachingRequestWrapper;
 
 public class RequestContentCachingFilter implements Filter {
 
+  private static final Integer CACHE_LIMIT = 0;
+
   @Override
   public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
       throws ServletException, IOException {
     if (request instanceof HttpServletRequest) {
       String contentType = request.getContentType();
       if (contentType == null || !contentType.contains("multipart/form-data")) {
-        request = new ContentCachingRequestWrapper((HttpServletRequest) request);
+        request = new ContentCachingRequestWrapper((HttpServletRequest) request, CACHE_LIMIT);
       }
     }
     chain.doFilter(request, response);
