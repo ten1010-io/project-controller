@@ -613,6 +613,11 @@ public class ReconciliationService {
             .withResources("resourcequotas")
             .withVerbs("get", "list")
             .build();
+        V1PolicyRule commitApiRule = new V1PolicyRuleBuilder()
+            .withApiGroups("aipub.ten1010.io")
+            .withResources("commits")
+            .withVerbs("*")
+            .build();
         //todo --
 
         yield List.of(
@@ -629,7 +634,8 @@ public class ReconciliationService {
             aipubJobsApiRule,
             aipubSFtpServerApiRule,
             aipubVolumesApiRule,
-            resourceQuotaApiRule
+            resourceQuotaApiRule,
+            commitApiRule
         );
       }
 
@@ -712,6 +718,11 @@ public class ReconciliationService {
             .withResources("resourcequotas")
             .withVerbs("get", "list")
             .build();
+        V1PolicyRule commitApiRule = new V1PolicyRuleBuilder()
+            .withApiGroups("aipub.ten1010.io")
+            .withResources("commits")
+            .withVerbs(BASIC_VERBS)
+            .build();
         //todo --
 
         yield List.of(
@@ -728,7 +739,8 @@ public class ReconciliationService {
             aipubJobsApiRule,
             aipubSFtpServerApiRule,
             aipubVolumesApiRule,
-            resourceQuotaApiRule
+            resourceQuotaApiRule,
+            commitApiRule
         );
       }
     };
@@ -831,11 +843,11 @@ public class ReconciliationService {
     return builder.build();
   }
 
-  public String reconcileImagePullSecretType(V1alpha1Project project) {
+  public String reconcileImageRegistrySecretType(V1alpha1Project project) {
     return "kubernetes.io/dockerconfigjson";
   }
 
-  public Map<String, byte[]> reconcileImagePullSecretData(V1alpha1Project project) {
+  public Map<String, byte[]> reconcileImageRegistrySecretData(V1alpha1Project project) {
     try {
       Map<String, Object> dockerConfigJson = this.dockerConfigJsonResolver.resolve(project);
       String jsonStr = this.mapper.writeValueAsString(dockerConfigJson);
@@ -869,6 +881,23 @@ public class ReconciliationService {
   }
 
   public Map<String, String> reconcileNamespaceLabels(@Nullable V1Namespace namespace,
+      @Nullable V1alpha1Project project) {
+    Map<String, String> existingLabels = new HashMap<>();
+    if (namespace != null) {
+      existingLabels.putAll(K8sObjectUtils.getLabels(namespace));
+    }
+    Map<String, String> reconciled = new HashMap<>(existingLabels);
+    reconciled.remove(LabelConstants.PROJECT_LABEL_KEY);
+
+    if (project == null) {
+      return reconciled;
+    }
+
+    reconciled.put(LabelConstants.PROJECT_LABEL_KEY, K8sObjectUtils.getName(project));
+    return reconciled;
+  }
+
+  public Map<String, String> reconcileSecretLabels(@Nullable V1Namespace namespace,
       @Nullable V1alpha1Project project) {
     Map<String, String> existingLabels = new HashMap<>();
     if (namespace != null) {
@@ -1002,15 +1031,15 @@ public class ReconciliationService {
     return reconciled;
   }
 
-  public List<V1LocalObjectReference> reconcileImagePullSecrets(V1Pod existing,
+  public List<V1LocalObjectReference> reconcileImageRegistrySecrets(V1Pod existing,
       @Nullable V1alpha1Project project) {
     if (project == null) {
-      return WorkloadUtils.getImagePullSecrets(existing);
+      return WorkloadUtils.getImageRegistrySecrets(existing);
     }
 
-    String secretName = new ImagePullSecretNameResolver().resolveSecretName(
+    String secretName = new ImageRegistrySecretNameResolver().resolveSecretName(
         K8sObjectUtils.getName(project));
-    List<V1LocalObjectReference> reconciled = WorkloadUtils.getImagePullSecrets(existing).stream()
+    List<V1LocalObjectReference> reconciled = WorkloadUtils.getImageRegistrySecrets(existing).stream()
         .filter(e -> Objects.nonNull(e.getName()))
         .filter(e -> !e.getName().equals(secretName))
         .toList();
@@ -1023,15 +1052,15 @@ public class ReconciliationService {
     return reconciled;
   }
 
-  public List<V1LocalObjectReference> reconcileImagePullSecrets(V1PodTemplateSpec existing,
+  public List<V1LocalObjectReference> reconcileImageRegistrySecrets(V1PodTemplateSpec existing,
       @Nullable V1alpha1Project project) {
     if (project == null) {
-      return WorkloadUtils.getImagePullSecrets(existing);
+      return WorkloadUtils.getImageRegistrySecrets(existing);
     }
 
-    String secretName = new ImagePullSecretNameResolver().resolveSecretName(
+    String secretName = new ImageRegistrySecretNameResolver().resolveSecretName(
         K8sObjectUtils.getName(project));
-    List<V1LocalObjectReference> reconciled = WorkloadUtils.getImagePullSecrets(existing).stream()
+    List<V1LocalObjectReference> reconciled = WorkloadUtils.getImageRegistrySecrets(existing).stream()
         .filter(e -> Objects.nonNull(e.getName()))
         .filter(e -> !e.getName().equals(secretName))
         .toList();

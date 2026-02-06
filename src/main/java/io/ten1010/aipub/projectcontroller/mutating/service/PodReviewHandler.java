@@ -60,7 +60,7 @@ public class PodReviewHandler extends AbstractReviewHandler<V1Pod> {
         allowedProjectNodeObjects);
     List<V1NodeSelectorTerm> reconciledSelectorTerms = this.reconciliationService.reconcileNodeSelectorTerms(
         pod, project);
-    List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliationService.reconcileImagePullSecrets(
+    List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliationService.reconcileImageRegistrySecrets(
         pod, project);
 
     JsonPatchBuilder jsonPatchBuilder = new JsonPatchBuilder();

@@ -114,7 +114,7 @@ public class DeploymentWorkloadControllerFactory extends WorkloadControllerFacto
         .equals(Set.copyOf(reconciledTolerations)) &&
         Set.copyOf(WorkloadUtils.getNodeSelectorTerms(controller))
             .equals(Set.copyOf(reconciledSelectorTerms)) &&
-        Set.copyOf(WorkloadUtils.getImagePullSecrets(controller))
+        Set.copyOf(WorkloadUtils.getImageRegistrySecrets(controller))
             .equals(Set.copyOf(reconciledImagePullSecrets))) {
       return new Result(false);
     }

@@ -2,9 +2,9 @@ package io.ten1010.aipub.projectcontroller.domain.k8s;
 
 import java.util.Optional;
 
-public class ImagePullSecretNameResolver {
+public class ImageRegistrySecretNameResolver {
 
-  private static final String PREFIX = "image-pull-secret-project-aipub-ten1010-io-";
+  private static final String PREFIX = "image-registry-secret-project-aipub-ten1010-io-";
 
   public String resolveSecretName(String projectName) {
     return PREFIX + projectName;

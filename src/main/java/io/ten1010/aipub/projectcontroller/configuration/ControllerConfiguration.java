@@ -14,7 +14,7 @@ import io.ten1010.aipub.projectcontroller.controller.cr.AipubUserControllerFacto
 import io.ten1010.aipub.projectcontroller.controller.cr.ImageHubControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cr.NodeGroupControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cr.ProjectControllerFactory;
-import io.ten1010.aipub.projectcontroller.controller.namespaced.ImagePullSecretReconcilerFactory;
+import io.ten1010.aipub.projectcontroller.controller.namespaced.ImageRegistrySecretReconcilerFactory;
 import io.ten1010.aipub.projectcontroller.controller.namespaced.ResourceQuotaControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.rbac.aipub.AipubUserClusterRoleBindingControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.rbac.aipub.AipubUserClusterRoleControllerFactory;
@@ -221,10 +221,11 @@ public class ControllerConfiguration {
   }
 
   @Bean
-  public Controller imagePullSecretReconcilerFactory(SharedInformerFactory sharedInformerFactory,
+  public Controller imageRegistrySecretReconcilerFactory(
+      SharedInformerFactory sharedInformerFactory,
       K8sApiProvider k8sApiProvider,
       ReconciliationService reconciliationService) {
-    return new ImagePullSecretReconcilerFactory(sharedInformerFactory, k8sApiProvider,
+    return new ImageRegistrySecretReconcilerFactory(sharedInformerFactory, k8sApiProvider,
         reconciliationService)
         .createController();
   }

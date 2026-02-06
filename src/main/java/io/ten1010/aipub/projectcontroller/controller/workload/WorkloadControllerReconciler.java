@@ -78,7 +78,7 @@ public class WorkloadControllerReconciler extends AbstractReconciler {
         templateSpec, nodeObjects);
     List<V1NodeSelectorTerm> reconciledSelectorTerms = this.reconciliationService.reconcileNodeSelectorTerms(
         templateSpec, project);
-    List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliationService.reconcileImagePullSecrets(
+    List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliationService.reconcileImageRegistrySecrets(
         templateSpec, project);
 
     return this.controllerObjectReconciler.reconcileController(controller, reconciledTolerations,

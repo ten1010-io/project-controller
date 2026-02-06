@@ -47,6 +47,7 @@ public class ImageRegistryRobotReconciler extends AbstractReconciler {
     ImageRegistryAccess access = new ImageRegistryAccess();
     access.setResource("repository");
     access.setAction("pull");
+    access.setAction("push");
 
     ImageRegistryRobotPermission permission = new ImageRegistryRobotPermission();
     permission.setImageHubId(ImageHubUtils.getSpecId(imageHub));

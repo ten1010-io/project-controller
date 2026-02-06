@@ -12,7 +12,7 @@ import io.kubernetes.client.openapi.models.V1ResourceQuota;
 import io.kubernetes.client.openapi.models.V1Secret;
 import io.ten1010.aipub.projectcontroller.controller.BoundObjectResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.AipubUserRoleNameResolver;
-import io.ten1010.aipub.projectcontroller.domain.k8s.ImagePullSecretNameResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.ImageRegistrySecretNameResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceNameResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ProjectRoleEnum;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ResourceQuotaNameResolver;
@@ -44,7 +44,7 @@ public class RequestBuilderFactory {
   private final RoleNameResolver roleNameResolver;
   private final AipubUserRoleNameResolver aipubUserRoleNameResolver;
   private final ResourceQuotaNameResolver quotaNameResolver;
-  private final ImagePullSecretNameResolver imagePullSecretNameResolver;
+  private final ImageRegistrySecretNameResolver imageRegistrySecretNameResolver;
 
   public RequestBuilderFactory(SharedInformerFactory sharedInformerFactory) {
     this.sharedInformerFactory = sharedInformerFactory;
@@ -53,7 +53,7 @@ public class RequestBuilderFactory {
     this.roleNameResolver = new RoleNameResolver();
     this.aipubUserRoleNameResolver = new AipubUserRoleNameResolver();
     this.quotaNameResolver = new ResourceQuotaNameResolver();
-    this.imagePullSecretNameResolver = new ImagePullSecretNameResolver();
+    this.imageRegistrySecretNameResolver = new ImageRegistrySecretNameResolver();
   }
 
   public Function<V1alpha1Project, List<Request>> projectToNamespaces() {
@@ -137,18 +137,18 @@ public class RequestBuilderFactory {
     };
   }
 
-  public Function<V1alpha1Project, List<Request>> projectToImagePullSecrets() {
+  public Function<V1alpha1Project, List<Request>> projectToImageRegistrySecrets() {
     return project -> {
       String projName = K8sObjectUtils.getName(project);
       String namespace = this.namespaceNameResolver.resolveNamespaceName(projName);
-      String secretName = this.imagePullSecretNameResolver.resolveSecretName(projName);
+      String secretName = this.imageRegistrySecretNameResolver.resolveSecretName(projName);
       return List.of(new Request(namespace, secretName));
     };
   }
 
-  public Function<V1Secret, List<Request>> secretToImagePullSecrets() {
+  public Function<V1Secret, List<Request>> secretToImageRegistrySecrets() {
     return secret -> {
-      Optional<String> opt = this.imagePullSecretNameResolver.resolveProjectName(
+      Optional<String> opt = this.imageRegistrySecretNameResolver.resolveProjectName(
           K8sObjectUtils.getName(secret));
       if (opt.isPresent()) {
         return List.of(

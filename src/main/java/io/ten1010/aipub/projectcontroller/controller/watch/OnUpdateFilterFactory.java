@@ -217,7 +217,7 @@ public class OnUpdateFilterFactory {
         !Objects.equals(oldObj.getSpec(), newObj.getSpec());
   }
 
-  public BiPredicate<V1Secret, V1Secret> imagePullSecretFilter() {
+  public BiPredicate<V1Secret, V1Secret> imageRegistrySecretFilter() {
     return (oldObj, newObj) -> !Set.copyOf(K8sObjectUtils.getOwnerReferences(oldObj))
         .equals(Set.copyOf(K8sObjectUtils.getOwnerReferences(newObj))) ||
         !Objects.equals(oldObj.getType(), newObj.getType()) ||

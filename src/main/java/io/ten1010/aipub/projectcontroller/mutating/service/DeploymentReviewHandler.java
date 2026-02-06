@@ -54,7 +54,7 @@ public class DeploymentReviewHandler extends AbstractReviewHandler<V1Deployment>
         podTemplateSpec, nodeObjects);
     List<V1NodeSelectorTerm> reconciledSelectorTerms = this.reconciliationService.reconcileNodeSelectorTerms(
         podTemplateSpec, project);
-    List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliationService.reconcileImagePullSecrets(
+    List<V1LocalObjectReference> reconciledImageRegistrySecrets = this.reconciliationService.reconcileImageRegistrySecrets(
         podTemplateSpec, project);
 
     JsonPatchBuilder jsonPatchBuilder = new JsonPatchBuilder();
@@ -86,7 +86,7 @@ public class DeploymentReviewHandler extends AbstractReviewHandler<V1Deployment>
     JsonPatchOperation imagePullSecretsPatchOp = new JsonPatchOperationBuilder()
         .replace()
         .setPath("/spec/template/spec/imagePullSecrets")
-        .setValue(createJsonNode(reconciledImagePullSecrets))
+        .setValue(createJsonNode(reconciledImageRegistrySecrets))
         .build();
     jsonPatchBuilder.addToOperations(imagePullSecretsPatchOp);
 

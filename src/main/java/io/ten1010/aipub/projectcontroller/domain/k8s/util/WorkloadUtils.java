@@ -71,7 +71,7 @@ public abstract class WorkloadUtils {
         .getRequiredDuringSchedulingIgnoredDuringExecution().getNodeSelectorTerms();
   }
 
-  public static List<V1LocalObjectReference> getImagePullSecrets(V1Pod pod) {
+  public static List<V1LocalObjectReference> getImageRegistrySecrets(V1Pod pod) {
     if (pod.getSpec() == null ||
         pod.getSpec().getImagePullSecrets() == null) {
       return List.of();
@@ -79,7 +79,7 @@ public abstract class WorkloadUtils {
     return pod.getSpec().getImagePullSecrets();
   }
 
-  public static List<V1LocalObjectReference> getImagePullSecrets(
+  public static List<V1LocalObjectReference> getImageRegistrySecrets(
       V1PodTemplateSpec podTemplateSpec) {
     if (podTemplateSpec.getSpec() == null ||
         podTemplateSpec.getSpec().getImagePullSecrets() == null) {
@@ -104,9 +104,9 @@ public abstract class WorkloadUtils {
     return getNodeSelectorTerms(templateSpec);
   }
 
-  public static List<V1LocalObjectReference> getImagePullSecrets(V1CronJob object) {
+  public static List<V1LocalObjectReference> getImageRegistrySecrets(V1CronJob object) {
     V1PodTemplateSpec templateSpec = getPodTemplateSpec(object);
-    return getImagePullSecrets(templateSpec);
+    return getImageRegistrySecrets(templateSpec);
   }
 
   public static V1PodTemplateSpec getPodTemplateSpec(V1DaemonSet object) {
@@ -124,9 +124,9 @@ public abstract class WorkloadUtils {
     return getNodeSelectorTerms(templateSpec);
   }
 
-  public static List<V1LocalObjectReference> getImagePullSecrets(V1DaemonSet object) {
+  public static List<V1LocalObjectReference> getImageRegistrySecrets(V1DaemonSet object) {
     V1PodTemplateSpec templateSpec = getPodTemplateSpec(object);
-    return getImagePullSecrets(templateSpec);
+    return getImageRegistrySecrets(templateSpec);
   }
 
   public static V1PodTemplateSpec getPodTemplateSpec(V1Deployment object) {
@@ -144,9 +144,9 @@ public abstract class WorkloadUtils {
     return getNodeSelectorTerms(templateSpec);
   }
 
-  public static List<V1LocalObjectReference> getImagePullSecrets(V1Deployment object) {
+  public static List<V1LocalObjectReference> getImageRegistrySecrets(V1Deployment object) {
     V1PodTemplateSpec templateSpec = getPodTemplateSpec(object);
-    return getImagePullSecrets(templateSpec);
+    return getImageRegistrySecrets(templateSpec);
   }
 
   public static V1PodTemplateSpec getPodTemplateSpec(V1Job object) {
@@ -164,9 +164,9 @@ public abstract class WorkloadUtils {
     return getNodeSelectorTerms(templateSpec);
   }
 
-  public static List<V1LocalObjectReference> getImagePullSecrets(V1Job object) {
+  public static List<V1LocalObjectReference> getImageRegistrySecrets(V1Job object) {
     V1PodTemplateSpec templateSpec = getPodTemplateSpec(object);
-    return getImagePullSecrets(templateSpec);
+    return getImageRegistrySecrets(templateSpec);
   }
 
   public static V1PodTemplateSpec getPodTemplateSpec(V1ReplicaSet object) {
@@ -185,9 +185,9 @@ public abstract class WorkloadUtils {
     return getNodeSelectorTerms(templateSpec);
   }
 
-  public static List<V1LocalObjectReference> getImagePullSecrets(V1ReplicaSet object) {
+  public static List<V1LocalObjectReference> getImageRegistrySecrets(V1ReplicaSet object) {
     V1PodTemplateSpec templateSpec = getPodTemplateSpec(object);
-    return getImagePullSecrets(templateSpec);
+    return getImageRegistrySecrets(templateSpec);
   }
 
   public static V1PodTemplateSpec getPodTemplateSpec(V1StatefulSet object) {
@@ -205,9 +205,9 @@ public abstract class WorkloadUtils {
     return getNodeSelectorTerms(templateSpec);
   }
 
-  public static List<V1LocalObjectReference> getImagePullSecrets(V1StatefulSet object) {
+  public static List<V1LocalObjectReference> getImageRegistrySecrets(V1StatefulSet object) {
     V1PodTemplateSpec templateSpec = getPodTemplateSpec(object);
-    return getImagePullSecrets(templateSpec);
+    return getImageRegistrySecrets(templateSpec);
   }
 
   public static V1PodTemplateSpec getPodTemplateSpec(V1Workspace object) {
@@ -225,9 +225,9 @@ public abstract class WorkloadUtils {
     return getNodeSelectorTerms(templateSpec);
   }
 
-  public static List<V1LocalObjectReference> getImagePullSecrets(V1Workspace object) {
+  public static List<V1LocalObjectReference> getImageRegistrySecrets(V1Workspace object) {
     V1PodTemplateSpec templateSpec = getPodTemplateSpec(object);
-    return getImagePullSecrets(templateSpec);
+    return getImageRegistrySecrets(templateSpec);
   }
 
   /* todo AipubJob */
@@ -246,9 +246,9 @@ public abstract class WorkloadUtils {
     return getNodeSelectorTerms(templateSpec);
   }
 
-  public static List<V1LocalObjectReference> getImagePullSecrets(V1alpha1AipubJob object) {
+  public static List<V1LocalObjectReference> getImageRegistrySecrets(V1alpha1AipubJob object) {
     V1PodTemplateSpec templateSpec = getPodTemplateSpec(object);
-    return getImagePullSecrets(templateSpec);
+    return getImageRegistrySecrets(templateSpec);
   }
 
   /* todo Operation */
@@ -267,9 +267,9 @@ public abstract class WorkloadUtils {
     return getNodeSelectorTerms(templateSpec);
   }
 
-  public static List<V1LocalObjectReference> getImagePullSecrets(V1alpha1Operation object) {
+  public static List<V1LocalObjectReference> getImageRegistrySecrets(V1alpha1Operation object) {
     V1PodTemplateSpec templateSpec = getPodTemplateSpec(object);
-    return getImagePullSecrets(templateSpec);
+    return getImageRegistrySecrets(templateSpec);
   }
 
   /* todo SftpServer */
@@ -288,9 +288,9 @@ public abstract class WorkloadUtils {
     return getNodeSelectorTerms(templateSpec);
   }
 
-  public static List<V1LocalObjectReference> getImagePullSecrets(V1alpha1SftpServer object) {
+  public static List<V1LocalObjectReference> getImageRegistrySecrets(V1alpha1SftpServer object) {
     V1PodTemplateSpec templateSpec = getPodTemplateSpec(object);
-    return getImagePullSecrets(templateSpec);
+    return getImageRegistrySecrets(templateSpec);
   }
 
   public static List<V1NodeSelectorRequirement> getMatchExpressions(

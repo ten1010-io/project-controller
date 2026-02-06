@@ -15,7 +15,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 
-public class ImagePullSecretReconcilerFactory implements ControllerFactory {
+public class ImageRegistrySecretReconcilerFactory implements ControllerFactory {
 
   private final SharedInformerFactory sharedInformerFactory;
   private final OnUpdateFilterFactory onUpdateFilterFactory;
@@ -23,7 +23,7 @@ public class ImagePullSecretReconcilerFactory implements ControllerFactory {
   private final K8sApiProvider k8sApiProvider;
   private final ReconciliationService reconciliationService;
 
-  public ImagePullSecretReconcilerFactory(
+  public ImageRegistrySecretReconcilerFactory(
       SharedInformerFactory sharedInformerFactory,
       K8sApiProvider k8sApiProvider,
       ReconciliationService reconciliationService) {
@@ -37,7 +37,7 @@ public class ImagePullSecretReconcilerFactory implements ControllerFactory {
   @Override
   public Controller createController() {
     return ControllerBuilder.defaultBuilder(this.sharedInformerFactory)
-        .withName("image-pull-secret-controller")
+        .withName("image-registry-secret-controller")
         .withWorkerCount(1)
         .withReadyFunc(
             this.sharedInformerFactory.getExistingSharedIndexInformer(V1Secret.class)::hasSynced)
@@ -46,7 +46,7 @@ public class ImagePullSecretReconcilerFactory implements ControllerFactory {
         .watch(this::createSecretWatch)
         .watch(this::createProjectWatch)
         .withReconciler(
-            new ImagePullSecretReconciler(this.sharedInformerFactory, this.k8sApiProvider,
+            new ImageRegistrySecretReconciler(this.sharedInformerFactory, this.k8sApiProvider,
                 this.reconciliationService))
         .build();
   }
@@ -55,7 +55,7 @@ public class ImagePullSecretReconcilerFactory implements ControllerFactory {
     DefaultControllerWatch<V1Secret> watch = new DefaultControllerWatch<>(workQueue,
         V1Secret.class);
     watch.setOnUpdateFilter(this.onUpdateFilterFactory.alwaysFalseFilter());
-    watch.setRequestBuilder(this.requestBuilderFactory.secretToImagePullSecrets());
+    watch.setRequestBuilder(this.requestBuilderFactory.secretToImageRegistrySecrets());
     return watch;
   }
 
@@ -63,7 +63,7 @@ public class ImagePullSecretReconcilerFactory implements ControllerFactory {
     DefaultControllerWatch<V1alpha1Project> watch = new DefaultControllerWatch<>(workQueue,
         V1alpha1Project.class);
     watch.setOnUpdateFilter(this.onUpdateFilterFactory.projectSpecBindingImageHubsFieldFilter());
-    watch.setRequestBuilder(this.requestBuilderFactory.projectToImagePullSecrets());
+    watch.setRequestBuilder(this.requestBuilderFactory.projectToImageRegistrySecrets());
     return watch;
   }
 
