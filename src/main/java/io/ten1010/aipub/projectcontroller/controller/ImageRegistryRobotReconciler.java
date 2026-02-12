@@ -44,14 +44,16 @@ public class ImageRegistryRobotReconciler extends AbstractReconciler {
   }
 
   private static ImageRegistryRobotPermission createPermission(V1alpha1ImageHub imageHub) {
-    ImageRegistryAccess access = new ImageRegistryAccess();
-    access.setResource("repository");
-    access.setAction("pull");
-    access.setAction("push");
+    ImageRegistryAccess pullAccess = new ImageRegistryAccess();
+    pullAccess.setResource("repository");
+    pullAccess.setAction("pull");
+    ImageRegistryAccess pushAccess = new ImageRegistryAccess();
+    pushAccess.setResource("repository");
+    pushAccess.setAction("push");
 
     ImageRegistryRobotPermission permission = new ImageRegistryRobotPermission();
     permission.setImageHubId(ImageHubUtils.getSpecId(imageHub));
-    permission.setAccesses(List.of(access));
+    permission.setAccesses(List.of(pullAccess, pushAccess));
 
     return permission;
   }
