@@ -28,7 +28,7 @@ spec:
       automountServiceAccountToken: true
       containers:
         - name: project-controller
-          image: ten1010io/project-controller:0.1.0-SNAPSHOT
+          image: project-controller:1.4.0
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:

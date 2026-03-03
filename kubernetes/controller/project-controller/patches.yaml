@@ -7,7 +7,7 @@ spec:
     spec:
       containers:
         - name: project-controller
-          image: ten1010io/project-controller:0.1.0-SNAPSHOT
+          image: registry.ten1010.io:8443/project-controller:1.4.0
           resources:
             requests: { }
             limits: { }
