@@ -18,6 +18,8 @@ import io.ten1010.aipub.projectcontroller.mutating.service.NamespaceReviewHandle
 import io.ten1010.aipub.projectcontroller.mutating.service.PodReviewHandler;
 import io.ten1010.aipub.projectcontroller.mutating.service.ProjectReviewHandler;
 import io.ten1010.aipub.projectcontroller.mutating.service.ReviewHandler;
+import io.ten1010.aipub.projectcontroller.mutating.service.UserInfoAnalyzer;
+import io.ten1010.aipub.projectcontroller.mutating.service.UserLabelReviewHandler;
 import java.util.List;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -66,6 +68,11 @@ public class MutatingConfiguration {
   public ProjectReviewHandler projectReviewHandler(AipubProperties aipubProperties,
       SubjectResolver subjectResolver, SharedInformerFactory sharedInformerFactory) {
     return new ProjectReviewHandler(aipubProperties, subjectResolver, sharedInformerFactory);
+  }
+
+  @Bean
+  public UserLabelReviewHandler userLabelReviewHandler(SharedInformerFactory sharedInformerFactory) {
+    return new UserLabelReviewHandler(new UserInfoAnalyzer(sharedInformerFactory));
   }
 
   @Bean

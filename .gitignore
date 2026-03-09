@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+/.sdkmanrc
+/CLAUDE.md
+/k8s-dev
