@@ -1,0 +1,26 @@
+apiVersion: project.aipub.ten1010.io/v1alpha1
+kind: AipubUser
+metadata:
+  name: testuser
+spec:
+  id: "test-user-001"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-ns
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: testuser-admin
+  namespace: test-ns
+subjects:
+  - kind: User
+    name: oidc:testuser
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: admin
+  apiGroup: rbac.authorization.k8s.io
+---

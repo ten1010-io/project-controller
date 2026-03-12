@@ -5,7 +5,6 @@ import io.kubernetes.client.informer.cache.Indexer;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sGroupConstants;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
-import io.ten1010.aipub.projectcontroller.domain.k8s.util.LabelUtils;
 import io.ten1010.aipub.projectcontroller.mutating.dto.V1UserInfo;
 import java.util.List;
 import java.util.Objects;
@@ -48,10 +47,11 @@ public class UserInfoAnalyzer {
 
     V1alpha1AipubUser aipubUser = null;
     if (isAipubMember(userInfo.getGroups())) {
-      // todo--
-      String aipubUserKey = this.keyResolver.resolveKey(
-          LabelUtils.getValueOfLabelString(userInfo.getUsername()));
-      // todo--
+      String username = userInfo.getUsername();
+      String aipubUserName = username.contains(":")
+          ? username.substring(username.lastIndexOf(":") + 1)
+          : username;
+      String aipubUserKey = this.keyResolver.resolveKey(aipubUserName);
       aipubUser = this.userIndexer.getByKey(aipubUserKey);
       Objects.requireNonNull(aipubUser);
     }

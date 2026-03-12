@@ -113,4 +113,26 @@ webhooks:
         scope: "*"
     sideEffects: None
     timeoutSeconds: 10
+  - name: userowner.project-controller.project.aipub.ten1010.io
+    admissionReviewVersions: [ "v1" ]
+    clientConfig:
+      caBundle: <CA_BUNDLE>
+      service:
+        namespace: project-controller
+        name: project-controller
+        path: /api/v1/userrelationship/mutate
+        port: 8080
+    failurePolicy: Ignore
+    matchPolicy: Equivalent
+    namespaceSelector: { }
+    objectSelector: { }
+    reinvocationPolicy: IfNeeded
+    rules:
+      - apiGroups: [ "*" ]
+        apiVersions: [ "*" ]
+        operations: [ "CREATE" ]
+        resources: [ "*" ]
+        scope: "Namespaced"
+    sideEffects: None
+    timeoutSeconds: 10
 ---
