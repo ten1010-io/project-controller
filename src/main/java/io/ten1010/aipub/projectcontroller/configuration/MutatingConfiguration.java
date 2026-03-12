@@ -1,6 +1,7 @@
 package io.ten1010.aipub.projectcontroller.configuration;
 
 import io.kubernetes.client.informer.SharedInformerFactory;
+import io.kubernetes.client.openapi.ApiClient;
 import io.ten1010.aipub.projectcontroller.controller.workload.PodNodesResolver;
 import io.ten1010.aipub.projectcontroller.controller.workload.WorkloadControllerNodesResolver;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ArtifactService;
@@ -18,7 +19,14 @@ import io.ten1010.aipub.projectcontroller.mutating.service.NamespaceReviewHandle
 import io.ten1010.aipub.projectcontroller.mutating.service.PodReviewHandler;
 import io.ten1010.aipub.projectcontroller.mutating.service.ProjectReviewHandler;
 import io.ten1010.aipub.projectcontroller.mutating.service.ReviewHandler;
+import io.ten1010.aipub.projectcontroller.mutating.service.UserInfoAnalyzer;
+import io.ten1010.aipub.projectcontroller.mutating.service.ApiResourceDiscovery;
+import io.ten1010.aipub.projectcontroller.mutating.service.UserLabelReviewHandler;
+import io.ten1010.aipub.projectcontroller.mutating.service.UserOwnerReviewHandler;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -74,6 +82,24 @@ public class MutatingConfiguration {
       ArtifactService artifactService, SharedInformerFactory sharedInformerFactory) {
     return new ImageReviewReviewHandler(imageHubService, repositoryService, artifactService,
         sharedInformerFactory);
+  }
+
+  @Bean
+  @Qualifier("aipubReviewHandlers")
+  public List<ReviewHandler> aipubReviewHandlers(
+      SharedInformerFactory sharedInformerFactory, AipubProperties aipubProperties,
+      ApiClient apiClient) {
+    UserInfoAnalyzer userInfoAnalyzer = new UserInfoAnalyzer(sharedInformerFactory);
+    Set<String> exceptGvkSet = aipubProperties.getAddOwnerExceptGvkList().stream()
+        .map(String::trim)
+        .filter(s -> !s.isEmpty())
+        .collect(Collectors.toSet());
+    UserOwnerReviewHandler userOwnerReviewHandler = new UserOwnerReviewHandler(
+        userInfoAnalyzer, exceptGvkSet);
+    ApiResourceDiscovery apiResourceDiscovery = new ApiResourceDiscovery(apiClient);
+    UserLabelReviewHandler userLabelReviewHandler = new UserLabelReviewHandler(
+        userInfoAnalyzer, apiResourceDiscovery, apiClient);
+    return List.of(userOwnerReviewHandler, userLabelReviewHandler);
   }
 
 }

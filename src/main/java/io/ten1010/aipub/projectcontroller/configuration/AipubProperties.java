@@ -21,5 +21,6 @@ public class AipubProperties {
   @Nullable
   private String password;
   private List<String> reservedNamespace = new ArrayList<>();
+  private List<String> addOwnerExceptGvkList = new ArrayList<>();
 
 }

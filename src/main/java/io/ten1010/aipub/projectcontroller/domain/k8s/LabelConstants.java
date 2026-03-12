@@ -8,6 +8,8 @@ public final class LabelConstants {
       ProjectApiConstants.PROJECT_GROUP + "/" + "isolation-mode";
   public static final String OBJECT_OWN_USERNAME_KEY =
       ProjectApiConstants.AIPUB_GROUP + "/" + "username";
+  public static final String OBJECT_OWN_USERID_KEY =
+      ProjectApiConstants.AIPUB_GROUP + "/" + "userid";
   public static final String PROJECT_LABEL_KEY =
       ProjectApiConstants.PROJECT_GROUP + "/" + "project";
 
