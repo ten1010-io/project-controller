@@ -26,8 +26,6 @@ import org.springframework.http.HttpStatus;
 public class UserLabelReviewHandler implements ReviewHandler {
 
   private static final String OPERATION_CREATE = "CREATE";
-  private static final String USERID_LABEL_KEY =
-      "aipub.ten1010.io/userid";
 
   private final UserInfoAnalyzer userInfoAnalyzer;
   private final ApiResourceDiscovery apiResourceDiscovery;
@@ -124,7 +122,7 @@ public class UserLabelReviewHandler implements ReviewHandler {
     jsonPatchBuilder.addToOperations(usernamePatchOp);
 
     String useridLabelPath = "/metadata/labels/"
-        + USERID_LABEL_KEY.replace("/", "~1");
+        + LabelConstants.OBJECT_OWN_USERID_KEY.replace("/", "~1");
     JsonPatchOperation useridPatchOp = new JsonPatchOperationBuilder()
         .add()
         .setPath(useridLabelPath)
@@ -186,7 +184,7 @@ public class UserLabelReviewHandler implements ReviewHandler {
     }
 
     JsonNode usernameNode = ownerLabels.path(LabelConstants.OBJECT_OWN_USERNAME_KEY);
-    JsonNode useridNode = ownerLabels.path(USERID_LABEL_KEY);
+    JsonNode useridNode = ownerLabels.path(LabelConstants.OBJECT_OWN_USERID_KEY);
     if (usernameNode.isMissingNode() || useridNode.isMissingNode()) {
       log.info("getLabelsFromOwner: owner missing username/userid labels. labels={}", ownerLabels);
       return null;
