@@ -26,8 +26,12 @@ import org.springframework.http.HttpStatus;
 public class UserLabelReviewHandler implements ReviewHandler {
 
   private static final String OPERATION_CREATE = "CREATE";
-  private static final String USERID_LABEL_KEY =
-      "aipub.ten1010.io/userid";
+
+  // v2 테스트용: Python 원본과 병행 운영하여 비교. 정식 전환 시 LabelConstants 원본 키로 복원.
+  private static final String USERNAME_LABEL_KEY_V2 =
+      LabelConstants.OBJECT_OWN_USERNAME_KEY + "-v2";
+  private static final String USERID_LABEL_KEY_V2 =
+      LabelConstants.OBJECT_OWN_USERID_KEY + "-v2";
 
   private final UserInfoAnalyzer userInfoAnalyzer;
   private final ApiResourceDiscovery apiResourceDiscovery;
@@ -62,15 +66,17 @@ public class UserLabelReviewHandler implements ReviewHandler {
     Objects.requireNonNull(request.getObject());
     Objects.requireNonNull(request.getNamespace());
 
-    log.info("UserLabel handle: user={}, namespace={}, operation={}",
+    log.debug("UserLabel handle: user={}, namespace={}, operation={}",
         request.getUserInfo().getUsername(), request.getNamespace(), request.getOperation());
 
     UserInfoAnalysis analysis;
     try {
       analysis = this.userInfoAnalyzer.analyze(request.getUserInfo());
     } catch (Exception e) {
-      log.info("Failed to analyze user info, allowing without mutation", e);
-      V1AdmissionReviewUtils.allow(review);
+      // Python: get_aipub_user non-404 ApiException → 500
+      log.warn("Failed to analyze user info", e);
+      V1AdmissionReviewUtils.reject(review, 500,
+          "Failed to get aipub user with following error. " + e.getMessage());
       return;
     }
 
@@ -86,18 +92,30 @@ public class UserLabelReviewHandler implements ReviewHandler {
       }
       username = K8sObjectUtils.getName(aipubUser);
       userid = aipubUser.getSpec().getId();
-      log.info("UserLabel: direct aipub member, username={}, userid={}", username, userid);
+      log.debug("UserLabel: direct aipub member, username={}, userid={}", username, userid);
+    } else if (analysis.isAipubMember()) {
+      V1AdmissionReviewUtils.reject(review, 400,
+          "Not found aipub user: " + analysis.getUsername());
+      return;
     } else {
-      log.info("UserLabel: not aipub member, looking up owner labels");
-      String[] ownerLabels = getLabelsFromOwner(request.getObject(), request.getNamespace());
+      log.debug("UserLabel: not aipub member, looking up owner labels");
+      String[] ownerLabels;
+      try {
+        ownerLabels = getLabelsFromOwner(request.getObject(), request.getNamespace());
+      } catch (Exception e) {
+        // Python: owner_service.get_owner_object non-404 ApiException → 500
+        log.warn("Failed to get owner object", e);
+        V1AdmissionReviewUtils.reject(review, 500, e.getMessage());
+        return;
+      }
       if (ownerLabels == null) {
-        log.info("UserLabel: no owner labels found, allowing without mutation");
+        log.debug("UserLabel: no owner labels found, allowing without mutation");
         V1AdmissionReviewUtils.allow(review);
         return;
       }
       username = ownerLabels[0];
       userid = ownerLabels[1];
-      log.info("UserLabel: propagated from owner, username={}, userid={}", username, userid);
+      log.debug("UserLabel: propagated from owner, username={}, userid={}", username, userid);
     }
 
     JsonNode objectNode = request.getObject();
@@ -115,7 +133,7 @@ public class UserLabelReviewHandler implements ReviewHandler {
     }
 
     String usernameLabelPath = "/metadata/labels/"
-        + LabelConstants.OBJECT_OWN_USERNAME_KEY.replace("/", "~1");
+        + USERNAME_LABEL_KEY_V2.replace("/", "~1");
     JsonPatchOperation usernamePatchOp = new JsonPatchOperationBuilder()
         .add()
         .setPath(usernameLabelPath)
@@ -124,7 +142,7 @@ public class UserLabelReviewHandler implements ReviewHandler {
     jsonPatchBuilder.addToOperations(usernamePatchOp);
 
     String useridLabelPath = "/metadata/labels/"
-        + USERID_LABEL_KEY.replace("/", "~1");
+        + USERID_LABEL_KEY_V2.replace("/", "~1");
     JsonPatchOperation useridPatchOp = new JsonPatchOperationBuilder()
         .add()
         .setPath(useridLabelPath)
@@ -150,45 +168,46 @@ public class UserLabelReviewHandler implements ReviewHandler {
       }
     }
     if (controllerRef == null) {
-      log.info("getLabelsFromOwner: no controller ref found");
+      log.debug("getLabelsFromOwner: no controller ref found");
       return null;
     }
 
     String apiVersion = controllerRef.path("apiVersion").asText();
     String kind = controllerRef.path("kind").asText();
     String name = controllerRef.path("name").asText();
-    log.info("getLabelsFromOwner: controller ref apiVersion={}, kind={}, name={}", apiVersion, kind, name);
+    log.debug("getLabelsFromOwner: controller ref apiVersion={}, kind={}, name={}", apiVersion, kind, name);
 
     String plural = this.apiResourceDiscovery.getPlural(apiVersion, kind);
     if (plural == null) {
-      log.info("getLabelsFromOwner: unknown plural for {}/{}", apiVersion, kind);
+      log.debug("getLabelsFromOwner: unknown plural for {}/{}", apiVersion, kind);
       return null;
     }
-    log.info("getLabelsFromOwner: plural={}", plural);
+    log.debug("getLabelsFromOwner: plural={}", plural);
 
     String group = apiVersion.contains("/") ? apiVersion.split("/")[0] : "";
     String groupResource = group + "/" + plural;
+    // Python: is_namespaced에서 Exception 발생 시 catch 없이 상위로 전파 → 500
     if (!this.apiResourceDiscovery.isNamespaced(groupResource)) {
-      log.info("getLabelsFromOwner: owner not namespaced: {}", groupResource);
+      log.debug("getLabelsFromOwner: owner not namespaced: {}", groupResource);
       return null;
     }
 
     JsonNode ownerObject = fetchObject(apiVersion, namespace, plural, name);
     if (ownerObject == null) {
-      log.info("getLabelsFromOwner: failed to fetch owner object");
+      log.debug("getLabelsFromOwner: failed to fetch owner object");
       return null;
     }
 
     JsonNode ownerLabels = ownerObject.path("metadata").path("labels");
     if (!ownerLabels.isObject()) {
-      log.info("getLabelsFromOwner: owner has no labels");
+      log.debug("getLabelsFromOwner: owner has no labels");
       return null;
     }
 
-    JsonNode usernameNode = ownerLabels.path(LabelConstants.OBJECT_OWN_USERNAME_KEY);
-    JsonNode useridNode = ownerLabels.path(USERID_LABEL_KEY);
+    JsonNode usernameNode = ownerLabels.path(USERNAME_LABEL_KEY_V2);
+    JsonNode useridNode = ownerLabels.path(USERID_LABEL_KEY_V2);
     if (usernameNode.isMissingNode() || useridNode.isMissingNode()) {
-      log.info("getLabelsFromOwner: owner missing username/userid labels. labels={}", ownerLabels);
+      log.debug("getLabelsFromOwner: owner missing username/userid labels. labels={}", ownerLabels);
       return null;
     }
 
@@ -215,19 +234,22 @@ public class UserLabelReviewHandler implements ReviewHandler {
         if (!response.isSuccessful()) {
           if (response.code() == 404) {
             log.debug("Owner object not found: {}", path);
-          } else {
-            log.warn("Failed to fetch owner object: {} status={}", path, response.code());
+            return null;
           }
-          return null;
+          // Python: ApiException non-404 → output.to_not_allowed(500)
+          throw new RuntimeException(
+              "Failed to get owner object with APIException. status code: " + response.code());
         }
         if (response.body() == null) {
           return null;
         }
         return this.mapper.readTree(response.body().string());
       }
+    } catch (RuntimeException e) {
+      throw e;
     } catch (Exception e) {
-      log.warn("Failed to fetch owner object: {}", path, e);
-      return null;
+      // Python: bare except → output.to_not_allowed(500, "undefined error")
+      throw new RuntimeException("Failed to get owner object with undefined error", e);
     }
   }
 

@@ -53,7 +53,6 @@ public class UserInfoAnalyzer {
           : username;
       String aipubUserKey = this.keyResolver.resolveKey(aipubUserName);
       aipubUser = this.userIndexer.getByKey(aipubUserKey);
-      Objects.requireNonNull(aipubUser);
     }
 
     return new UserInfoAnalysis(userInfo.getUsername(), userInfo.getGroups(), aipubUser);

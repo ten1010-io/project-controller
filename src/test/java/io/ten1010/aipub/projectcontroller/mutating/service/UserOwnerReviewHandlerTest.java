@@ -156,7 +156,7 @@ class UserOwnerReviewHandlerTest {
   }
 
   @Test
-  void handle_analyzerThrows_allowsWithoutPatch() {
+  void handle_analyzerThrows_rejectsWithServerError() {
     V1AdmissionReview review = createReview("CREATE", "default", "apps", "v1", "Deployment");
 
     when(this.mockAnalyzer.analyze(any())).thenThrow(new RuntimeException("test error"));
@@ -164,8 +164,8 @@ class UserOwnerReviewHandlerTest {
     this.handler.handle(review);
 
     assertThat(review.getResponse()).isNotNull();
-    assertThat(review.getResponse().getAllowed()).isTrue();
-    assertThat(review.getResponse().getPatch()).isNull();
+    assertThat(review.getResponse().getAllowed()).isFalse();
+    assertThat(review.getResponse().getStatus().getCode()).isEqualTo(500);
   }
 
 }

@@ -43,6 +43,9 @@ public class AipubAdmissionReviewController {
       if (handler.canHandle(clone)) {
         handler.handle(clone);
         handled = true;
+        if (clone.getResponse() != null && !Boolean.TRUE.equals(clone.getResponse().getAllowed())) {
+          break;
+        }
       }
     }
 
