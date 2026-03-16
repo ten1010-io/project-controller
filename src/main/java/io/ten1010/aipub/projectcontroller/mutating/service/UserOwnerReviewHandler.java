@@ -23,6 +23,10 @@ public class UserOwnerReviewHandler implements ReviewHandler {
 
   private static final String OPERATION_CREATE = "CREATE";
 
+  // v2 테스트용: ownerReference 대신 annotation으로 기록. 정식 전환 시 ownerReference 방식으로 복원.
+  private static final String OWNER_REF_ANNOTATION_KEY_V2 =
+      "aipub.ten1010.io/owner-reference-v2";
+
   private final UserInfoAnalyzer userInfoAnalyzer;
   private final Set<String> exceptGvkSet;
   private final ObjectMapper mapper;
@@ -68,8 +72,10 @@ public class UserOwnerReviewHandler implements ReviewHandler {
     try {
       analysis = this.userInfoAnalyzer.analyze(request.getUserInfo());
     } catch (Exception e) {
-      log.debug("Failed to analyze user info, allowing without mutation", e);
-      V1AdmissionReviewUtils.allow(review);
+      // Python: get_aipub_user non-404 ApiException → 500
+      log.warn("Failed to analyze user info", e);
+      V1AdmissionReviewUtils.reject(review, 500,
+          "Failed to get aipub user with following error. " + e.getMessage());
       return;
     }
 
@@ -79,37 +85,39 @@ public class UserOwnerReviewHandler implements ReviewHandler {
     }
 
     if (analysis.getAipubUser().isEmpty()) {
-      V1AdmissionReviewUtils.allow(review);
+      V1AdmissionReviewUtils.reject(review, 400,
+          "Not found aipub user: " + analysis.getUsername());
       return;
     }
 
+    // v2 테스트용: ownerReference를 annotation JSON으로 기록하여 Python 원본과 비교.
+    //  정식 전환 시 이 블록을 ownerReference 패치 방식으로 복원할 것.
     V1alpha1AipubUser aipubUser = analysis.getAipubUser().get();
     V1OwnerReference ownerRef = K8sObjectUtils.buildV1OwnerReference(aipubUser, false, false);
+    String ownerRefJson = this.mapper.valueToTree(ownerRef).toString();
 
     JsonNode objectNode = request.getObject();
-    JsonNode existingRefs = objectNode.path("metadata").path("ownerReferences");
+    JsonNode existingAnnotations = objectNode.path("metadata").path("annotations");
 
     JsonPatchBuilder jsonPatchBuilder = new JsonPatchBuilder();
 
-    if (existingRefs.isMissingNode() || existingRefs.isNull() || !existingRefs.isArray()
-        || existingRefs.isEmpty()) {
-      JsonPatchOperation patchOp = new JsonPatchOperationBuilder()
+    if (!existingAnnotations.isObject()) {
+      JsonPatchOperation initAnnotationsOp = new JsonPatchOperationBuilder()
           .add()
-          .setPath("/metadata/ownerReferences")
-          .setValue(this.mapper.valueToTree(List.of(ownerRef)))
+          .setPath("/metadata/annotations")
+          .setValue(this.mapper.createObjectNode())
           .build();
-      jsonPatchBuilder.addToOperations(patchOp);
-    } else {
-      List<JsonNode> refList = new ArrayList<>();
-      existingRefs.forEach(refList::add);
-      refList.add(this.mapper.valueToTree(ownerRef));
-      JsonPatchOperation patchOp = new JsonPatchOperationBuilder()
-          .replace()
-          .setPath("/metadata/ownerReferences")
-          .setValue(this.mapper.valueToTree(refList))
-          .build();
-      jsonPatchBuilder.addToOperations(patchOp);
+      jsonPatchBuilder.addToOperations(initAnnotationsOp);
     }
+
+    String annotationPath = "/metadata/annotations/"
+        + OWNER_REF_ANNOTATION_KEY_V2.replace("/", "~1");
+    JsonPatchOperation patchOp = new JsonPatchOperationBuilder()
+        .add()
+        .setPath(annotationPath)
+        .setValue(this.mapper.getNodeFactory().textNode(ownerRefJson))
+        .build();
+    jsonPatchBuilder.addToOperations(patchOp);
 
     V1AdmissionReviewUtils.allow(review, jsonPatchBuilder.build());
   }
