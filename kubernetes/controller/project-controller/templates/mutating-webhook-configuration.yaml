@@ -8,7 +8,7 @@ webhooks:
     clientConfig:
       caBundle: <CA_BUNDLE>
       service:
-        namespace: project-controller
+        namespace: aipub
         name: project-controller
         path: /api/v1/admissionreviews
         port: 8080
@@ -30,7 +30,7 @@ webhooks:
     clientConfig:
       caBundle: <CA_BUNDLE>
       service:
-        namespace: project-controller
+        namespace: aipub
         name: project-controller
         path: /api/v1/admissionreviews
         port: 8080
@@ -52,7 +52,7 @@ webhooks:
     clientConfig:
       caBundle: <CA_BUNDLE>
       service:
-        namespace: project-controller
+        namespace: aipub
         name: project-controller
         path: /api/v1/admissionreviews
         port: 8080
@@ -74,7 +74,7 @@ webhooks:
     clientConfig:
       caBundle: <CA_BUNDLE>
       service:
-        namespace: project-controller
+        namespace: aipub
         name: project-controller
         path: /api/v1/admissionreviews
         port: 8080
@@ -96,7 +96,7 @@ webhooks:
     clientConfig:
       caBundle: <CA_BUNDLE>
       service:
-        namespace: project-controller
+        namespace: aipub
         name: project-controller
         path: /api/v1/admissionreviews
         port: 8080
@@ -118,7 +118,7 @@ webhooks:
     clientConfig:
       caBundle: <CA_BUNDLE>
       service:
-        namespace: project-controller
+        namespace: aipub
         name: project-controller
         path: /api/v1/userrelationship/mutate
         port: 8080

@@ -237,7 +237,7 @@ cp "$CONTROLLER_CERT_DIR/tls.p12" "$SCRIPT_DIR/tls.p12"
 kubectl kustomize "$SCRIPT_DIR" --load-restrictor LoadRestrictionsNone | kubectl apply -f -
 
 echo "Waiting for controller to be ready..."
-kubectl -n project-controller rollout status deployment/project-controller --timeout=120s
+kubectl -n aipub rollout status deployment/project-controller --timeout=120s
 
 # ============================================================
 # Step 8: Apply test resources
