@@ -1,5 +1,3 @@
-namespace: aipub
-
 configMapGenerator:
   - name: project-controller-envs
     literals:
@@ -34,5 +32,8 @@ resources:
   - ../kubernetes/controller/project-controller/templates/mutating-webhook-configuration.yaml
   - ../kubernetes/controller/project-controller/templates/mutating-webhook-userrelationship-v2.yaml
 
-patchesStrategicMerge:
-  - patches.yaml
+transformers:
+  - namespace-transformer.yaml
+
+patches:
+  - path: patches.yaml
