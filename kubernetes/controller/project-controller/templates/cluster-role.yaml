@@ -13,7 +13,7 @@ metadata:
   name: project-controller.project.aipub.ten1010.io
 subjects:
   - kind: ServiceAccount
-    namespace: aipub
+    namespace: project-controller
     name: project-controller
 roleRef:
   kind: ClusterRole
