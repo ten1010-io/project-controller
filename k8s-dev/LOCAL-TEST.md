@@ -1,13 +1,21 @@
-># Local Kind Test - UserOwner & UserLabel Mutation
+# Local Kind Test - UserRelationship v2 Webhook (E2E)
 
-Test ownerReference and label (`aipub.ten1010.io/username`, `aipub.ten1010.io/userid`) injection on resource CREATE by an OIDC-authenticated aipub-member user.
+End-to-end test for the Java v2 webhook that adds `-v2` suffixed user labels and annotation-based owner references on resource CREATE by an OIDC-authenticated aipub-member user.
+
+## What gets tested
+
+| Feature | Python (original) | Java v2 (this test) |
+|---------|-------------------|---------------------|
+| User labels | `aipub.ten1010.io/username`, `aipub.ten1010.io/userid` | `aipub.ten1010.io/username-v2`, `aipub.ten1010.io/userid-v2` |
+| Owner reference | `metadata.ownerReferences[]` entry | `metadata.annotations["aipub.ten1010.io/owner-reference-v2"]` (JSON) |
+| Label propagation | Labels copied from parent owner | v2 labels copied from parent owner |
 
 ## Prerequisites
 
 - [kind](https://kind.sigs.k8s.io/)
 - [Docker](https://docs.docker.com/get-docker/)
 - kubectl, jq, openssl
-- Java 21 + Maven (or `./mvnw`)
+- Java 21 Temurin (`sdk use java 21.0.9-tem`)
 
 ## Quick Start
 
@@ -16,9 +24,45 @@ cd k8s-dev
 ./setup.sh
 ```
 
-Then jump to [Verify Mutations](#verify-mutations).
+This script does everything: creates kind cluster, deploys Keycloak + OIDC, builds Java app, generates TLS certs, deploys controller + webhook to `aipub` namespace, creates test AipubUser and namespace, and configures OIDC kubectl context.
 
-## Manual Steps
+After setup completes, jump to [Verify Mutations](#verify-mutations).
+
+## Architecture
+
+```
+kubectl --context=oidc create deployment test-workspace --image=nginx
+  │
+  ▼
+K8s API Server (OIDC auth: oidc:testuser, groups: [oidc:aipub-member])
+  │
+  ├─► MutatingWebhookConfiguration (userrelationship-v2)
+  │     │
+  │     ▼
+  │   project-controller.aipub.svc:8080
+  │   POST /api/v1/userrelationship/mutate
+  │     │
+  │     ├─► UserOwnerReviewHandler
+  │     │     → adds annotation: aipub.ten1010.io/owner-reference-v2 = {ownerRef JSON}
+  │     │
+  │     └─► UserLabelReviewHandler
+  │           → adds label: aipub.ten1010.io/username-v2 = testuser
+  │           → adds label: aipub.ten1010.io/userid-v2 = test-user-001
+  │
+  ▼
+Deployment created with v2 labels + annotation
+  │
+  ▼
+K8s creates ReplicaSet (as system:serviceaccount)
+  │
+  ├─► UserLabelReviewHandler (non-member path)
+  │     → owner propagation: copies v2 labels from parent Deployment
+  │
+  ▼
+ReplicaSet also gets v2 labels (propagated from Deployment)
+```
+
+## Manual Steps (if not using setup.sh)
 
 ### 1. Generate Keycloak TLS certificates
 
@@ -45,45 +89,34 @@ openssl x509 -req -CA certs/keycloak/ca.crt -CAkey certs/keycloak/ca.key \
 
 ### 2. Create Kind cluster with OIDC
 
-The API server is configured to trust Keycloak as an OIDC provider.
-
 ```bash
-# Generate kind config with absolute cert path
 sed "s|__OIDC_CA_PATH__|$(pwd)/certs/keycloak/ca.crt|g" kind-config.yaml > kind-config-resolved.yaml
-
 kind create cluster --name project-controller-dev --config kind-config-resolved.yaml
 ```
 
-Key OIDC flags set on the API server:
+API server OIDC configuration:
 - `--oidc-issuer-url=https://localhost:30443/realms/aipub`
 - `--oidc-client-id=k8s`
-- `--oidc-username-prefix=oidc:` (Keycloak username `testuser` becomes `oidc:testuser` in K8s)
-- `--oidc-groups-prefix=oidc:` (Keycloak group `aipub-member` becomes `oidc:aipub-member` in K8s)
+- `--oidc-username-prefix=oidc:` → Keycloak `testuser` becomes K8s `oidc:testuser`
+- `--oidc-groups-prefix=oidc:` → Keycloak `aipub-member` becomes K8s `oidc:aipub-member`
 
-### 3. Deploy Keycloak in Kind
+### 3. Deploy Keycloak
 
 ```bash
-# Create TLS secret
 kubectl create namespace keycloak
 kubectl -n keycloak create secret generic keycloak-tls \
   --from-file=tls.crt=certs/keycloak/tls.crt \
   --from-file=tls.key=certs/keycloak/tls.key
-
-# Create realm config
 kubectl -n keycloak create configmap keycloak-realm \
   --from-file=realm-init.json=realm-init.json
-
-# Deploy
 kubectl apply -f keycloak/keycloak.yaml
-
-# Wait for ready
 kubectl -n keycloak rollout status deployment/keycloak --timeout=180s
 ```
 
-Keycloak is exposed via NodePort 30443 on localhost. The realm `aipub` is auto-imported with:
-- Client: `k8s` (confidential, direct access grants, service account enabled)
-- Realm roles: `aipub-member`, `aipub-admin`
-- User: `testuser` is created via Admin API after Keycloak starts (see setup.sh Step 3b)
+After Keycloak is ready, `setup.sh` automatically:
+- Creates `testuser` with password `testpass`
+- Assigns `aipub-member` realm role
+- Retrieves `k8s` client secret for OIDC token requests
 
 ### 4. Build and load controller image
 
@@ -100,6 +133,8 @@ cd k8s-dev
 ```
 
 ### 5. Generate controller TLS certificates
+
+The TLS cert SAN must match `project-controller.aipub.svc` (service DNS in `aipub` namespace).
 
 ```bash
 mkdir -p certs/controller
@@ -121,16 +156,15 @@ openssl pkcs12 -export -inkey certs/controller/tls.key -in certs/controller/tls.
 cp certs/controller/tls.p12 tls.p12
 ```
 
-### 6. Deploy controller
+### 6. Deploy controller to `aipub` namespace
 
 ```bash
-# Inject caBundle into patches.yaml
+# Inject caBundle and deploy via kustomize
 CA_BUNDLE=$(base64 < certs/controller/ca.crt)
 sed -i '' "s|caBundle: <CA_BUNDLE>|caBundle: ${CA_BUNDLE}|g" patches.yaml
 
-# Deploy
-kubectl apply -k .
-kubectl -n project-controller rollout status deployment/project-controller --timeout=120s
+kubectl kustomize . --load-restrictor LoadRestrictionsNone | kubectl apply -f -
+kubectl -n aipub rollout status deployment/project-controller --timeout=120s
 ```
 
 ### 7. Create test resources
@@ -139,8 +173,8 @@ kubectl -n project-controller rollout status deployment/project-controller --tim
 kubectl apply -f test-resources.yaml
 ```
 
-This creates:
-- `AipubUser` named `testuser` (spec.id: `test-user-001`)
+Creates:
+- `AipubUser` named `testuser` (spec.id: `test-user-001`) — the informer cache source
 - Namespace `test-ns`
 - `RoleBinding` granting `oidc:testuser` admin in `test-ns`
 
@@ -148,7 +182,7 @@ This creates:
 
 ### Setup OIDC context
 
-`setup.sh`가 자동으로 `oidc` context를 생성합니다. 토큰 만료(5분) 시 갱신:
+`setup.sh` automatically creates the `oidc` kubectl context. Token expires in 5 minutes. Refresh:
 
 ```bash
 TOKEN=$(curl -sk https://localhost:30443/realms/aipub/protocol/openid-connect/token \
@@ -157,77 +191,93 @@ TOKEN=$(curl -sk https://localhost:30443/realms/aipub/protocol/openid-connect/to
 kubectl config set-credentials oidc-testuser --token="$TOKEN"
 ```
 
-Verify token contents (optional):
-
-```bash
-echo "$TOKEN" | cut -d. -f2 | tr '_-' '/+' | awk '{while(length%4)$0=$0"=";print}' | base64 -d 2>/dev/null | jq .
-```
-
-You should see `"preferred_username": "testuser"` and `"groups": ["aipub-member", ...]` (realm roles mapped via `oidc-usermodel-realm-role-mapper`).
-
-> **Note**: `--token` 플래그는 Kind kubeconfig의 client-certificate 인증에 의해 무시됩니다. 반드시 `--context=oidc`를 사용하세요.
-
-### Create a workspace
+### Test 1: Create deployment as OIDC user (aipub-member)
 
 ```bash
 kubectl --context=oidc create deployment test-workspace --image=nginx
 ```
 
-### Check ownerReference
-
-```bash
-kubectl -n test-ns get deployment test-workspace -o jsonpath='{.metadata.ownerReferences}' | jq .
-```
-
-Expected: ownerReference pointing to AipubUser `testuser`:
-
-```json
-[
-  {
-    "apiVersion": "project.aipub.ten1010.io/v1alpha1",
-    "kind": "AipubUser",
-    "name": "testuser",
-    "uid": "<uid>",
-    "controller": false,
-    "blockOwnerDeletion": false
-  }
-]
-```
-
-### Check labels
+### Test 2: Check v2 labels
 
 ```bash
 kubectl -n test-ns get deployment test-workspace -o jsonpath='{.metadata.labels}' | jq .
 ```
 
-Expected labels include:
+Expected:
 
 ```json
 {
-  "aipub.ten1010.io/username": "testuser",
-  "aipub.ten1010.io/userid": "test-user-001"
+  "app": "test-workspace",
+  "aipub.ten1010.io/username-v2": "testuser",
+  "aipub.ten1010.io/userid-v2": "test-user-001"
 }
 ```
 
-### Check child resource label propagation
-
-When the Deployment controller creates a ReplicaSet (as a service account, not an OIDC user), the UserLabel handler copies labels from the owner Deployment:
+### Test 3: Check v2 owner reference annotation
 
 ```bash
-# Check ReplicaSet labels
-kubectl -n test-ns get replicaset -l app=test-workspace -o jsonpath='{.items[0].metadata.labels}' | jq .
-
-# Check Pod labels (propagated through ReplicaSet)
-kubectl -n test-ns get pods -l app=test-workspace -o jsonpath='{.items[0].metadata.labels}' | jq .
+kubectl -n test-ns get deployment test-workspace -o jsonpath='{.metadata.annotations}' | jq .
 ```
+
+Expected:
+
+```json
+{
+  "aipub.ten1010.io/owner-reference-v2": "{\"apiVersion\":\"project.aipub.ten1010.io/v1alpha1\",\"blockOwnerDeletion\":false,\"controller\":false,\"kind\":\"AipubUser\",\"name\":\"testuser\",\"uid\":\"<uid>\"}"
+}
+```
+
+### Test 4: Check label propagation to child resources
+
+When the Deployment controller creates a ReplicaSet (as a service account, not OIDC user), the UserLabel handler copies v2 labels from the parent Deployment:
+
+```bash
+# ReplicaSet v2 labels
+kubectl -n test-ns get replicaset -l app=test-workspace \
+  -o jsonpath='{.items[0].metadata.labels}' | jq .
+
+# Pod v2 labels (propagated through ReplicaSet)
+kubectl -n test-ns get pods -l app=test-workspace \
+  -o jsonpath='{.items[0].metadata.labels}' | jq .
+```
+
+### Test 5: Check GVK exception (Commit resources should be skipped)
+
+The `UserOwnerReviewHandler` skips `aipub.ten1010.io/v1alpha1/Commit` and `aipub.ten1010.io/v1/Commit` — no owner reference annotation should be added for these.
+
+### Test 6: Non-member user (system service accounts)
+
+Resources created by service accounts (no `oidc:aipub-member` group) should:
+- **Not** get owner reference annotation
+- **Get** v2 labels propagated from parent owner (if parent has them)
+- **Not** get v2 labels (if parent doesn't have them — allowed without mutation)
 
 ### Controller logs
 
 ```bash
-kubectl -n project-controller logs deployment/project-controller -f
+kubectl -n aipub logs deployment/project-controller -f
 ```
 
-Look for `Aipub admission review request received` log entries.
+Look for:
+- `Aipub admission review request received`
+- `UserLabel handle: user=..., namespace=..., operation=...`
+- `UserLabel: direct aipub member, username=..., userid=...`
+- `UserLabel: propagated from owner, username=..., userid=...`
+
+## Emergency: Remove v2 webhook
+
+If the v2 webhook causes problems (e.g., CREATE operations fail):
+
+```bash
+# Remove v2 webhook immediately
+kubectl delete mutatingwebhookconfiguration \
+  userrelationship-v2.project-controller.project.aipub.ten1010.io
+
+# Verify removal
+kubectl get mutatingwebhookconfiguration | grep v2
+```
+
+This does NOT affect the Python admission-controller or the original Java webhooks.
 
 ## Cleanup
 
@@ -248,23 +298,41 @@ sed -i '' 's|caBundle: .*|caBundle: <CA_BUNDLE>|g' patches.yaml
 **Keycloak not ready:**
 ```bash
 kubectl -n keycloak logs deployment/keycloak
-kubectl -n keycloak describe pod -l app=keycloak
 ```
 
 **Token request fails:**
 ```bash
-# Check Keycloak is reachable
 curl -sk https://localhost:30443/realms/aipub/.well-known/openid-configuration | jq .issuer
 ```
 
-**API server OIDC not working (401 even with valid token):**
+**API server OIDC not working (401 with valid token):**
 ```bash
-# Check API server logs for OIDC errors
-docker exec project-controller-dev-control-plane cat /var/log/containers/kube-apiserver-*.log | grep oidc
+docker exec project-controller-dev-control-plane \
+  cat /var/log/containers/kube-apiserver-*.log | grep oidc
 ```
 
 **Controller pod not starting:**
 ```bash
-kubectl -n project-controller describe pod -l app=project-controller
-kubectl -n project-controller logs deployment/project-controller
+kubectl -n aipub describe pod -l app=project-controller
+kubectl -n aipub logs deployment/project-controller
+```
+
+**Webhook not intercepting requests:**
+```bash
+# Check webhook is registered
+kubectl get mutatingwebhookconfiguration | grep v2
+
+# Check webhook config details
+kubectl get mutatingwebhookconfiguration \
+  userrelationship-v2.project-controller.project.aipub.ten1010.io -o yaml
+```
+
+**Webhook rejects all requests (failurePolicy: Fail):**
+```bash
+# Quick fix: remove webhook
+kubectl delete mutatingwebhookconfiguration \
+  userrelationship-v2.project-controller.project.aipub.ten1010.io
+
+# Then check controller logs for the error
+kubectl -n aipub logs deployment/project-controller --tail=200
 ```
