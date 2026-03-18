@@ -38,3 +38,4 @@ build/
 /.claude/hooks/codex-review.sh
 /.claude/skills/review/SKILL.md
 /.claude/settings.json
+harbor/.env
