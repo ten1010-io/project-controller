@@ -1,0 +1,83 @@
+name: Build and Push Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      github_tag:
+        description: 'GitHub tag / Image tag'
+        required: true
+        type: string
+
+jobs:
+  build-and-push:
+    name: Build and Push
+    runs-on: [self-hosted, linux]
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Create GitHub tag
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+          git tag -f ${{ inputs.github_tag }}
+          git push origin ${{ inputs.github_tag }} --force
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5.2.0
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Build container image
+        run: |
+          chmod +x mvnw
+          echo "==================== spring-boot:build-image ===================="
+          ./mvnw spring-boot:build-image \
+            -Dspring-boot.build-image.imageName=ten1010io/project-controller:${{ inputs.github_tag }} \
+            -DskipTests
+
+      - name: Login to Harbor Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.HARBOR_REGISTRY }}
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_PASSWORD }}
+
+      - name: Publish container image
+        run: |
+          HARBOR_IMAGE="${{ secrets.HARBOR_REGISTRY }}/project-controller/project-controller:${{ inputs.github_tag }}"
+
+          echo "==================== docker tag ===================="
+          docker tag ten1010io/project-controller:${{ inputs.github_tag }} ${HARBOR_IMAGE}
+
+          echo "==================== docker push ===================="
+          docker push ${HARBOR_IMAGE}
+
+          echo "Pushed: ${HARBOR_IMAGE}"
+
+  summary:
+    name: Summary
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Summary
+        run: |
+          echo "### Build and Push Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Tag | \`${{ inputs.github_tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Harbor Image | \`${{ secrets.HARBOR_REGISTRY }}/project-controller/project-controller:${{ inputs.github_tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Triggered by | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image pushed to Harbor**" >> $GITHUB_STEP_SUMMARY
