@@ -11,7 +11,7 @@ on:
 jobs:
   build-and-push:
     name: Build and Push
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
     permissions:
       contents: write
       packages: write
