@@ -342,6 +342,13 @@ public class SharedInformerFactoryProvider {
     informer.addIndexers(Map.of(
         IndexerConstants.NODE_NAME_TO_POD_INDEXER_NAME,
         obj -> WorkloadUtils.getNodeName(obj).map(List::of).orElse(List.of())));
+    informer.addIndexers(Map.of(
+        IndexerConstants.USERNAME_V2_LABEL_TO_OBJECTS_INDEXER_NAME,
+        obj -> {
+          String v = K8sObjectUtils.getLabels(obj)
+              .get(io.ten1010.aipub.projectcontroller.domain.k8s.LabelConstants.OBJECT_OWN_USERNAME_V2_KEY);
+          return v != null ? List.of(v) : List.of();
+        }));
   }
 
 }

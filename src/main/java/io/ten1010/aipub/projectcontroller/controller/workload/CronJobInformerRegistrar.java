@@ -7,6 +7,7 @@ import io.kubernetes.client.openapi.models.V1CronJob;
 import io.kubernetes.client.openapi.models.V1CronJobList;
 import io.kubernetes.client.util.CallGeneratorParams;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
+import io.ten1010.aipub.projectcontroller.domain.k8s.LabelConstants;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.informer.IndexerConstants;
 import io.ten1010.aipub.projectcontroller.informer.InformerRegistrar;
@@ -38,6 +39,12 @@ public class CronJobInformerRegistrar implements InformerRegistrar {
     informer.addIndexers(Map.of(
         IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
         obj -> List.of(K8sObjectUtils.getNamespace(obj))));
+    informer.addIndexers(Map.of(
+        IndexerConstants.USERNAME_V2_LABEL_TO_OBJECTS_INDEXER_NAME,
+        obj -> {
+          String v = K8sObjectUtils.getLabels(obj).get(LabelConstants.OBJECT_OWN_USERNAME_V2_KEY);
+          return v != null ? List.of(v) : List.of();
+        }));
   }
 
 }

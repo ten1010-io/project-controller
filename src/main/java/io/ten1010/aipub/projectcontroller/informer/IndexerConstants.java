@@ -19,6 +19,7 @@ public final class IndexerConstants {
 
   public static final String NAMESPACE_TO_OBJECTS_INDEXER_NAME = "NAMESPACE_TO_OBJECTS";
   public static final String LABEL_STRING_TO_OBJECTS_INDEXER_NAME = "LABEL_STRING_TO_OBJECTS";
+  public static final String USERNAME_V2_LABEL_TO_OBJECTS_INDEXER_NAME = "USERNAME_V2_LABEL_TO_OBJECTS";
 
   public static final String TRUE_VALUE = "true";
   public static final String FALSE_VALUE = "false";
