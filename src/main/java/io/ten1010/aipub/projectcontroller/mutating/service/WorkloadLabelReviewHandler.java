@@ -29,6 +29,12 @@ public class WorkloadLabelReviewHandler implements ReviewHandler {
 
   private static final String OPERATION_CREATE = "CREATE";
 
+  // v2 테스트용: Python 원본과 병행 운영하여 비교. 정식 전환 시 LabelConstants 원본 키로 복원.
+  private static final String WORKLOAD_NAME_KEY_V2 =
+      LabelConstants.WORKLOAD_NAME_KEY + "-v2";
+  private static final String WORKLOAD_KIND_KEY_V2 =
+      LabelConstants.WORKLOAD_KIND_KEY + "-v2";
+
   private final ApiResourceDiscovery apiResourceDiscovery;
   private final ApiClient k8sApiClient;
   private final ObjectMapper mapper;
@@ -87,9 +93,9 @@ public class WorkloadLabelReviewHandler implements ReviewHandler {
 
     // Port of Python: workload_labels = self._get_workload_labels_from_owner(owner_object)
     Optional<String> workloadName = getWorkloadLabelFromOwner(owner,
-        LabelConstants.WORKLOAD_NAME_KEY);
+        WORKLOAD_NAME_KEY_V2);
     Optional<String> workloadKind = getWorkloadLabelFromOwner(owner,
-        LabelConstants.WORKLOAD_KIND_KEY);
+        WORKLOAD_KIND_KEY_V2);
 
     // Port of Python: if workload_labels is None: workload_name = owner_object["metadata"]["name"] ...
     String resolvedName;
@@ -124,7 +130,7 @@ public class WorkloadLabelReviewHandler implements ReviewHandler {
     }
 
     String workloadNamePath = "/metadata/labels/"
-        + LabelConstants.WORKLOAD_NAME_KEY.replace("/", "~1");
+        + WORKLOAD_NAME_KEY_V2.replace("/", "~1");
     JsonPatchOperation workloadNameOp = new JsonPatchOperationBuilder()
         .add()
         .setPath(workloadNamePath)
@@ -133,7 +139,7 @@ public class WorkloadLabelReviewHandler implements ReviewHandler {
     jsonPatchBuilder.addToOperations(workloadNameOp);
 
     String workloadKindPath = "/metadata/labels/"
-        + LabelConstants.WORKLOAD_KIND_KEY.replace("/", "~1");
+        + WORKLOAD_KIND_KEY_V2.replace("/", "~1");
     JsonPatchOperation workloadKindOp = new JsonPatchOperationBuilder()
         .add()
         .setPath(workloadKindPath)
