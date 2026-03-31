@@ -86,10 +86,15 @@ public class MutatingConfiguration {
   }
 
   @Bean
+  public ApiResourceDiscovery apiResourceDiscovery(ApiClient apiClient) {
+    return new ApiResourceDiscovery(apiClient);
+  }
+
+  @Bean
   @Qualifier("aipubReviewHandlers")
   public List<ReviewHandler> aipubReviewHandlers(
       SharedInformerFactory sharedInformerFactory, AipubProperties aipubProperties,
-      ApiClient apiClient) {
+      ApiResourceDiscovery apiResourceDiscovery, ApiClient apiClient) {
     UserInfoAnalyzer userInfoAnalyzer = new UserInfoAnalyzer(sharedInformerFactory);
     Set<String> exceptGvkSet = aipubProperties.getAddOwnerExceptGvkList().stream()
         .map(String::trim)
@@ -97,15 +102,14 @@ public class MutatingConfiguration {
         .collect(Collectors.toSet());
     UserOwnerReviewHandler userOwnerReviewHandler = new UserOwnerReviewHandler(
         userInfoAnalyzer, exceptGvkSet);
-    ApiResourceDiscovery apiResourceDiscovery = new ApiResourceDiscovery(apiClient);
     UserLabelReviewHandler userLabelReviewHandler = new UserLabelReviewHandler(
         userInfoAnalyzer, apiResourceDiscovery, apiClient);
     return List.of(userOwnerReviewHandler, userLabelReviewHandler);
   }
 
   @Bean
-  public WorkloadLabelReviewHandler workloadLabelReviewHandler(ApiClient apiClient) {
-    ApiResourceDiscovery apiResourceDiscovery = new ApiResourceDiscovery(apiClient);
+  public WorkloadLabelReviewHandler workloadLabelReviewHandler(
+      ApiResourceDiscovery apiResourceDiscovery, ApiClient apiClient) {
     return new WorkloadLabelReviewHandler(apiResourceDiscovery, apiClient);
   }
 
