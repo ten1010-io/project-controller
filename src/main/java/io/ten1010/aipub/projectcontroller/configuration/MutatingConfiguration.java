@@ -23,6 +23,7 @@ import io.ten1010.aipub.projectcontroller.mutating.service.UserInfoAnalyzer;
 import io.ten1010.aipub.projectcontroller.mutating.service.ApiResourceDiscovery;
 import io.ten1010.aipub.projectcontroller.mutating.service.UserLabelReviewHandler;
 import io.ten1010.aipub.projectcontroller.mutating.service.UserOwnerReviewHandler;
+import io.ten1010.aipub.projectcontroller.mutating.service.WorkloadLabelReviewHandler;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -100,6 +101,12 @@ public class MutatingConfiguration {
     UserLabelReviewHandler userLabelReviewHandler = new UserLabelReviewHandler(
         userInfoAnalyzer, apiResourceDiscovery, apiClient);
     return List.of(userOwnerReviewHandler, userLabelReviewHandler);
+  }
+
+  @Bean
+  public WorkloadLabelReviewHandler workloadLabelReviewHandler(ApiClient apiClient) {
+    ApiResourceDiscovery apiResourceDiscovery = new ApiResourceDiscovery(apiClient);
+    return new WorkloadLabelReviewHandler(apiResourceDiscovery, apiClient);
   }
 
 }

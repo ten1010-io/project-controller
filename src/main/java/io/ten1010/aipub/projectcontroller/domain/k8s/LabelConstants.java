@@ -12,6 +12,10 @@ public final class LabelConstants {
       ProjectApiConstants.AIPUB_GROUP + "/" + "userid";
   public static final String PROJECT_LABEL_KEY =
       ProjectApiConstants.PROJECT_GROUP + "/" + "project";
+  public static final String WORKLOAD_NAME_KEY =
+      ProjectApiConstants.AIPUB_GROUP + "/" + "workload-name";
+  public static final String WORKLOAD_KIND_KEY =
+      ProjectApiConstants.AIPUB_GROUP + "/" + "workload-kind";
 
   private LabelConstants() {
   }
