@@ -89,8 +89,8 @@ public class WorkloadLabelReviewHandler implements ReviewHandler {
 
     // Port of Python: if workload_labels is None: workload_name = owner_object["metadata"]["name"] ...
     if (workloadName == null || workloadKind == null) {
-      workloadName = ownerObject.path("metadata").path("name").asText();
-      workloadKind = ownerObject.path("kind").asText();
+      workloadName = ownerObject.get("metadata").get("name").textValue();
+      workloadKind = ownerObject.get("kind").textValue();
       log.debug("WorkloadLabel: created labels from owner: name={}, kind={}",
           workloadName, workloadKind);
     } else {
@@ -98,13 +98,15 @@ public class WorkloadLabelReviewHandler implements ReviewHandler {
           workloadName, workloadKind);
     }
 
-    // Port of Python: labels = mutated_obj["metadata"].get("labels") ... labels.update(workload_labels)
+    // Port of Python: labels = mutated_obj["metadata"].get("labels")
+    //                 if labels is None: labels = {} ...
     JsonNode objectNode = request.getObject();
-    JsonNode existingLabels = objectNode.path("metadata").path("labels");
+    JsonNode metadataNode = objectNode.get("metadata");
+    JsonNode existingLabels = (metadataNode != null) ? metadataNode.get("labels") : null;
 
     JsonPatchBuilder jsonPatchBuilder = new JsonPatchBuilder();
 
-    if (!existingLabels.isObject()) {
+    if (existingLabels == null) {
       JsonPatchOperation initLabelsOp = new JsonPatchOperationBuilder()
           .add()
           .setPath("/metadata/labels")
@@ -135,31 +137,45 @@ public class WorkloadLabelReviewHandler implements ReviewHandler {
   }
 
   // Port of Python: _get_workload_labels_from_owner(self, owner_object)
+  // Python: labels = owner_object["metadata"].get("labels")
+  //         workload_name = labels.get(self._workload_name_label_key)
   @Nullable
   private String getWorkloadLabelFromOwner(JsonNode ownerObject, String labelKey) {
-    JsonNode labels = ownerObject.path("metadata").path("labels");
-    if (!labels.isObject()) {
+    JsonNode metadata = ownerObject.get("metadata");
+    if (metadata == null) {
       return null;
     }
-    JsonNode labelNode = labels.path(labelKey);
-    if (labelNode.isMissingNode()) {
+    JsonNode labels = metadata.get("labels");
+    if (labels == null) {
       return null;
     }
-    return labelNode.asText();
+    JsonNode labelNode = labels.get(labelKey);
+    if (labelNode == null) {
+      return null;
+    }
+    return labelNode.textValue();
   }
 
   // Port of Python: owner_service.get_owner_object(obj, namespace, output)
+  // Python: owner_references = obj["metadata"].get("ownerReferences")
+  //         if not _owner_reference.get("controller"): continue
+  //         name = owner_reference["name"]
   @Nullable
   private JsonNode getOwnerObject(JsonNode objectNode, String namespace) {
-    JsonNode ownerRefs = objectNode.path("metadata").path("ownerReferences");
-    if (!ownerRefs.isArray()) {
+    JsonNode metadata = objectNode.get("metadata");
+    if (metadata == null) {
+      return null;
+    }
+    JsonNode ownerRefs = metadata.get("ownerReferences");
+    if (ownerRefs == null || !ownerRefs.isArray()) {
       return null;
     }
 
     // Port of Python: find controller ownerReference
     JsonNode controllerRef = null;
     for (JsonNode ref : ownerRefs) {
-      if (ref.path("controller").asBoolean(false)) {
+      JsonNode controllerNode = ref.get("controller");
+      if (controllerNode != null && controllerNode.booleanValue()) {
         controllerRef = ref;
         break;
       }
@@ -169,9 +185,9 @@ public class WorkloadLabelReviewHandler implements ReviewHandler {
       return null;
     }
 
-    String apiVersion = controllerRef.path("apiVersion").asText();
-    String kind = controllerRef.path("kind").asText();
-    String name = controllerRef.path("name").asText();
+    String apiVersion = controllerRef.get("apiVersion").textValue();
+    String kind = controllerRef.get("kind").textValue();
+    String name = controllerRef.get("name").textValue();
     log.debug("getOwnerObject: controller ref apiVersion={}, kind={}, name={}",
         apiVersion, kind, name);
 
