@@ -10,7 +10,7 @@ webhooks:
       service:
         namespace: project-controller
         name: project-controller
-        path: /api/v1/admissionreviews
+        path: /api/v1/workloadlabel/mutate
         port: 8080
     failurePolicy: Ignore
     matchPolicy: Equivalent

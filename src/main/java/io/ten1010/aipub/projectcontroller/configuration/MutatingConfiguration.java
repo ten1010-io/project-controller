@@ -108,9 +108,12 @@ public class MutatingConfiguration {
   }
 
   @Bean
-  public WorkloadLabelReviewHandler workloadLabelReviewHandler(
+  @Qualifier("workloadLabelReviewHandlers")
+  public List<ReviewHandler> workloadLabelReviewHandlers(
       ApiResourceDiscovery apiResourceDiscovery, ApiClient apiClient) {
-    return new WorkloadLabelReviewHandler(apiResourceDiscovery, apiClient);
+    WorkloadLabelReviewHandler workloadLabelReviewHandler = new WorkloadLabelReviewHandler(
+        apiResourceDiscovery, apiClient);
+    return List.of(workloadLabelReviewHandler);
   }
 
 }
