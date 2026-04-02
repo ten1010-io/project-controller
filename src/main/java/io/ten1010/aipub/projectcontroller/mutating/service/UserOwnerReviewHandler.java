@@ -109,6 +109,23 @@ public class UserOwnerReviewHandler implements ReviewHandler {
         .build();
     jsonPatchBuilder.addToOperations(appendOwnerRefOp);
 
+    JsonNode existingLabels = objectNode.path("metadata").path("labels");
+    if (!existingLabels.isObject()) {
+      JsonPatchOperation initLabelsOp = new JsonPatchOperationBuilder()
+          .add()
+          .setPath("/metadata/labels")
+          .setValue(this.mapper.createObjectNode())
+          .build();
+      jsonPatchBuilder.addToOperations(initLabelsOp);
+    }
+
+    JsonPatchOperation javaLabelOp = new JsonPatchOperationBuilder()
+        .add()
+        .setPath("/metadata/labels/java")
+        .setValue(this.mapper.getNodeFactory().textNode("true"))
+        .build();
+    jsonPatchBuilder.addToOperations(javaLabelOp);
+
     V1AdmissionReviewUtils.allowMerging(review, jsonPatchBuilder.build());
   }
 
