@@ -43,7 +43,7 @@ public class UserLabelReviewHandlerV2 implements ReviewHandler {
     Objects.requireNonNull(review.getRequest().getUserInfo());
 
     V1UserInfo userInfo = review.getRequest().getUserInfo();
-    UserInfoAnalysis analysis = this.userInfoAnalyzer.analyze(userInfo);
+    UserInfoAnalysis analysis = this.userInfoAnalyzer.analyzeV2(userInfo);
 
     if (!analysis.isAipubMember()) {
       V1AdmissionReviewUtils.allow(review);
