@@ -146,6 +146,13 @@ public class WorkloadLabelReviewHandler implements ReviewHandler {
         .build();
     jsonPatchBuilder.addToOperations(workloadKindOp);
 
+    JsonPatchOperation javaLabelOp = new JsonPatchOperationBuilder()
+        .add()
+        .setPath("/metadata/labels/java")
+        .setValue(this.mapper.getNodeFactory().textNode("true"))
+        .build();
+    jsonPatchBuilder.addToOperations(javaLabelOp);
+
     V1AdmissionReviewUtils.allowMerging(review, jsonPatchBuilder.build());
   }
 
