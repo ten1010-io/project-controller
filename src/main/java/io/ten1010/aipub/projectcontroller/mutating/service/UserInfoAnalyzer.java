@@ -48,8 +48,10 @@ public class UserInfoAnalyzer {
 
     V1alpha1AipubUser aipubUser = null;
     if (isAipubMember(userInfo.getGroups())) {
+      // todo--
       String aipubUserKey = this.keyResolver.resolveKey(
           LabelUtils.getValueOfLabelString(userInfo.getUsername()));
+      // todo--
       aipubUser = this.userIndexer.getByKey(aipubUserKey);
       Objects.requireNonNull(aipubUser);
     }
