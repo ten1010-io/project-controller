@@ -27,11 +27,10 @@ public class UserLabelReviewHandler implements ReviewHandler {
 
   private static final String OPERATION_CREATE = "CREATE";
 
-  // v2 테스트용: Python 원본과 병행 운영하여 비교. 정식 전환 시 LabelConstants 원본 키로 복원.
-  private static final String USERNAME_LABEL_KEY_V2 =
-      LabelConstants.OBJECT_OWN_USERNAME_KEY + "-v2";
-  private static final String USERID_LABEL_KEY_V2 =
-      LabelConstants.OBJECT_OWN_USERID_KEY + "-v2";
+  private static final String USERNAME_LABEL_KEY =
+      LabelConstants.OBJECT_OWN_USERNAME_KEY;
+  private static final String USERID_LABEL_KEY =
+      LabelConstants.OBJECT_OWN_USERID_KEY;
 
   private final UserInfoAnalyzer userInfoAnalyzer;
   private final ApiResourceDiscovery apiResourceDiscovery;
@@ -133,7 +132,7 @@ public class UserLabelReviewHandler implements ReviewHandler {
     }
 
     String usernameLabelPath = "/metadata/labels/"
-        + USERNAME_LABEL_KEY_V2.replace("/", "~1");
+        + USERNAME_LABEL_KEY.replace("/", "~1");
     JsonPatchOperation usernamePatchOp = new JsonPatchOperationBuilder()
         .add()
         .setPath(usernameLabelPath)
@@ -142,7 +141,7 @@ public class UserLabelReviewHandler implements ReviewHandler {
     jsonPatchBuilder.addToOperations(usernamePatchOp);
 
     String useridLabelPath = "/metadata/labels/"
-        + USERID_LABEL_KEY_V2.replace("/", "~1");
+        + USERID_LABEL_KEY.replace("/", "~1");
     JsonPatchOperation useridPatchOp = new JsonPatchOperationBuilder()
         .add()
         .setPath(useridLabelPath)
@@ -212,8 +211,8 @@ public class UserLabelReviewHandler implements ReviewHandler {
       return null;
     }
 
-    JsonNode usernameNode = ownerLabels.get(USERNAME_LABEL_KEY_V2);
-    JsonNode useridNode = ownerLabels.get(USERID_LABEL_KEY_V2);
+    JsonNode usernameNode = ownerLabels.get(USERNAME_LABEL_KEY);
+    JsonNode useridNode = ownerLabels.get(USERID_LABEL_KEY);
     if (usernameNode == null || useridNode == null) {
       log.debug("getLabelsFromOwner: owner missing username/userid labels. labels={}", ownerLabels);
       return null;
