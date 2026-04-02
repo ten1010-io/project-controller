@@ -50,7 +50,7 @@ public class AipubAdmissionReviewController {
     }
 
     if (!handled) {
-      V1AdmissionReviewUtils.allow(clone);
+      V1AdmissionReviewUtils.allowMerging(clone);
     }
 
     return ResponseEntity.ok(clone);

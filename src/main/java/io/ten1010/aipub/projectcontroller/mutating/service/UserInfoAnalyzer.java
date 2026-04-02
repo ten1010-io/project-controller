@@ -5,6 +5,7 @@ import io.kubernetes.client.informer.cache.Indexer;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sGroupConstants;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.LabelUtils;
 import io.ten1010.aipub.projectcontroller.mutating.dto.V1UserInfo;
 import java.util.List;
 import java.util.Objects;
@@ -42,6 +43,21 @@ public class UserInfoAnalyzer {
   }
 
   public UserInfoAnalysis analyze(V1UserInfo userInfo) {
+    Objects.requireNonNull(userInfo.getUsername());
+    Objects.requireNonNull(userInfo.getGroups());
+
+    V1alpha1AipubUser aipubUser = null;
+    if (isAipubMember(userInfo.getGroups())) {
+      String aipubUserKey = this.keyResolver.resolveKey(
+          LabelUtils.getValueOfLabelString(userInfo.getUsername()));
+      aipubUser = this.userIndexer.getByKey(aipubUserKey);
+      Objects.requireNonNull(aipubUser);
+    }
+
+    return new UserInfoAnalysis(userInfo.getUsername(), userInfo.getGroups(), aipubUser);
+  }
+
+  public UserInfoAnalysis analyzeV2(V1UserInfo userInfo) {
     Objects.requireNonNull(userInfo.getUsername());
     Objects.requireNonNull(userInfo.getGroups());
 

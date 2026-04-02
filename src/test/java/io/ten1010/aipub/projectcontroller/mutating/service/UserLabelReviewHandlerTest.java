@@ -105,7 +105,7 @@ class UserLabelReviewHandlerTest {
         "oidc:testuser",
         List.of("oidc:aipub-member", "system:authenticated"),
         aipubUser);
-    when(this.mockAnalyzer.analyze(any())).thenReturn(analysis);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);
 
     this.handler.handle(review);
 
@@ -125,7 +125,7 @@ class UserLabelReviewHandlerTest {
         "oidc:testuser",
         List.of("oidc:aipub-member", "system:authenticated"),
         aipubUser);
-    when(this.mockAnalyzer.analyze(any())).thenReturn(analysis);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);
 
     this.handler.handle(review);
 
@@ -142,7 +142,7 @@ class UserLabelReviewHandlerTest {
         "system:serviceaccount:kube-system:replicaset-controller",
         List.of("system:serviceaccounts", "system:authenticated"),
         null);
-    when(this.mockAnalyzer.analyze(any())).thenReturn(analysis);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);
 
     this.handler.handle(review);
 
@@ -155,7 +155,7 @@ class UserLabelReviewHandlerTest {
   void handle_analyzerThrows_rejects() {
     V1AdmissionReview review = createReview("CREATE", "default");
 
-    when(this.mockAnalyzer.analyze(any())).thenThrow(new RuntimeException("test error"));
+    when(this.mockAnalyzer.analyzeV2(any())).thenThrow(new RuntimeException("test error"));
 
     this.handler.handle(review);
 

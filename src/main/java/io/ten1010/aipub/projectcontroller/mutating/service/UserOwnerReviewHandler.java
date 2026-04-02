@@ -64,13 +64,13 @@ public class UserOwnerReviewHandler implements ReviewHandler {
         + request.getKind().getVersion() + "/"
         + request.getKind().getKind();
     if (this.exceptGvkSet.contains(gvk)) {
-      V1AdmissionReviewUtils.allow(review);
+      V1AdmissionReviewUtils.allowMerging(review);
       return;
     }
 
     UserInfoAnalysis analysis;
     try {
-      analysis = this.userInfoAnalyzer.analyze(request.getUserInfo());
+      analysis = this.userInfoAnalyzer.analyzeV2(request.getUserInfo());
     } catch (Exception e) {
       // Python: get_aipub_user non-404 ApiException → 500
       log.warn("Failed to analyze user info", e);
@@ -80,7 +80,7 @@ public class UserOwnerReviewHandler implements ReviewHandler {
     }
 
     if (!analysis.isAipubMember()) {
-      V1AdmissionReviewUtils.allow(review);
+      V1AdmissionReviewUtils.allowMerging(review);
       return;
     }
 
@@ -119,7 +119,7 @@ public class UserOwnerReviewHandler implements ReviewHandler {
         .build();
     jsonPatchBuilder.addToOperations(patchOp);
 
-    V1AdmissionReviewUtils.allow(review, jsonPatchBuilder.build());
+    V1AdmissionReviewUtils.allowMerging(review, jsonPatchBuilder.build());
   }
 
 }

@@ -32,6 +32,26 @@ public abstract class V1AdmissionReviewUtils {
   public static void allow(V1AdmissionReview review) {
     Objects.requireNonNull(review.getRequest());
 
+    V1AdmissionReviewResponse response = new V1AdmissionReviewResponse();
+    response.setUid(review.getRequest().getUid());
+    response.setAllowed(true);
+
+    review.setResponse(response);
+  }
+
+  public static void allow(V1AdmissionReview review, JsonPatch jsonPatch) {
+    allow(review);
+
+    String patch = new JsonPatchHelper(MAPPER).buildPatchString(jsonPatch);
+
+    Objects.requireNonNull(review.getResponse());
+    review.getResponse().setPatchType("JSONPatch");
+    review.getResponse().setPatch(patch);
+  }
+
+  public static void allowMerging(V1AdmissionReview review) {
+    Objects.requireNonNull(review.getRequest());
+
     if (review.getResponse() == null) {
       V1AdmissionReviewResponse response = new V1AdmissionReviewResponse();
       response.setUid(review.getRequest().getUid());
@@ -40,8 +60,8 @@ public abstract class V1AdmissionReviewUtils {
     }
   }
 
-  public static void allow(V1AdmissionReview review, JsonPatch jsonPatch) {
-    allow(review);
+  public static void allowMerging(V1AdmissionReview review, JsonPatch jsonPatch) {
+    allowMerging(review);
 
     Objects.requireNonNull(review.getResponse());
 

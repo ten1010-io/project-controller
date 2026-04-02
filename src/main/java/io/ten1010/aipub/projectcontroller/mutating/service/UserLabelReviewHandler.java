@@ -71,7 +71,7 @@ public class UserLabelReviewHandler implements ReviewHandler {
 
     UserInfoAnalysis analysis;
     try {
-      analysis = this.userInfoAnalyzer.analyze(request.getUserInfo());
+      analysis = this.userInfoAnalyzer.analyzeV2(request.getUserInfo());
     } catch (Exception e) {
       // Python: get_aipub_user non-404 ApiException → 500
       log.warn("Failed to analyze user info", e);
@@ -110,7 +110,7 @@ public class UserLabelReviewHandler implements ReviewHandler {
       }
       if (ownerLabels == null) {
         log.debug("UserLabel: no owner labels found, allowing without mutation");
-        V1AdmissionReviewUtils.allow(review);
+        V1AdmissionReviewUtils.allowMerging(review);
         return;
       }
       username = ownerLabels[0];
@@ -150,7 +150,7 @@ public class UserLabelReviewHandler implements ReviewHandler {
         .build();
     jsonPatchBuilder.addToOperations(useridPatchOp);
 
-    V1AdmissionReviewUtils.allow(review, jsonPatchBuilder.build());
+    V1AdmissionReviewUtils.allowMerging(review, jsonPatchBuilder.build());
   }
 
   @Nullable
@@ -162,7 +162,8 @@ public class UserLabelReviewHandler implements ReviewHandler {
 
     JsonNode controllerRef = null;
     for (JsonNode ref : ownerRefs) {
-      if (ref.path("controller").asBoolean(false)) {
+      JsonNode controllerNode = ref.get("controller");
+      if (controllerNode != null && controllerNode.booleanValue()) {
         controllerRef = ref;
         break;
       }
@@ -172,9 +173,16 @@ public class UserLabelReviewHandler implements ReviewHandler {
       return null;
     }
 
-    String apiVersion = controllerRef.path("apiVersion").asText();
-    String kind = controllerRef.path("kind").asText();
-    String name = controllerRef.path("name").asText();
+    JsonNode apiVersionNode = controllerRef.get("apiVersion");
+    JsonNode kindNode = controllerRef.get("kind");
+    JsonNode nameNode = controllerRef.get("name");
+    if (apiVersionNode == null || kindNode == null || nameNode == null) {
+      log.debug("getLabelsFromOwner: controller ref missing required fields");
+      return null;
+    }
+    String apiVersion = apiVersionNode.textValue();
+    String kind = kindNode.textValue();
+    String name = nameNode.textValue();
     log.debug("getLabelsFromOwner: controller ref apiVersion={}, kind={}, name={}", apiVersion, kind, name);
 
     String plural = this.apiResourceDiscovery.getPlural(apiVersion, kind);
@@ -204,14 +212,14 @@ public class UserLabelReviewHandler implements ReviewHandler {
       return null;
     }
 
-    JsonNode usernameNode = ownerLabels.path(USERNAME_LABEL_KEY_V2);
-    JsonNode useridNode = ownerLabels.path(USERID_LABEL_KEY_V2);
-    if (usernameNode.isMissingNode() || useridNode.isMissingNode()) {
+    JsonNode usernameNode = ownerLabels.get(USERNAME_LABEL_KEY_V2);
+    JsonNode useridNode = ownerLabels.get(USERID_LABEL_KEY_V2);
+    if (usernameNode == null || useridNode == null) {
       log.debug("getLabelsFromOwner: owner missing username/userid labels. labels={}", ownerLabels);
       return null;
     }
 
-    return new String[]{usernameNode.asText(), useridNode.asText()};
+    return new String[]{usernameNode.textValue(), useridNode.textValue()};
   }
 
   @Nullable

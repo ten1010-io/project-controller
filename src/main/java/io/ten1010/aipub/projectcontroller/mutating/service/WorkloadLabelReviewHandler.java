@@ -85,7 +85,7 @@ public class WorkloadLabelReviewHandler implements ReviewHandler {
     // Port of Python: if not output.allowed or owner_object is None: return output
     if (ownerObject.isEmpty()) {
       log.debug("WorkloadLabel: no owner object found, allowing without mutation");
-      V1AdmissionReviewUtils.allow(review);
+      V1AdmissionReviewUtils.allowMerging(review);
       return;
     }
 
@@ -147,7 +147,7 @@ public class WorkloadLabelReviewHandler implements ReviewHandler {
         .build();
     jsonPatchBuilder.addToOperations(workloadKindOp);
 
-    V1AdmissionReviewUtils.allow(review, jsonPatchBuilder.build());
+    V1AdmissionReviewUtils.allowMerging(review, jsonPatchBuilder.build());
   }
 
   // Port of Python: _get_workload_labels_from_owner(self, owner_object)

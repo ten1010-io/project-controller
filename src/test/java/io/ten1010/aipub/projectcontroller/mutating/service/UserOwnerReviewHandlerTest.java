@@ -127,7 +127,7 @@ class UserOwnerReviewHandlerTest {
 
     UserInfoAnalysis analysis = new UserInfoAnalysis(
         "testuser", List.of("system:authenticated"), null);
-    when(this.mockAnalyzer.analyze(any())).thenReturn(analysis);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);
 
     this.handler.handle(review);
 
@@ -145,7 +145,7 @@ class UserOwnerReviewHandlerTest {
         "oidc:testuser",
         List.of("oidc:aipub-member", "system:authenticated"),
         aipubUser);
-    when(this.mockAnalyzer.analyze(any())).thenReturn(analysis);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);
 
     this.handler.handle(review);
 
@@ -159,7 +159,7 @@ class UserOwnerReviewHandlerTest {
   void handle_analyzerThrows_rejectsWithServerError() {
     V1AdmissionReview review = createReview("CREATE", "default", "apps", "v1", "Deployment");
 
-    when(this.mockAnalyzer.analyze(any())).thenThrow(new RuntimeException("test error"));
+    when(this.mockAnalyzer.analyzeV2(any())).thenThrow(new RuntimeException("test error"));
 
     this.handler.handle(review);
 

@@ -50,7 +50,7 @@ public class WorkloadLabelAdmissionReviewController {
     }
 
     if (!handled) {
-      V1AdmissionReviewUtils.allow(clone);
+      V1AdmissionReviewUtils.allowMerging(clone);
     }
 
     return ResponseEntity.ok(clone);
