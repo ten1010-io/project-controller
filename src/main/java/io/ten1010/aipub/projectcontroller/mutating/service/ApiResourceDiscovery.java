@@ -3,12 +3,13 @@ package io.ten1010.aipub.projectcontroller.mutating.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kubernetes.client.openapi.ApiClient;
-import io.kubernetes.client.openapi.ApiException;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ObjectMapperFactory;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Call;
 import okhttp3.Response;
@@ -17,25 +18,28 @@ import org.jspecify.annotations.Nullable;
 @Slf4j
 public class ApiResourceDiscovery {
 
-  // TODO check: Python(api_resource_manager.py)은 run() 메서드로 300초마다 주기적으로 리소스를 재탐색함.
-  //  Java는 생성자에서 1회만 init(). 런타임에 새 CRD 추가 시 반영 안 됨.
-
   private final ApiClient apiClient;
   private final ObjectMapper mapper;
-  private final Map<String, String> plurals = new HashMap<>();
-  private final Map<String, Boolean> namespacedInfo = new HashMap<>();
-  private final Map<String, String> groupVersions = new HashMap<>();
-  private final Map<String, List<String>> kindDict = new HashMap<>();
-  // TODO check: List.contains()는 O(n). Python도 동일하지만, 리소스 수가 많을 경우 Set 고려.
-  private final List<String> groupResources = new ArrayList<>();
+  private volatile Snapshot snapshot;
 
   public ApiResourceDiscovery(ApiClient apiClient) {
     this.apiClient = apiClient;
     this.mapper = new ObjectMapperFactory().createObjectMapper();
-    init();
+    this.snapshot = buildSnapshot();
   }
 
-  private void init() {
+  public void refresh() {
+    log.debug("Refreshing API resource discovery");
+    this.snapshot = buildSnapshot();
+  }
+
+  private Snapshot buildSnapshot() {
+    Map<String, String> plurals = new HashMap<>();
+    Map<String, Boolean> namespacedInfo = new HashMap<>();
+    Map<String, String> groupVersions = new HashMap<>();
+    Map<String, List<String>> kindDict = new HashMap<>();
+    Set<String> groupResources = new HashSet<>();
+
     // Core API resources (/api/v1)
     try {
       JsonNode coreResources = fetchJson("/api/v1");
@@ -48,13 +52,11 @@ public class ApiResourceDiscovery {
           String kind = resource.path("kind").asText();
           boolean namespaced = resource.path("namespaced").asBoolean();
 
-          // TODO check: Python도 동일하지만, core API 리소스(Pod, Service 등)가 groupVersions에 저장되지 않음.
-          //  getResourcesByKind("Pod"), getGroupVersion("/pods") 호출 시 null 반환됨.
           String groupResource = "/" + name;
-          this.plurals.put("v1/" + kind, name);
-          this.namespacedInfo.put(groupResource, namespaced);
-          this.groupResources.add(groupResource);
-          this.kindDict.computeIfAbsent(kind, k -> new ArrayList<>()).add(groupResource);
+          plurals.put("v1/" + kind, name);
+          namespacedInfo.put(groupResource, namespaced);
+          groupResources.add(groupResource);
+          kindDict.computeIfAbsent(kind, k -> new ArrayList<>()).add(groupResource);
         }
       }
     } catch (Exception e) {
@@ -81,11 +83,11 @@ public class ApiResourceDiscovery {
                   boolean namespaced = resource.path("namespaced").asBoolean();
 
                   String groupResource = groupName + "/" + name;
-                  this.plurals.put(groupVersion + "/" + kind, name);
-                  this.namespacedInfo.put(groupResource, namespaced);
-                  this.groupVersions.put(groupResource, groupVersion);
-                  this.groupResources.add(groupResource);
-                  this.kindDict.computeIfAbsent(kind, k -> new ArrayList<>()).add(groupResource);
+                  plurals.put(groupVersion + "/" + kind, name);
+                  namespacedInfo.put(groupResource, namespaced);
+                  groupVersions.put(groupResource, groupVersion);
+                  groupResources.add(groupResource);
+                  kindDict.computeIfAbsent(kind, k -> new ArrayList<>()).add(groupResource);
                 }
               }
             } catch (Exception e) {
@@ -98,21 +100,19 @@ public class ApiResourceDiscovery {
       log.warn("Failed to discover API groups", e);
     }
 
-    log.info("Discovered {} API resource plurals, {} namespaced info entries", this.plurals.size(), this.namespacedInfo.size());
-    if (this.plurals.containsKey("apps/v1/Deployment")) {
-      log.info("Deployment plural: {}", this.plurals.get("apps/v1/Deployment"));
-    } else {
-      log.info("WARNING: apps/v1/Deployment NOT found in plurals map");
-    }
+    log.info("Discovered {} API resource plurals, {} namespaced info entries",
+        plurals.size(), namespacedInfo.size());
+
+    return new Snapshot(plurals, namespacedInfo, groupVersions, kindDict, groupResources);
   }
 
   @Nullable
   public String getPlural(String apiVersion, String kind) {
-    return this.plurals.get(apiVersion + "/" + kind);
+    return this.snapshot.plurals().get(apiVersion + "/" + kind);
   }
 
   public boolean isNamespaced(String groupResource) {
-    Boolean result = this.namespacedInfo.get(groupResource);
+    Boolean result = this.snapshot.namespacedInfo().get(groupResource);
     if (result == null) {
       throw new GroupResourceNotFoundException(groupResource);
     }
@@ -120,23 +120,24 @@ public class ApiResourceDiscovery {
   }
 
   public boolean isExist(String groupResource) {
-    return this.groupResources.contains(groupResource);
+    return this.snapshot.groupResources().contains(groupResource);
   }
 
   @Nullable
   public String getGroupVersion(String groupResource) {
-    return this.groupVersions.get(groupResource);
+    return this.snapshot.groupVersions().get(groupResource);
   }
 
   public List<ResourceInfo> getResourcesByKind(String kind) {
+    Snapshot s = this.snapshot;
     List<ResourceInfo> resources = new ArrayList<>();
-    for (String groupResource : this.kindDict.getOrDefault(kind, List.of())) {
-      String groupVersion = this.groupVersions.get(groupResource);
-      // TODO check: groupVersion이 null일 때(core API 리소스) 아래 문자열 연결에서 "null/Pod" 됨.
-      //  Python도 동일한 패턴이지만, null check를 먼저 해야 안전함.
-      String apiVersionKind = groupVersion + "/" + kind;
-      String plural = this.plurals.get(apiVersionKind);
-      if (groupVersion == null || plural == null) {
+    for (String groupResource : s.kindDict().getOrDefault(kind, List.of())) {
+      String groupVersion = s.groupVersions().get(groupResource);
+      if (groupVersion == null) {
+        continue;
+      }
+      String plural = s.plurals().get(groupVersion + "/" + kind);
+      if (plural == null) {
         continue;
       }
       resources.add(new ResourceInfo(groupVersion, plural));
@@ -145,6 +146,14 @@ public class ApiResourceDiscovery {
   }
 
   public record ResourceInfo(String apiVersion, String plural) {
+  }
+
+  private record Snapshot(
+      Map<String, String> plurals,
+      Map<String, Boolean> namespacedInfo,
+      Map<String, String> groupVersions,
+      Map<String, List<String>> kindDict,
+      Set<String> groupResources) {
   }
 
   @Nullable
