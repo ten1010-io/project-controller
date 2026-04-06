@@ -11,13 +11,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Call;
 import okhttp3.MediaType;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.jspecify.annotations.Nullable;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 
 @Slf4j
 public class UserLabelSynchronizer {
@@ -27,15 +31,26 @@ public class UserLabelSynchronizer {
   private final ApiResourceDiscovery apiResourceDiscovery;
   private final ApiClient apiClient;
   private final ObjectMapper mapper;
+  private final ScheduledExecutorService scheduler;
 
   public UserLabelSynchronizer(ApiResourceDiscovery apiResourceDiscovery, ApiClient apiClient) {
     this.apiResourceDiscovery = apiResourceDiscovery;
     this.apiClient = apiClient;
     this.mapper = new ObjectMapperFactory().createObjectMapper();
+    this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+      Thread t = new Thread(r, "user-label-synchronizer");
+      t.setDaemon(true);
+      return t;
+    });
   }
 
-  @Scheduled(fixedDelay = SYNC_INTERVAL_MS)
-  public void sync() {
+  @EventListener(ApplicationReadyEvent.class)
+  public void onApplicationReady() {
+    log.info("Application ready, starting UserLabelSynchronizer with interval {}ms", SYNC_INTERVAL_MS);
+    this.scheduler.scheduleWithFixedDelay(this::sync, 0, SYNC_INTERVAL_MS, TimeUnit.MILLISECONDS);
+  }
+
+  private void sync() {
     try {
       run();
     } catch (Exception e) {
