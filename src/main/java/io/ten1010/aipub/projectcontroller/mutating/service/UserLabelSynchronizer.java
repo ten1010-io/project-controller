@@ -50,7 +50,7 @@ public class UserLabelSynchronizer {
     this.scheduler.scheduleWithFixedDelay(this::sync, 0, SYNC_INTERVAL_MS, TimeUnit.MILLISECONDS);
   }
 
-  private void sync() {
+  void sync() {
     try {
       run();
     } catch (Exception e) {
@@ -95,17 +95,10 @@ public class UserLabelSynchronizer {
 
       String cacheKey = kind + "/" + name;
       if (cache.containsKey(cacheKey)) {
-        String @Nullable [] cached = cache.get(cacheKey);
-        if (cached == null) {
-          continue;
-        }
-        syncPodIfNeeded(pod, labels, podName, namespace, cached);
+        syncPodIfNeeded(pod, labels, podName, namespace, cache.get(cacheKey));
       } else {
         String @Nullable [] ownerLabels = getOwnerUserLabels(kind, name, namespace);
         if (ownerLabels == null) {
-          // Python: object not found or no labels → not cached, continue
-          // To avoid repeated failed lookups, cache as null
-          cache.put(cacheKey, null);
           continue;
         }
         cache.put(cacheKey, ownerLabels);
@@ -212,14 +205,11 @@ public class UserLabelSynchronizer {
       @Nullable String username, @Nullable String userid) {
     String path = "/api/v1/namespaces/" + namespace + "/pods/" + name;
     try {
-      String patchBody = this.mapper.writeValueAsString(Map.of(
-          "metadata", Map.of(
-              "labels", Map.of(
-                  LabelConstants.OBJECT_OWN_USERNAME_KEY, username != null ? username : "",
-                  LabelConstants.OBJECT_OWN_USERID_KEY, userid != null ? userid : ""
-              )
-          )
-      ));
+      Map<String, Object> labels = new HashMap<>();
+      labels.put(LabelConstants.OBJECT_OWN_USERNAME_KEY, username);
+      labels.put(LabelConstants.OBJECT_OWN_USERID_KEY, userid);
+      String patchBody = this.mapper.writeValueAsString(
+          Map.of("metadata", Map.of("labels", labels)));
 
       RequestBody body = RequestBody.create(
           patchBody,
