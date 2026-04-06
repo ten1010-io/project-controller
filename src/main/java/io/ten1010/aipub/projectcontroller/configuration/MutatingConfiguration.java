@@ -22,6 +22,7 @@ import io.ten1010.aipub.projectcontroller.mutating.service.ReviewHandler;
 import io.ten1010.aipub.projectcontroller.mutating.service.UserInfoAnalyzer;
 import io.ten1010.aipub.projectcontroller.mutating.service.ApiResourceDiscovery;
 import io.ten1010.aipub.projectcontroller.mutating.service.UserLabelReviewHandler;
+import io.ten1010.aipub.projectcontroller.mutating.service.UserLabelSynchronizer;
 import io.ten1010.aipub.projectcontroller.mutating.service.UserOwnerReviewHandler;
 import io.ten1010.aipub.projectcontroller.mutating.service.WorkloadLabelReviewHandler;
 import java.util.List;
@@ -105,6 +106,12 @@ public class MutatingConfiguration {
     UserLabelReviewHandler userLabelReviewHandler = new UserLabelReviewHandler(
         userInfoAnalyzer, apiResourceDiscovery, apiClient);
     return List.of(userOwnerReviewHandler, userLabelReviewHandler);
+  }
+
+  @Bean
+  public UserLabelSynchronizer userLabelSynchronizer(
+      ApiResourceDiscovery apiResourceDiscovery, ApiClient apiClient) {
+    return new UserLabelSynchronizer(apiResourceDiscovery, apiClient);
   }
 
   @Bean
