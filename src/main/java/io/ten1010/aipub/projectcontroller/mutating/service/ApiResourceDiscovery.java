@@ -2,6 +2,7 @@ package io.ten1010.aipub.projectcontroller.mutating.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.kubernetes.client.openapi.ApiClient;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ObjectMapperFactory;
 import java.util.ArrayList;
@@ -26,11 +27,52 @@ public class ApiResourceDiscovery {
     this.apiClient = apiClient;
     this.mapper = new ObjectMapperFactory().createObjectMapper();
     this.snapshot = buildSnapshot();
+    updateConfigMap(this.snapshot);
   }
 
   public void refresh() {
     log.debug("Refreshing API resource discovery");
-    this.snapshot = buildSnapshot();
+    Snapshot newSnapshot = buildSnapshot();
+    this.snapshot = newSnapshot;
+    updateConfigMap(newSnapshot);
+  }
+
+  /**
+   * Port of Python api_resource_manager._update_configmap().
+   * kind → groupResource 매핑을 ConfigMap에 기록. 외부 시스템이 이 ConfigMap을 참조.
+   */
+  private void updateConfigMap(Snapshot snapshot) {
+    String configMapName = "api-resources";
+    String configMapNamespace = "aipub";
+
+    try {
+      ObjectNode body = this.mapper.createObjectNode();
+      ObjectNode metadata = body.putObject("metadata");
+      metadata.put("name", configMapName);
+      metadata.put("namespace", configMapNamespace);
+      ObjectNode data = body.putObject("data");
+      for (Map.Entry<String, List<String>> entry : snapshot.kindDict().entrySet()) {
+        data.put(entry.getKey(), String.join(",", entry.getValue()));
+      }
+
+      String path = "/api/v1/namespaces/" + configMapNamespace + "/configmaps/" + configMapName;
+      Call call = this.apiClient.buildCall(
+          this.apiClient.getBasePath(), path, "PUT",
+          List.of(), List.of(),
+          this.mapper.writeValueAsString(body),
+          Map.of("Content-Type", "application/json"),
+          Map.of(), Map.of(),
+          new String[]{"BearerToken"}, null);
+      try (Response response = call.execute()) {
+        if (!response.isSuccessful()) {
+          log.warn("Failed to update api-resources ConfigMap: status={}", response.code());
+        } else {
+          log.debug("Updated api-resources ConfigMap with {} entries", snapshot.kindDict().size());
+        }
+      }
+    } catch (Exception e) {
+      log.warn("Failed to update api-resources ConfigMap", e);
+    }
   }
 
   private Snapshot buildSnapshot() {
@@ -45,12 +87,12 @@ public class ApiResourceDiscovery {
       JsonNode coreResources = fetchJson("/api/v1");
       if (coreResources != null) {
         for (JsonNode resource : coreResources.path("resources")) {
-          String name = resource.path("name").asText();
+          String name = resource.path("name").textValue();
           if (name.contains("/")) {
             continue;
           }
-          String kind = resource.path("kind").asText();
-          boolean namespaced = resource.path("namespaced").asBoolean();
+          String kind = resource.path("kind").textValue();
+          boolean namespaced = resource.path("namespaced").booleanValue();
 
           String groupResource = "/" + name;
           plurals.put("v1/" + kind, name);
@@ -68,19 +110,19 @@ public class ApiResourceDiscovery {
       JsonNode apiGroups = fetchJson("/apis");
       if (apiGroups != null) {
         for (JsonNode group : apiGroups.path("groups")) {
-          String groupName = group.path("name").asText();
+          String groupName = group.path("name").textValue();
           for (JsonNode version : group.path("versions")) {
-            String groupVersion = version.path("groupVersion").asText();
+            String groupVersion = version.path("groupVersion").textValue();
             try {
               JsonNode resources = fetchJson("/apis/" + groupVersion);
               if (resources != null) {
                 for (JsonNode resource : resources.path("resources")) {
-                  String name = resource.path("name").asText();
+                  String name = resource.path("name").textValue();
                   if (name.contains("/")) {
                     continue;
                   }
-                  String kind = resource.path("kind").asText();
-                  boolean namespaced = resource.path("namespaced").asBoolean();
+                  String kind = resource.path("kind").textValue();
+                  boolean namespaced = resource.path("namespaced").booleanValue();
 
                   String groupResource = groupName + "/" + name;
                   plurals.put(groupVersion + "/" + kind, name);
@@ -143,6 +185,60 @@ public class ApiResourceDiscovery {
       resources.add(new ResourceInfo(groupVersion, plural));
     }
     return resources;
+  }
+
+  /**
+   * Port of Python api_resource_manager.get_all_object_names().
+   * K8s API를 호출하여 해당 group/resource의 모든 object name을 반환.
+   *
+   * @throws RuntimeException groupVersion 조회 실패, namespaced 검증 실패, API 호출 실패 시
+   */
+  public List<String> getAllObjectNames(String groupResource, @Nullable String namespace) {
+    String[] parts = groupResource.split("/");
+    String group = parts[0];
+    String resource = parts[1];
+
+    if (namespace != null && !isNamespaced(groupResource)) {
+      throw new RuntimeException(
+          "Cannot get namespaced objects for non-namespaced resource: " + groupResource);
+    }
+
+    String path;
+    boolean isCoreApi = group.isEmpty() || "core".equals(group);
+    if (namespace == null) {
+      if (isCoreApi) {
+        path = "/api/v1/" + resource;
+      } else {
+        String version = this.snapshot.groupVersions().get(groupResource);
+        if (version == null) {
+          throw new RuntimeException("Unknown groupVersion for: " + groupResource);
+        }
+        path = "/apis/" + version + "/" + resource;
+      }
+    } else {
+      if (isCoreApi) {
+        path = "/api/v1/namespaces/" + namespace + "/" + resource;
+      } else {
+        String version = this.snapshot.groupVersions().get(groupResource);
+        if (version == null) {
+          throw new RuntimeException("Unknown groupVersion for: " + groupResource);
+        }
+        path = "/apis/" + version + "/namespaces/" + namespace + "/" + resource;
+      }
+    }
+
+    JsonNode result = fetchJson(path);
+    if (result == null) {
+      throw new RuntimeException("Failed to list objects: " + path);
+    }
+    List<String> names = new ArrayList<>();
+    for (JsonNode item : result.path("items")) {
+      String name = item.path("metadata").path("name").textValue();
+      if (name != null) {
+        names.add(name);
+      }
+    }
+    return names;
   }
 
   public record ResourceInfo(String apiVersion, String plural) {

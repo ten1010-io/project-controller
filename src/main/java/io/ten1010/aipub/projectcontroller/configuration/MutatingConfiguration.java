@@ -24,6 +24,8 @@ import io.ten1010.aipub.projectcontroller.mutating.service.ApiResourceDiscovery;
 import io.ten1010.aipub.projectcontroller.mutating.service.UserLabelReviewHandler;
 import io.ten1010.aipub.projectcontroller.mutating.service.UserLabelSynchronizer;
 import io.ten1010.aipub.projectcontroller.mutating.service.UserOwnerReviewHandler;
+import io.ten1010.aipub.projectcontroller.mutating.service.UserAuthorityReviewMutateHandler;
+import io.ten1010.aipub.projectcontroller.mutating.service.UserAuthorityReviewValidateHandler;
 import io.ten1010.aipub.projectcontroller.mutating.service.WorkloadLabelReviewHandler;
 import java.util.List;
 import java.util.Set;
@@ -46,7 +48,20 @@ public class MutatingConfiguration {
   }
 
   @Bean
-  public AdmissionReviewService admissionReviewService(List<ReviewHandler> reviewHandlers) {
+  @Qualifier("admissionReviewHandlers")
+  public List<ReviewHandler> admissionReviewHandlers(
+      PodReviewHandler podReviewHandler,
+      DeploymentReviewHandler deploymentReviewHandler,
+      NamespaceReviewHandler namespaceReviewHandler,
+      ProjectReviewHandler projectReviewHandler,
+      ImageReviewReviewHandler imageReviewReviewHandler) {
+    return List.of(podReviewHandler, deploymentReviewHandler, namespaceReviewHandler,
+        projectReviewHandler, imageReviewReviewHandler);
+  }
+
+  @Bean
+  public AdmissionReviewService admissionReviewService(
+      @Qualifier("admissionReviewHandlers") List<ReviewHandler> reviewHandlers) {
     return new AdmissionReviewService(new CompositeReviewHandler(reviewHandlers));
   }
 
@@ -92,11 +107,15 @@ public class MutatingConfiguration {
   }
 
   @Bean
+  public UserInfoAnalyzer userInfoAnalyzer(SharedInformerFactory sharedInformerFactory) {
+    return new UserInfoAnalyzer(sharedInformerFactory);
+  }
+
+  @Bean
   @Qualifier("aipubReviewHandlers")
   public List<ReviewHandler> aipubReviewHandlers(
-      SharedInformerFactory sharedInformerFactory, AipubProperties aipubProperties,
+      UserInfoAnalyzer userInfoAnalyzer, AipubProperties aipubProperties,
       ApiResourceDiscovery apiResourceDiscovery, ApiClient apiClient) {
-    UserInfoAnalyzer userInfoAnalyzer = new UserInfoAnalyzer(sharedInformerFactory);
     Set<String> exceptGvkSet = aipubProperties.getAddOwnerExceptGvkList().stream()
         .map(String::trim)
         .filter(s -> !s.isEmpty())
@@ -115,12 +134,23 @@ public class MutatingConfiguration {
   }
 
   @Bean
-  @Qualifier("workloadLabelReviewHandlers")
-  public List<ReviewHandler> workloadLabelReviewHandlers(
+  public WorkloadLabelReviewHandler workloadLabelReviewHandler(
       ApiResourceDiscovery apiResourceDiscovery, ApiClient apiClient) {
-    WorkloadLabelReviewHandler workloadLabelReviewHandler = new WorkloadLabelReviewHandler(
-        apiResourceDiscovery, apiClient);
-    return List.of(workloadLabelReviewHandler);
+    return new WorkloadLabelReviewHandler(apiResourceDiscovery, apiClient);
+  }
+
+  @Bean
+  public UserAuthorityReviewMutateHandler userAuthorityReviewMutateHandler(
+      UserInfoAnalyzer userInfoAnalyzer,
+      ApiResourceDiscovery apiResourceDiscovery,
+      SharedInformerFactory sharedInformerFactory) {
+    return new UserAuthorityReviewMutateHandler(
+        userInfoAnalyzer, apiResourceDiscovery, sharedInformerFactory);
+  }
+
+  @Bean
+  public UserAuthorityReviewValidateHandler userAuthorityReviewValidateHandler() {
+    return new UserAuthorityReviewValidateHandler();
   }
 
 }

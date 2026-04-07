@@ -8,6 +8,7 @@ import io.kubernetes.client.openapi.apis.RbacAuthorizationV1Api;
 import io.kubernetes.client.openapi.models.V1ClusterRole;
 import io.kubernetes.client.openapi.models.V1ClusterRoleBinding;
 import io.kubernetes.client.openapi.models.V1ClusterRoleBindingList;
+import io.kubernetes.client.openapi.models.RbacV1Subject;
 import io.kubernetes.client.openapi.models.V1ClusterRoleList;
 import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1NamespaceList;
@@ -209,7 +210,7 @@ public class SharedInformerFactoryProvider {
 
   private void registerClusterRoleBindingInformer(SharedInformerFactory informerFactory) {
     ApiClient apiClient = this.k8sApiProvider.getApiClient();
-    informerFactory.sharedIndexInformerFor(
+    SharedIndexInformer<V1ClusterRoleBinding> informer = informerFactory.sharedIndexInformerFor(
         (CallGeneratorParams params) -> new RbacAuthorizationV1Api(
             apiClient).listClusterRoleBinding()
             .resourceVersion(params.resourceVersion)
@@ -218,6 +219,22 @@ public class SharedInformerFactoryProvider {
             .buildCall(null),
         V1ClusterRoleBinding.class,
         V1ClusterRoleBindingList.class);
+    informer.addIndexers(Map.of(
+        IndexerConstants.SUBJECT_USER_TO_BINDINGS_INDEXER_NAME,
+        binding -> binding.getSubjects() == null ? List.of() :
+            binding.getSubjects().stream()
+                .filter(s -> "User".equals(s.getKind()))
+                .map(RbacV1Subject::getName)
+                .filter(Objects::nonNull)
+                .toList()));
+    informer.addIndexers(Map.of(
+        IndexerConstants.SUBJECT_GROUP_TO_BINDINGS_INDEXER_NAME,
+        binding -> binding.getSubjects() == null ? List.of() :
+            binding.getSubjects().stream()
+                .filter(s -> "Group".equals(s.getKind()))
+                .map(RbacV1Subject::getName)
+                .filter(Objects::nonNull)
+                .toList()));
   }
 
   private void registerRoleInformer(SharedInformerFactory informerFactory) {
@@ -250,6 +267,22 @@ public class SharedInformerFactoryProvider {
     informer.addIndexers(Map.of(
         IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
         obj -> List.of(K8sObjectUtils.getNamespace(obj))));
+    informer.addIndexers(Map.of(
+        IndexerConstants.SUBJECT_USER_TO_BINDINGS_INDEXER_NAME,
+        binding -> binding.getSubjects() == null ? List.of() :
+            binding.getSubjects().stream()
+                .filter(s -> "User".equals(s.getKind()))
+                .map(RbacV1Subject::getName)
+                .filter(Objects::nonNull)
+                .toList()));
+    informer.addIndexers(Map.of(
+        IndexerConstants.SUBJECT_GROUP_TO_BINDINGS_INDEXER_NAME,
+        binding -> binding.getSubjects() == null ? List.of() :
+            binding.getSubjects().stream()
+                .filter(s -> "Group".equals(s.getKind()))
+                .map(RbacV1Subject::getName)
+                .filter(Objects::nonNull)
+                .toList()));
   }
 
   private void registerResourceQuotaInformer(SharedInformerFactory informerFactory) {

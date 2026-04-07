@@ -17,6 +17,9 @@ public final class IndexerConstants {
 
   public static final String NODE_NAME_TO_POD_INDEXER_NAME = "NODE_NAME_TO_POD";
 
+  public static final String SUBJECT_USER_TO_BINDINGS_INDEXER_NAME = "SUBJECT_USER_TO_BINDINGS";
+  public static final String SUBJECT_GROUP_TO_BINDINGS_INDEXER_NAME = "SUBJECT_GROUP_TO_BINDINGS";
+
   public static final String NAMESPACE_TO_OBJECTS_INDEXER_NAME = "NAMESPACE_TO_OBJECTS";
   public static final String LABEL_STRING_TO_OBJECTS_INDEXER_NAME = "LABEL_STRING_TO_OBJECTS";
 
