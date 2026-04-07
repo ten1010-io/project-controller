@@ -39,3 +39,4 @@ build/
 /.claude/skills/review/SKILL.md
 /.claude/settings.json
 harbor/.env
+/image_push.sh
