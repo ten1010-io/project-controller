@@ -12,7 +12,7 @@ webhooks:
         name: project-controller
         path: /api/v1/workloadlabel/mutate
         port: 8080
-    failurePolicy: Ignore
+    failurePolicy: Fail
     matchPolicy: Equivalent
     namespaceSelector:
       matchExpressions:
