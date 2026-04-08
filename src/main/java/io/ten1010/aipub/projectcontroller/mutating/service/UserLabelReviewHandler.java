@@ -218,7 +218,14 @@ public class UserLabelReviewHandler implements ReviewHandler {
       return null;
     }
 
-    return new String[]{usernameNode.textValue(), useridNode.textValue()};
+    String username = usernameNode.textValue();
+    String userid = useridNode.textValue();
+    if (username == null || userid == null) {
+      log.debug("getLabelsFromOwner: owner labels are not string type. labels={}", ownerLabels);
+      return null;
+    }
+
+    return new String[]{username, userid};
   }
 
   @Nullable
