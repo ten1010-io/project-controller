@@ -48,13 +48,13 @@ public class UserOwnerReviewHandler implements ReviewHandler {
 
     V1AdmissionReviewRequest request = review.getRequest();
     Objects.requireNonNull(request.getKind());
-    Objects.requireNonNull(request.getKind().getGroup());
     Objects.requireNonNull(request.getKind().getVersion());
     Objects.requireNonNull(request.getKind().getKind());
     Objects.requireNonNull(request.getUserInfo());
     Objects.requireNonNull(request.getObject());
 
-    String gvk = request.getKind().getGroup() + "/"
+    String group = request.getKind().getGroup() != null ? request.getKind().getGroup() : "";
+    String gvk = group + "/"
         + request.getKind().getVersion() + "/"
         + request.getKind().getKind();
     if (this.exceptGvkSet.contains(gvk)) {
