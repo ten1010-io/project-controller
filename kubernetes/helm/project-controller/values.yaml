@@ -1,0 +1,70 @@
+replicaCount: 1
+
+image:
+  repository: project-controller
+  tag: "1.4.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+config:
+  TZ: Asia/Seoul
+  SERVER_SSL_KEY_STORE: /etc/project-controller/tls/tls.p12
+
+aipub:
+  enabled: false
+  serverUrl: "http://aipub-backend-gateway.aipub.svc.cluster.local:8080"
+  verifyingSsl: false
+  username: ""
+  password: ""
+  reservedNamespace: project-controller
+  # aipub member RBAC Role/RoleBinding이 생성될 네임스페이스
+  rbacNamespace: aipub
+
+secrets:
+  sslKeyStorePassword: ""
+
+tls:
+  # base64 인코딩된 tls.p12 파일 내용
+  p12: ""
+
+webhook:
+  caBundle: ""
+  excludedNamespaces:
+    - kube-system
+    - kube-public
+    - kube-node-lease
+    - kube-flannel
+    - aipub
+    - coaster
+    - harbor
+    - ingress-nginx
+    - keycloak
+    - linkerd
+    - metallb
+    - project-controller
+    - aipub-promstack
+    - trident
+    - aipub-efk
+  admissionReview:
+    enabled: true
+  userRelationship:
+    enabled: true
+  workloadLabel:
+    enabled: true
+  userAuthorityReview:
+    enabled: true
+
+resources: {}
+
+nodeAffinity:
+  enabled: true
+
+tolerations:
+  enabled: true
+
+dashboard:
+  enabled: true
+  namespace: aipub-efk

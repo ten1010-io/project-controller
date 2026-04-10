@@ -1,0 +1,14 @@
+image:
+  repository: registry.ten1010.io:8443/project-controller
+  tag: "1.4.0"
+
+aipub:
+  enabled: false
+  serverUrl: "http://aipub-backend-gateway.aipub.svc.cluster.local:8080"
+  verifyingSsl: false
+  username: testuser
+  password: asdasdasd
+  reservedNamespace: project-controller
+
+webhook:
+  caBundle: ""  # 배포 시 실제 CA bundle 값으로 설정 필요

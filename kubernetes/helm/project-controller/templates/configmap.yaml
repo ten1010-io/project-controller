@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "project-controller.fullname" . }}-envs
+  namespace: {{ include "project-controller.namespace" . }}
+  labels:
+    {{- include "project-controller.labels" . | nindent 4 }}
+data:
+  TZ: {{ .Values.config.TZ | quote }}
+  SERVER_SSL_KEY_STORE: {{ .Values.config.SERVER_SSL_KEY_STORE | quote }}
+  APP_AIPUB_ENABLED: {{ .Values.aipub.enabled | quote }}
+  APP_AIPUB_SERVER_URL: {{ .Values.aipub.serverUrl | quote }}
+  APP_AIPUB_VERIFYING-SSL: {{ .Values.aipub.verifyingSsl | quote }}
+  APP_AIPUB_USERNAME: {{ .Values.aipub.username | quote }}
+  APP_AIPUB_PASSWORD: {{ .Values.aipub.password | quote }}
+  APP_AIPUB_RESERVED_NAMESPACE: {{ .Values.aipub.reservedNamespace | quote }}

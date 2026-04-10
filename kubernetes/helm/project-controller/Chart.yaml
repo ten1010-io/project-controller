@@ -1,0 +1,6 @@
+apiVersion: v2
+name: project-controller
+description: Kubernetes operator for managing project-scoped resources (RBAC, resource quotas, image registry secrets, workload mutations)
+type: application
+version: 0.1.0
+appVersion: "1.4.0"

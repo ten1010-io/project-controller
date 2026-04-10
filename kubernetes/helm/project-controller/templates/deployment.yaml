@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "project-controller.fullname" . }}
+  namespace: {{ include "project-controller.namespace" . }}
+  labels:
+    {{- include "project-controller.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "project-controller.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "project-controller.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- if .Values.nodeAffinity.enabled }}
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1
+              preference:
+                matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
+      {{- end }}
+      {{- if .Values.tolerations.enabled }}
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+      {{- end }}
+      serviceAccountName: {{ include "project-controller.fullname" . }}
+      automountServiceAccountToken: true
+      containers:
+        - name: {{ include "project-controller.name" . }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "project-controller.fullname" . }}-envs
+            - secretRef:
+                name: {{ include "project-controller.fullname" . }}-envs
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: tls
+              readOnly: true
+              mountPath: /etc/project-controller/tls
+      volumes:
+        - name: tls
+          projected:
+            sources:
+              - secret:
+                  name: {{ include "project-controller.fullname" . }}-tls
+                  items:
+                    - key: tls.p12
+                      path: "tls.p12"

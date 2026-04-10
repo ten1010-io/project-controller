@@ -1,0 +1,28 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: aipub-member.project.aipub.ten1010.io
+  namespace: {{ .Values.aipub.rbacNamespace }}
+  labels:
+    {{- include "project-controller.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["api-resources"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: aipub-member.project.aipub.ten1010.io
+  namespace: {{ .Values.aipub.rbacNamespace }}
+  labels:
+    {{- include "project-controller.labels" . | nindent 4 }}
+subjects:
+  - kind: Group
+    name: aipub-member
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: aipub-member.project.aipub.ten1010.io
+  apiGroup: rbac.authorization.k8s.io

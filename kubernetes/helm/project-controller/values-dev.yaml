@@ -1,0 +1,18 @@
+image:
+  repository: project-controller
+  tag: dev
+  pullPolicy: Never
+
+aipub:
+  enabled: false
+  serverUrl: "http://localhost:8080"
+  verifyingSsl: false
+  username: testuser
+  password: testpass
+  reservedNamespace: aipub
+
+nodeAffinity:
+  enabled: false
+
+tolerations:
+  enabled: false

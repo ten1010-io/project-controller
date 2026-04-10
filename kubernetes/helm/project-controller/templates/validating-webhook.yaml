@@ -1,0 +1,25 @@
+{{- if .Values.webhook.userAuthorityReview.enabled }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: userauthorityreview-validate.project-controller.project.aipub.ten1010.io
+  labels:
+    {{- include "project-controller.labels" . | nindent 4 }}
+webhooks:
+  - name: userauthorityreview-validate.project-controller.project.aipub.ten1010.io
+    admissionReviewVersions: ["v1"]
+    clientConfig:
+      {{- include "project-controller.webhookClientConfig" (dict "root" . "path" "/api/v1/userauthorityreview/validate") | nindent 6 }}
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    namespaceSelector: {}
+    objectSelector: {}
+    rules:
+      - apiGroups: ["aipub.ten1010.io"]
+        apiVersions: ["*"]
+        operations: ["CREATE"]
+        resources: ["userauthorityreviews"]
+        scope: "*"
+    sideEffects: None
+    timeoutSeconds: 10
+{{- end }}
