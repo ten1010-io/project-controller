@@ -14,6 +14,7 @@ import io.ten1010.aipub.projectcontroller.controller.watch.OnUpdateFilterFactory
 import io.ten1010.aipub.projectcontroller.controller.watch.RequestBuilderFactory;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeGroup;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ResourceSet;
@@ -52,11 +53,14 @@ public class ClusterRoleControllerFactory implements ControllerFactory {
             V1alpha1ResourceSet.class)::hasSynced)
         .withReadyFunc(
             this.sharedInformerFactory.getExistingSharedIndexInformer(V1Node.class)::hasSynced)
+        .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
+            V1alpha1AipubUser.class)::hasSynced)
         .watch(this::createClusterRoleWatch)
         .watch(this::createProjectWatch)
         .watch(this::createNodeGroupWatch)
         .watch(this::createResourceSetWatch)
         .watch(this::createNodeWatch)
+        .watch(this::createAipubUserWatch)
         .withReconciler(new ClusterRoleReconciler(this.sharedInformerFactory, this.k8sApiProvider,
             this.reconciliationService))
         .build();
@@ -98,6 +102,14 @@ public class ClusterRoleControllerFactory implements ControllerFactory {
     DefaultControllerWatch<V1Node> watch = new DefaultControllerWatch<>(workQueue, V1Node.class);
     watch.setOnUpdateFilter(this.onUpdateFilterFactory.nodeFilter());
     watch.setRequestBuilder(this.requestBuilderFactory.nodeToRoles(false));
+    return watch;
+  }
+
+  private ControllerWatch<V1alpha1AipubUser> createAipubUserWatch(WorkQueue<Request> workQueue) {
+    DefaultControllerWatch<V1alpha1AipubUser> watch = new DefaultControllerWatch<>(workQueue,
+        V1alpha1AipubUser.class);
+    watch.setOnUpdateFilter(this.onUpdateFilterFactory.alwaysFalseFilter());
+    watch.setRequestBuilder(this.requestBuilderFactory.aipubUserToProjectRoles(false));
     return watch;
   }
 

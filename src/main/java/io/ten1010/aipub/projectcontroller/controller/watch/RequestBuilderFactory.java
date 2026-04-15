@@ -193,6 +193,14 @@ public class RequestBuilderFactory {
     };
   }
 
+  public Function<V1alpha1AipubUser, List<Request>> aipubUserToProjectRoles(
+      boolean namespacedRole) {
+    Function<V1alpha1Project, List<Request>> projectToRoles = projectToProjectRoles(namespacedRole);
+    return user -> this.boundObjectResolver.getAllBoundProjects(user).stream()
+        .flatMap(project -> projectToRoles.apply(project).stream())
+        .toList();
+  }
+
   public Function<V1alpha1AipubUser, List<Request>> aipubUserToBoundProjects() {
     return aipubUser -> this.boundObjectResolver.getAllBoundProjects(aipubUser).stream()
         .map(K8sObjectUtils::getName)

@@ -341,7 +341,8 @@ public class ReconciliationService {
       ProjectRoleEnum projectRoleEnum,
       List<V1alpha1NodeGroup> bindingNodeGroups,
       List<V1Node> bindingNodes,
-      List<V1alpha1ResourceSet> bindingResourceSets) {
+      List<V1alpha1ResourceSet> bindingResourceSets,
+      List<V1alpha1AipubUser> boundAipubUsers) {
     List<V1PolicyRule> reconciled = new ArrayList<>();
 
     V1PolicyRule projectApiRule = switch (projectRoleEnum) {
@@ -482,6 +483,30 @@ public class ReconciliationService {
     };
     reconciled.add(nodeGpuUsagesApiRule);
     //todo --
+
+    if (projectRoleEnum == ProjectRoleEnum.PROJECT_MANAGER) {
+      List<String> memberNames = boundAipubUsers.stream()
+          .map(K8sObjectUtils::getName)
+          .distinct()
+          .sorted()
+          .toList();
+      if (!memberNames.isEmpty()) {
+        V1PolicyRule userWorkspaceReclaimsApiRule = new V1PolicyRuleBuilder()
+            .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
+            .withResources(ProjectApiConstants.USER_WORKSPACE_RECLAIM_RESOURCE_PLURAL)
+            .withResourceNames(memberNames)
+            .withVerbs("get")
+            .build();
+        reconciled.add(userWorkspaceReclaimsApiRule);
+        V1PolicyRule userResourceQuotasApiRule = new V1PolicyRuleBuilder()
+            .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
+            .withResources(ProjectApiConstants.USER_RESOURCE_QUOTA_RESOURCE_PLURAL)
+            .withResourceNames(memberNames)
+            .withVerbs("get")
+            .build();
+        reconciled.add(userResourceQuotasApiRule);
+      }
+    }
 
     return reconciled;
   }
