@@ -21,6 +21,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.ProjectNameAndRole;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ProjectRoleEnum;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
 import io.ten1010.aipub.projectcontroller.domain.k8s.RoleNameResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeGroup;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ResourceSet;
@@ -95,8 +96,11 @@ public class ClusterRoleReconciler extends AbstractReconciler {
 
     List<V1alpha1ResourceSet> boundNodesResourceSets = this.boundObjectResolver.getAllBoundResourceSets(
         projectOpt.get());
+    List<V1alpha1AipubUser> boundAipubUsers = this.boundObjectResolver.getAllBoundAipubUsers(
+        projectOpt.get());
     List<V1PolicyRule> reconciledRules = this.reconciliationService.reconcileClusterRoleRules(
-        projectOpt.get(), projRoleEnum, boundNodeGroups, boundNodes, boundNodesResourceSets);
+        projectOpt.get(), projRoleEnum, boundNodeGroups, boundNodes, boundNodesResourceSets,
+        boundAipubUsers);
     V1AggregationRule reconciledAggregationRule = this.reconciliationService.reconcileClusterRoleAggregationRule(
         projectOpt.get(), projRoleEnum);
 
