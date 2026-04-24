@@ -7,6 +7,12 @@ import io.ten1010.aipub.projectcontroller.mutating.dto.V1AdmissionReview;
 import io.ten1010.aipub.projectcontroller.mutating.dto.V1AdmissionReviewResponse;
 import io.ten1010.aipub.projectcontroller.mutating.dto.V1Status;
 import io.ten1010.common.jsonpatch.dto.JsonPatch;
+import io.ten1010.common.jsonpatch.dto.JsonPatchOperation;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
 import java.util.Objects;
 
 public abstract class V1AdmissionReviewUtils {
@@ -39,6 +45,42 @@ public abstract class V1AdmissionReviewUtils {
     String patch = new JsonPatchHelper(MAPPER).buildPatchString(jsonPatch);
 
     Objects.requireNonNull(review.getResponse());
+    review.getResponse().setPatchType("JSONPatch");
+    review.getResponse().setPatch(patch);
+  }
+
+  public static void allowMerging(V1AdmissionReview review) {
+    Objects.requireNonNull(review.getRequest());
+
+    if (review.getResponse() == null) {
+      V1AdmissionReviewResponse response = new V1AdmissionReviewResponse();
+      response.setUid(review.getRequest().getUid());
+      response.setAllowed(true);
+      review.setResponse(response);
+    }
+  }
+
+  public static void allowMerging(V1AdmissionReview review, JsonPatch jsonPatch) {
+    allowMerging(review);
+
+    Objects.requireNonNull(review.getResponse());
+
+    List<JsonPatchOperation> allOps = new ArrayList<>(jsonPatch.getOperations());
+    String existingPatchStr = review.getResponse().getPatch();
+    if (existingPatchStr != null) {
+      try {
+        byte[] decoded = Base64.getDecoder().decode(existingPatchStr);
+        JsonPatch existingPatch = MAPPER.readValue(decoded, JsonPatch.class);
+        allOps.addAll(0, existingPatch.getOperations());
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    JsonPatch mergedPatch = new JsonPatch();
+    mergedPatch.setOperations(allOps);
+
+    String patch = new JsonPatchHelper(MAPPER).buildPatchString(mergedPatch);
     review.getResponse().setPatchType("JSONPatch");
     review.getResponse().setPatch(patch);
   }

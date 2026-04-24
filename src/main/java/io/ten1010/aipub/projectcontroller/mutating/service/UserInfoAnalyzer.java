@@ -59,4 +59,21 @@ public class UserInfoAnalyzer {
     return new UserInfoAnalysis(userInfo.getUsername(), userInfo.getGroups(), aipubUser);
   }
 
+  public UserInfoAnalysis analyzeV2(V1UserInfo userInfo) {
+    Objects.requireNonNull(userInfo.getUsername());
+    Objects.requireNonNull(userInfo.getGroups());
+
+    V1alpha1AipubUser aipubUser = null;
+    if (isAipubMember(userInfo.getGroups())) {
+      String username = userInfo.getUsername();
+      String aipubUserName = username.contains(":")
+          ? username.substring(username.lastIndexOf(":") + 1)
+          : username;
+      String aipubUserKey = this.keyResolver.resolveKey(aipubUserName);
+      aipubUser = this.userIndexer.getByKey(aipubUserKey);
+    }
+
+    return new UserInfoAnalysis(userInfo.getUsername(), userInfo.getGroups(), aipubUser);
+  }
+
 }

@@ -31,3 +31,12 @@ build/
 
 ### VS Code ###
 .vscode/
+/.sdkmanrc
+/CLAUDE.md
+/k8s-dev
+/.claude/worktrees/
+/.claude/hooks/codex-review.sh
+/.claude/skills/review/SKILL.md
+/.claude/settings.json
+harbor/.env
+/image_push.sh

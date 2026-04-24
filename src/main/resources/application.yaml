@@ -29,3 +29,8 @@ app:
     username: "testuser"
     password: "asdasdasd"
     reserved-namespace: "aipub, project-controller"
+    add-owner-except-gvk-list:
+      - "aipub.ten1010.io/v1alpha1/Commit"
+      - "aipub.ten1010.io/v1/Commit"
+      - "aipub.ten1010.io/v1alpha1/UserAuthorityReview"
+      - "aipub.ten1010.io/v1/UserAuthorityReview"
