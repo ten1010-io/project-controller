@@ -70,6 +70,14 @@ public class PodReconciler extends AbstractReconciler {
       return new Result(false);
     }
 
+    String projName = this.namespaceNameResolver.resolveProjectName(
+        K8sObjectUtils.getNamespace(pod));
+    String projKey = this.keyResolver.resolveKey(projName);
+    V1alpha1Project project = this.projectIndexer.getByKey(projKey);
+    if (project == null) {
+      return new Result(false);
+    }
+
     if (NodeUtils.isProjectManaged(node)) {
       return processCaseThatProjectManagedNode(node, pod);
     }

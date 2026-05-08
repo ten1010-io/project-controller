@@ -71,6 +71,9 @@ public class WorkloadControllerReconciler extends AbstractReconciler {
     }
     String projKey = this.keyResolver.resolveKey(request.getNamespace());
     V1alpha1Project project = this.projectIndexer.getByKey(projKey);
+    if (project == null) {
+      return new Result(false);
+    }
 
     V1PodTemplateSpec templateSpec = this.podTemplateSpecResolver.apply(controller);
     List<V1Node> nodeObjects = this.workloadControllerNodesResolver.getNodes(controller);
