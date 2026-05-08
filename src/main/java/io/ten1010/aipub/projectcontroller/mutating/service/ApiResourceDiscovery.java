@@ -47,6 +47,8 @@ public class ApiResourceDiscovery {
 
     try {
       ObjectNode body = this.mapper.createObjectNode();
+      body.put("apiVersion", "v1");
+      body.put("kind", "ConfigMap");
       ObjectNode metadata = body.putObject("metadata");
       metadata.put("name", configMapName);
       metadata.put("namespace", configMapNamespace);
@@ -65,7 +67,9 @@ public class ApiResourceDiscovery {
           new String[]{"BearerToken"}, null);
       try (Response response = call.execute()) {
         if (!response.isSuccessful()) {
-          log.warn("Failed to update api-resources ConfigMap: status={}", response.code());
+          String errorBody = response.body() != null ? response.body().string() : "";
+          log.warn("Failed to update api-resources ConfigMap: status={} body={}",
+              response.code(), errorBody);
         } else {
           log.debug("Updated api-resources ConfigMap with {} entries", snapshot.kindDict().size());
         }
@@ -263,7 +267,9 @@ public class ApiResourceDiscovery {
           new String[]{"BearerToken"}, null);
       try (Response response = call.execute()) {
         if (!response.isSuccessful()) {
-          log.warn("Failed to fetch API resource: {} status={}", path, response.code());
+          String errorBody = response.body() != null ? response.body().string() : "";
+          log.warn("Failed to fetch API resource: {} status={} body={}",
+              path, response.code(), errorBody);
           return null;
         }
         if (response.body() == null) {
