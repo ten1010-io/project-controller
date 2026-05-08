@@ -618,6 +618,10 @@ public class ReconciliationService {
             .withResources("aipubjobs")
             .withVerbs("*")
             .build();
+        V1PolicyRule chainJobsApiRule = new V1PolicyRuleBuilder().withApiGroups("aipub.ten1010.io")
+            .withResources("chainjobs")
+            .withVerbs("*")
+            .build();
         V1PolicyRule aipubOperationRevisionApiRule = new V1PolicyRuleBuilder().withApiGroups(
                 "aipub.ten1010.io")
             .withResources("operationrevisions")
@@ -657,6 +661,7 @@ public class ReconciliationService {
             aipubOperationRevisionApiRule,
             aipubWorkspaceApiRule,
             aipubJobsApiRule,
+            chainJobsApiRule,
             aipubSFtpServerApiRule,
             aipubVolumesApiRule,
             resourceQuotaApiRule,
@@ -723,6 +728,10 @@ public class ReconciliationService {
             .withResources("aipubjobs")
             .withVerbs(BASIC_VERBS)
             .build();
+        V1PolicyRule chainJobsApiRule = new V1PolicyRuleBuilder().withApiGroups("aipub.ten1010.io")
+            .withResources("chainJobs")
+            .withVerbs(BASIC_VERBS)
+            .build();
         V1PolicyRule aipubOperationRevisionApiRule = new V1PolicyRuleBuilder().withApiGroups(
                 "aipub.ten1010.io")
             .withResources("operationrevisions")
@@ -762,6 +771,7 @@ public class ReconciliationService {
             aipubOperationRevisionApiRule,
             aipubWorkspaceApiRule,
             aipubJobsApiRule,
+            chainJobsApiRule,
             aipubSFtpServerApiRule,
             aipubVolumesApiRule,
             resourceQuotaApiRule,
