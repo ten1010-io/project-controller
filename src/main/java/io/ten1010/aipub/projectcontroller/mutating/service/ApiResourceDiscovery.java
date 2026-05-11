@@ -57,25 +57,39 @@ public class ApiResourceDiscovery {
         data.put(entry.getKey(), String.join(",", entry.getValue()));
       }
 
-      String path = "/api/v1/namespaces/" + configMapNamespace + "/configmaps/" + configMapName;
-      Call call = this.apiClient.buildCall(
-          this.apiClient.getBasePath(), path, "PUT",
-          List.of(), List.of(),
-          this.mapper.writeValueAsBytes(body),
-          Map.of("Content-Type", "application/json"),
-          Map.of(), Map.of(),
-          new String[]{"BearerToken"}, null);
-      try (Response response = call.execute()) {
-        if (!response.isSuccessful()) {
-          String errorBody = response.body() != null ? response.body().string() : "";
-          log.warn("Failed to update api-resources ConfigMap: status={} body={}",
-              response.code(), errorBody);
-        } else {
-          log.debug("Updated api-resources ConfigMap with {} entries", snapshot.kindDict().size());
+      byte[] bodyBytes = this.mapper.writeValueAsBytes(body);
+      String collectionPath = "/api/v1/namespaces/" + configMapNamespace + "/configmaps";
+      String itemPath = collectionPath + "/" + configMapName;
+
+      int putStatus = executeConfigMapWrite(itemPath, "PUT", bodyBytes);
+      if (putStatus == 404) {
+        int postStatus = executeConfigMapWrite(collectionPath, "POST", bodyBytes);
+        if (postStatus >= 200 && postStatus < 300) {
+          log.debug("Created api-resources ConfigMap with {} entries", snapshot.kindDict().size());
         }
+      } else if (putStatus >= 200 && putStatus < 300) {
+        log.debug("Updated api-resources ConfigMap with {} entries", snapshot.kindDict().size());
       }
     } catch (Exception e) {
       log.warn("Failed to update api-resources ConfigMap", e);
+    }
+  }
+
+  private int executeConfigMapWrite(String path, String method, byte[] bodyBytes) throws Exception {
+    Call call = this.apiClient.buildCall(
+        this.apiClient.getBasePath(), path, method,
+        List.of(), List.of(),
+        bodyBytes,
+        Map.of("Content-Type", "application/json"),
+        Map.of(), Map.of(),
+        new String[]{"BearerToken"}, null);
+    try (Response response = call.execute()) {
+      if (!response.isSuccessful()) {
+        String errorBody = response.body() != null ? response.body().string() : "";
+        log.warn("api-resources ConfigMap {} failed: status={} body={}",
+            method, response.code(), errorBody);
+      }
+      return response.code();
     }
   }
 
