@@ -61,7 +61,7 @@ public class ApiResourceDiscovery {
       Call call = this.apiClient.buildCall(
           this.apiClient.getBasePath(), path, "PUT",
           List.of(), List.of(),
-          this.mapper.writeValueAsString(body),
+          this.mapper.writeValueAsBytes(body),
           Map.of("Content-Type", "application/json"),
           Map.of(), Map.of(),
           new String[]{"BearerToken"}, null);
