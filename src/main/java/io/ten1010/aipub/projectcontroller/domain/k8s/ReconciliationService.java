@@ -198,10 +198,19 @@ public class ReconciliationService {
   private static List<V1NodeSelectorTerm> removeProjectManagedNodeSelectorTerms(
       List<V1NodeSelectorTerm> nodeSelectorTerms) {
     return nodeSelectorTerms.stream()
-        .filter(term -> WorkloadUtils.getMatchExpressions(term).stream()
-            .filter(expr -> expr.getKey().equals(LabelConstants.PROJECT_MANAGED_KEY))
-            .findAny()
-            .isEmpty())
+        .map(term -> {
+          List<V1NodeSelectorRequirement> filtered = WorkloadUtils.getMatchExpressions(term)
+              .stream()
+              .filter(expr -> !expr.getKey().equals(LabelConstants.PROJECT_MANAGED_KEY))
+              .toList();
+          if (filtered.isEmpty()) {
+            return null;
+          }
+          return new V1NodeSelectorTermBuilder(term)
+              .withMatchExpressions(filtered)
+              .build();
+        })
+        .filter(Objects::nonNull)
         .toList();
   }
 
@@ -1044,26 +1053,39 @@ public class ReconciliationService {
       @Nullable V1alpha1Project project) {
     List<V1NodeSelectorTerm> existingNodeSelectorTerms = WorkloadUtils.getNodeSelectorTerms(
         existing);
-    List<V1NodeSelectorTerm> reconciled = new ArrayList<>(
-        removeProjectManagedNodeSelectorTerms(existingNodeSelectorTerms));
-    if (project != null) {
-      reconciled.add(buildProjectManagedNodeSelectorTerm());
-    }
-
-    return reconciled;
+    List<V1NodeSelectorTerm> cleaned = removeProjectManagedNodeSelectorTerms(
+        existingNodeSelectorTerms);
+    return addProjectManagedExpressionToTerms(cleaned, project);
   }
 
   public List<V1NodeSelectorTerm> reconcileNodeSelectorTerms(V1PodTemplateSpec existing,
       @Nullable V1alpha1Project project) {
     List<V1NodeSelectorTerm> existingNodeSelectorTerms = WorkloadUtils.getNodeSelectorTerms(
         existing);
-    List<V1NodeSelectorTerm> reconciled = new ArrayList<>(
-        removeProjectManagedNodeSelectorTerms(existingNodeSelectorTerms));
-    if (project != null) {
-      reconciled.add(buildProjectManagedNodeSelectorTerm());
-    }
+    List<V1NodeSelectorTerm> cleaned = removeProjectManagedNodeSelectorTerms(
+        existingNodeSelectorTerms);
+    return addProjectManagedExpressionToTerms(cleaned, project);
+  }
 
-    return reconciled;
+  private static List<V1NodeSelectorTerm> addProjectManagedExpressionToTerms(
+      List<V1NodeSelectorTerm> terms, @Nullable V1alpha1Project project) {
+    if (project == null) {
+      return new ArrayList<>(terms);
+    }
+    V1NodeSelectorRequirement projectManagedRequirement = buildProjectManagedNodeSelectorRequirement();
+    if (terms.isEmpty()) {
+      return new ArrayList<>(List.of(buildProjectManagedNodeSelectorTerm()));
+    }
+    return terms.stream()
+        .map(term -> {
+          List<V1NodeSelectorRequirement> expressions = new ArrayList<>(
+              WorkloadUtils.getMatchExpressions(term));
+          expressions.add(projectManagedRequirement);
+          return new V1NodeSelectorTermBuilder(term)
+              .withMatchExpressions(expressions)
+              .build();
+        })
+        .collect(Collectors.toList());
   }
 
   public List<V1LocalObjectReference> reconcileImageRegistrySecrets(V1Pod existing,
