@@ -46,6 +46,12 @@ public class DeploymentReviewHandler extends AbstractReviewHandler<V1Deployment>
     Objects.requireNonNull(review.getRequest());
 
     V1Deployment deployment = getRequestObject(review);
+
+    if (K8sObjectUtils.isCiliumComponent(deployment)) {
+      V1AdmissionReviewUtils.allow(review);
+      return;
+    }
+
     V1alpha1Project project = this.projectIndexer.getByKey(K8sObjectUtils.getNamespace(deployment));
 
     V1PodTemplateSpec podTemplateSpec = WorkloadUtils.getPodTemplateSpec(deployment);
