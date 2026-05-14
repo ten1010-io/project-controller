@@ -26,15 +26,25 @@ public class ApiResourceDiscovery {
   public ApiResourceDiscovery(ApiClient apiClient) {
     this.apiClient = apiClient;
     this.mapper = new ObjectMapperFactory().createObjectMapper();
+    log.info("Initializing API resource discovery");
     this.snapshot = buildSnapshot();
     updateConfigMap(this.snapshot);
   }
 
   public void refresh() {
-    log.debug("Refreshing API resource discovery");
+    log.info("Refreshing API resource discovery");
+    long startNanos = System.nanoTime();
     Snapshot newSnapshot = buildSnapshot();
     this.snapshot = newSnapshot;
     updateConfigMap(newSnapshot);
+    long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000L;
+    log.info("API resource discovery refresh complete: plurals={}, namespacedInfo={}, kinds={}, "
+            + "groupResources={}, durationMs={}",
+        newSnapshot.plurals().size(),
+        newSnapshot.namespacedInfo().size(),
+        newSnapshot.kindDict().size(),
+        newSnapshot.groupResources().size(),
+        elapsedMs);
   }
 
   /**
@@ -44,6 +54,7 @@ public class ApiResourceDiscovery {
   private void updateConfigMap(Snapshot snapshot) {
     String configMapName = "api-resources";
     String configMapNamespace = "aipub";
+    int entryCount = snapshot.kindDict().size();
 
     try {
       ObjectNode body = this.mapper.createObjectNode();
@@ -60,16 +71,27 @@ public class ApiResourceDiscovery {
       String itemPath = collectionPath + "/" + configMapName;
 
       int putStatus = executeConfigMapWrite(itemPath, "PUT", bodyBytes);
+      if (putStatus >= 200 && putStatus < 300) {
+        log.info("api-resources ConfigMap updated: namespace={}, name={}, entries={}, payloadBytes={}",
+            configMapNamespace, configMapName, entryCount, bodyBytes.length);
+        return;
+      }
       if (putStatus == 404) {
         int postStatus = executeConfigMapWrite(collectionPath, "POST", bodyBytes);
         if (postStatus >= 200 && postStatus < 300) {
-          log.debug("Created api-resources ConfigMap with {} entries", snapshot.kindDict().size());
+          log.info("api-resources ConfigMap created: namespace={}, name={}, entries={}, payloadBytes={}",
+              configMapNamespace, configMapName, entryCount, bodyBytes.length);
+        } else {
+          log.error("api-resources ConfigMap create failed after PUT 404: namespace={}, name={}, "
+                  + "postStatus={}", configMapNamespace, configMapName, postStatus);
         }
-      } else if (putStatus >= 200 && putStatus < 300) {
-        log.debug("Updated api-resources ConfigMap with {} entries", snapshot.kindDict().size());
+        return;
       }
+      log.error("api-resources ConfigMap update failed: namespace={}, name={}, putStatus={}, entries={}",
+          configMapNamespace, configMapName, putStatus, entryCount);
     } catch (Exception e) {
-      log.warn("Failed to update api-resources ConfigMap", e);
+      log.error("api-resources ConfigMap update threw exception: namespace={}, name={}, entries={}",
+          configMapNamespace, configMapName, entryCount, e);
     }
   }
 
@@ -82,12 +104,19 @@ public class ApiResourceDiscovery {
         Map.of(), Map.of(),
         new String[]{"BearerToken"}, null);
     try (Response response = call.execute()) {
-      if (!response.isSuccessful()) {
-        String errorBody = response.body() != null ? response.body().string() : "";
-        log.warn("api-resources ConfigMap {} failed: status={} body={}",
-            method, response.code(), errorBody);
+      int code = response.code();
+      if (response.isSuccessful()) {
+        return code;
       }
-      return response.code();
+      String errorBody = response.body() != null ? response.body().string() : "";
+      if (code == 404 && "PUT".equals(method)) {
+        log.info("api-resources ConfigMap not found on PUT, will fall back to POST: path={}, body={}",
+            path, errorBody);
+      } else {
+        log.error("api-resources ConfigMap {} request failed: path={}, status={}, body={}",
+            method, path, code, errorBody);
+      }
+      return code;
     }
   }
 
@@ -97,6 +126,11 @@ public class ApiResourceDiscovery {
     Map<String, String> groupVersions = new HashMap<>();
     Map<String, List<String>> kindDict = new HashMap<>();
     Set<String> groupResources = new HashSet<>();
+
+    int coreCount = 0;
+    int nonCoreGroupVersionCount = 0;
+    int nonCoreResourceCount = 0;
+    List<String> failedGroupVersions = new ArrayList<>();
 
     // Core API resources (/api/v1)
     try {
@@ -115,10 +149,13 @@ public class ApiResourceDiscovery {
           namespacedInfo.put(groupResource, namespaced);
           groupResources.add(groupResource);
           kindDict.computeIfAbsent(kind, k -> new ArrayList<>()).add(groupResource);
+          coreCount++;
         }
+      } else {
+        log.error("Core API discovery returned null: path=/api/v1");
       }
     } catch (Exception e) {
-      log.warn("Failed to discover core API resources", e);
+      log.error("Core API discovery threw exception: path=/api/v1", e);
     }
 
     // Non-core API resources (/apis)
@@ -129,37 +166,58 @@ public class ApiResourceDiscovery {
           String groupName = group.path("name").textValue();
           for (JsonNode version : group.path("versions")) {
             String groupVersion = version.path("groupVersion").textValue();
+            nonCoreGroupVersionCount++;
             try {
               JsonNode resources = fetchJson("/apis/" + groupVersion);
-              if (resources != null) {
-                for (JsonNode resource : resources.path("resources")) {
-                  String name = resource.path("name").textValue();
-                  if (name.contains("/")) {
-                    continue;
-                  }
-                  String kind = resource.path("kind").textValue();
-                  boolean namespaced = resource.path("namespaced").booleanValue();
-
-                  String groupResource = groupName + "/" + name;
-                  plurals.put(groupVersion + "/" + kind, name);
-                  namespacedInfo.put(groupResource, namespaced);
-                  groupVersions.put(groupResource, groupVersion);
-                  groupResources.add(groupResource);
-                  kindDict.computeIfAbsent(kind, k -> new ArrayList<>()).add(groupResource);
+              if (resources == null) {
+                failedGroupVersions.add(groupVersion);
+                continue;
+              }
+              int beforeCount = nonCoreResourceCount;
+              for (JsonNode resource : resources.path("resources")) {
+                String name = resource.path("name").textValue();
+                if (name.contains("/")) {
+                  continue;
                 }
+                String kind = resource.path("kind").textValue();
+                boolean namespaced = resource.path("namespaced").booleanValue();
+
+                String groupResource = groupName + "/" + name;
+                plurals.put(groupVersion + "/" + kind, name);
+                namespacedInfo.put(groupResource, namespaced);
+                groupVersions.put(groupResource, groupVersion);
+                groupResources.add(groupResource);
+                kindDict.computeIfAbsent(kind, k -> new ArrayList<>()).add(groupResource);
+                nonCoreResourceCount++;
+              }
+              if (log.isDebugEnabled()) {
+                log.debug("Discovered API group/version: groupVersion={}, resources={}",
+                    groupVersion, nonCoreResourceCount - beforeCount);
               }
             } catch (Exception e) {
-              log.warn("Failed to discover API resources for {}", groupVersion, e);
+              failedGroupVersions.add(groupVersion);
+              log.error("API group/version discovery threw exception: groupVersion={}",
+                  groupVersion, e);
             }
           }
         }
+      } else {
+        log.error("API groups discovery returned null: path=/apis");
       }
     } catch (Exception e) {
-      log.warn("Failed to discover API groups", e);
+      log.error("API groups discovery threw exception: path=/apis", e);
     }
 
-    log.info("Discovered {} API resource plurals, {} namespaced info entries",
-        plurals.size(), namespacedInfo.size());
+    if (!failedGroupVersions.isEmpty()) {
+      log.error("API discovery completed with {} failed group/versions: {}",
+          failedGroupVersions.size(), failedGroupVersions);
+    }
+    log.info("API discovery summary: coreResources={}, nonCoreGroupVersions={}, "
+            + "nonCoreResources={}, plurals={}, namespacedInfo={}, kinds={}, groupResources={}, "
+            + "failedGroupVersions={}",
+        coreCount, nonCoreGroupVersionCount, nonCoreResourceCount,
+        plurals.size(), namespacedInfo.size(), kindDict.size(), groupResources.size(),
+        failedGroupVersions.size());
 
     return new Snapshot(plurals, namespacedInfo, groupVersions, kindDict, groupResources);
   }
@@ -278,17 +336,20 @@ public class ApiResourceDiscovery {
           Map.of(), Map.of(), Map.of(),
           new String[]{"BearerToken"}, null);
       try (Response response = call.execute()) {
+        int code = response.code();
         if (!response.isSuccessful()) {
-          log.warn("Failed to fetch API resource: {} status={}", path, response.code());
+          String errorBody = response.body() != null ? response.body().string() : "";
+          log.error("API fetch failed: path={}, status={}, body={}", path, code, errorBody);
           return null;
         }
         if (response.body() == null) {
+          log.error("API fetch returned empty body: path={}, status={}", path, code);
           return null;
         }
         return this.mapper.readTree(response.body().string());
       }
     } catch (Exception e) {
-      log.warn("Failed to fetch API resource: {}", path, e);
+      log.error("API fetch threw exception: path={}", path, e);
       return null;
     }
   }
