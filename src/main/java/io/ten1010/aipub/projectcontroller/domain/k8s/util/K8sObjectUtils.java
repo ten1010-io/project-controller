@@ -16,6 +16,20 @@ import java.util.Optional;
 
 public abstract class K8sObjectUtils {
 
+  private static final String PART_OF_LABEL_KEY = "app.kubernetes.io/part-of";
+  private static final String CILIUM_PART_OF_VALUE = "cilium";
+
+  public static boolean isCiliumComponent(KubernetesObject object) {
+    if (object.getMetadata() == null) {
+      return false;
+    }
+    Map<String, String> labels = object.getMetadata().getLabels();
+    if (labels == null) {
+      return false;
+    }
+    return CILIUM_PART_OF_VALUE.equals(labels.get(PART_OF_LABEL_KEY));
+  }
+
   public static String getApiVersion(KubernetesObject object) {
     Objects.requireNonNull(object.getApiVersion());
     return object.getApiVersion();

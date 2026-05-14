@@ -19,14 +19,10 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
 public class WorkloadControllerReconciler extends AbstractReconciler {
-
-  private static final String PART_OF_LABEL_KEY = "app.kubernetes.io/part-of";
-  private static final String CILIUM_PART_OF_VALUE = "cilium";
 
   private final KeyResolver keyResolver;
   private final ReconciliationService reconciliationService;
@@ -70,7 +66,7 @@ public class WorkloadControllerReconciler extends AbstractReconciler {
       return new Result(false);
     }
     KubernetesObject controller = controllerOpt.get();
-    if (isCiliumComponent(controller)) {
+    if (K8sObjectUtils.isCiliumComponent(controller)) {
       return new Result(false);
     }
     if (K8sObjectUtils.findControllerOwnerReference(controller).isPresent()) {
@@ -90,17 +86,6 @@ public class WorkloadControllerReconciler extends AbstractReconciler {
 
     return this.controllerObjectReconciler.reconcileController(controller, reconciledTolerations,
         reconciledSelectorTerms, reconciledImagePullSecrets);
-  }
-
-  private static boolean isCiliumComponent(KubernetesObject controller) {
-    if (controller.getMetadata() == null) {
-      return false;
-    }
-    Map<String, String> labels = controller.getMetadata().getLabels();
-    if (labels == null) {
-      return false;
-    }
-    return CILIUM_PART_OF_VALUE.equals(labels.get(PART_OF_LABEL_KEY));
   }
 
   private String createRequestDescription(Request request) {
