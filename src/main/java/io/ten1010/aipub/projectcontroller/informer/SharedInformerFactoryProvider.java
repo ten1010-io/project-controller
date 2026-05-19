@@ -3,6 +3,7 @@ package io.ten1010.aipub.projectcontroller.informer;
 import io.kubernetes.client.informer.SharedIndexInformer;
 import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.openapi.ApiClient;
+import io.kubernetes.client.openapi.apis.BatchV1Api;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.apis.RbacAuthorizationV1Api;
 import io.kubernetes.client.openapi.models.V1ClusterRole;
@@ -10,6 +11,8 @@ import io.kubernetes.client.openapi.models.V1ClusterRoleBinding;
 import io.kubernetes.client.openapi.models.V1ClusterRoleBindingList;
 import io.kubernetes.client.openapi.models.RbacV1Subject;
 import io.kubernetes.client.openapi.models.V1ClusterRoleList;
+import io.kubernetes.client.openapi.models.V1Job;
+import io.kubernetes.client.openapi.models.V1JobList;
 import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1NamespaceList;
 import io.kubernetes.client.openapi.models.V1Node;
@@ -83,6 +86,7 @@ public class SharedInformerFactoryProvider {
     registerWorkspaceInformer(informerFactory);
     registerAipubVolumeInformer(informerFactory);
     registerAipubJobInformer(informerFactory);
+    registerJobInformer(informerFactory);
     registerSftpServerInformer(informerFactory);
     registerPodInformer(informerFactory);
     this.registrars.forEach(e -> e.registerInformer(informerFactory));
@@ -344,6 +348,21 @@ public class SharedInformerFactoryProvider {
         this.k8sApiProvider.getAipubJobApi(),
         V1alpha1AipubJob.class,
         DEFAULT_RESYNC_PERIOD);
+    informer.addIndexers(Map.of(
+        IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
+        obj -> List.of(K8sObjectUtils.getNamespace(obj))));
+  }
+
+  private void registerJobInformer(SharedInformerFactory informerFactory) {
+    ApiClient apiClient = this.k8sApiProvider.getApiClient();
+    SharedIndexInformer<V1Job> informer = informerFactory.sharedIndexInformerFor(
+        (CallGeneratorParams params) -> new BatchV1Api(apiClient).listJobForAllNamespaces()
+            .resourceVersion(params.resourceVersion)
+            .watch(params.watch)
+            .timeoutSeconds(params.timeoutSeconds)
+            .buildCall(null),
+        V1Job.class,
+        V1JobList.class);
     informer.addIndexers(Map.of(
         IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
         obj -> List.of(K8sObjectUtils.getNamespace(obj))));

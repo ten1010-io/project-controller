@@ -7,6 +7,7 @@ import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.RbacAuthorizationV1Api;
+import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1OwnerReference;
 import io.kubernetes.client.openapi.models.V1PolicyRule;
 import io.kubernetes.client.openapi.models.V1Role;
@@ -49,6 +50,7 @@ public class AipubUserRoleReconciler extends AbstractReconciler {
   private final Indexer<V1alpha1Project> projectIndexer;
   private final Indexer<V1Workspace> workspaceIndexer;
   private final Indexer<V1alpha1AipubJob> aipubJobIndexer;
+  private final Indexer<V1Job> jobIndexer;
   private final Indexer<V1alpha1Operation> operationIndexer;
   private final Indexer<V1alpha1AipubVolume> aipubVolumeIndexer;
   private final Indexer<V1alpha1SftpServer> sftpServerIndexer;
@@ -79,6 +81,9 @@ public class AipubUserRoleReconciler extends AbstractReconciler {
         .getIndexer();
     this.aipubJobIndexer = sharedInformerFactory
         .getExistingSharedIndexInformer(V1alpha1AipubJob.class)
+        .getIndexer();
+    this.jobIndexer = sharedInformerFactory
+        .getExistingSharedIndexInformer(V1Job.class)
         .getIndexer();
     this.operationIndexer = sharedInformerFactory
         .getExistingSharedIndexInformer(V1alpha1Operation.class)
@@ -132,6 +137,8 @@ public class AipubUserRoleReconciler extends AbstractReconciler {
         IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME, request.getNamespace());
     List<V1alpha1AipubJob> aipubJobs = this.aipubJobIndexer.byIndex(
         IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME, request.getNamespace());
+    List<V1Job> jobs = this.jobIndexer.byIndex(
+        IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME, request.getNamespace());
     List<V1alpha1Operation> operations = this.operationIndexer.byIndex(
         IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME, request.getNamespace());
     List<V1alpha1AipubVolume> aipubVolumes = this.aipubVolumeIndexer.byIndex(
@@ -140,6 +147,7 @@ public class AipubUserRoleReconciler extends AbstractReconciler {
         IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME, request.getNamespace());
     workloads.addAll(workspaces);
     workloads.addAll(aipubJobs);
+    workloads.addAll(jobs);
     workloads.addAll(operations);
     workloads.addAll(aipubVolumes);
     workloads.addAll(sftpServers);
