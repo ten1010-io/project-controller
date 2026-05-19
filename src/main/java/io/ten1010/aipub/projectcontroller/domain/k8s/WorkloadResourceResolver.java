@@ -28,14 +28,14 @@ public class WorkloadResourceResolver {
     return Optional.empty();
   }
 
-  public Optional<String> resolveGroup(KubernetesObject workload) {
+  public String resolveGroup(KubernetesObject workload) {
     if (workload instanceof V1Job) {
-      return Optional.of("batch");
+      return "batch";
     }
     if ("Job".equals(workload.getKind())) {
-      return Optional.of("batch");
+      return "batch";
     }
-    return Optional.of(ProjectApiConstants.AIPUB_GROUP);
+    return ProjectApiConstants.AIPUB_GROUP;
   }
 
 }

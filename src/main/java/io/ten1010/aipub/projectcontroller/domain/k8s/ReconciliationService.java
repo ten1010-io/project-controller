@@ -794,8 +794,7 @@ public class ReconciliationService {
       if (usernameOpt.isPresent() && usernameOpt.get().equals(K8sObjectUtils.getName(aipubUser))) {
         Optional<String> resourceOpt = this.workloadResourceResolver.resolveResource(workload);
         if (resourceOpt.isPresent()) {
-          String group = this.workloadResourceResolver.resolveGroup(workload)
-              .orElse(ProjectApiConstants.AIPUB_GROUP);
+          String group = this.workloadResourceResolver.resolveGroup(workload);
           V1PolicyRule rule = this.buildUpdateDeleteRoleRule(group,
               resourceOpt.get(), workloadName);
           workloadRules.add(rule);
