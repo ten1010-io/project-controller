@@ -5,6 +5,7 @@ import io.kubernetes.client.extended.controller.reconciler.Request;
 import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.models.V1DaemonSet;
+import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1Node;
 import io.kubernetes.client.openapi.models.V1Pod;
@@ -338,6 +339,19 @@ public class RequestBuilderFactory {
   }
 
   public Function<V1alpha1AipubJob, List<Request>> aipubJobToAipubUserRoles() {
+    return job -> {
+      String projName = K8sObjectUtils.getNamespace(job);
+      Optional<String> usernameOpt = UsernameUtils.getUsername(job);
+
+      if (usernameOpt.isPresent()) {
+        String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());
+        return List.of(new Request(projName, roleName));
+      }
+      return List.of();
+    };
+  }
+
+  public Function<V1Job, List<Request>> jobToAipubUserRoles() {
     return job -> {
       String projName = K8sObjectUtils.getNamespace(job);
       Optional<String> usernameOpt = UsernameUtils.getUsername(job);

@@ -1,6 +1,7 @@
 package io.ten1010.aipub.projectcontroller.domain.k8s;
 
 import io.kubernetes.client.common.KubernetesObject;
+import io.kubernetes.client.openapi.models.V1Job;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
@@ -15,9 +16,26 @@ public class WorkloadResourceResolver {
       case "AIPubVolume" -> "aipubvolumes";
       case "SFTPServer" -> "sftpservers";
       case "FtpServer" -> "ftpservers";
+      case "Job" -> "jobs";
       default -> null;
     };
-    return Optional.ofNullable(resourceName);
+    if (resourceName != null) {
+      return Optional.of(resourceName);
+    }
+    if (workload instanceof V1Job) {
+      return Optional.of("jobs");
+    }
+    return Optional.empty();
+  }
+
+  public Optional<String> resolveGroup(KubernetesObject workload) {
+    if (workload instanceof V1Job) {
+      return Optional.of("batch");
+    }
+    if ("Job".equals(workload.getKind())) {
+      return Optional.of("batch");
+    }
+    return Optional.of(ProjectApiConstants.AIPUB_GROUP);
   }
 
 }
