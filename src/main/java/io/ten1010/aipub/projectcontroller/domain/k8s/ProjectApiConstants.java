@@ -59,6 +59,9 @@ public final class ProjectApiConstants {
   public static final String AIPUB_JOB_RESOURCE_KIND = "AIPubJob";
   public static final String AIPUB_JOB_RESOURCE_PLURAL = "aipubjobs";
 
+  public static final String CHAIN_JOB_RESOURCE_KIND = "ChainJob";
+  public static final String CHAIN_JOB_RESOURCE_PLURAL = "chainjobs";
+
   public static final String OPERATION_RESOURCE_KIND = "Operation";
   public static final String OPERATION_RESOURCE_PLURAL = "operations";
 

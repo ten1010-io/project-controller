@@ -23,6 +23,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubJob;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubVolume;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ChainJob;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageHub;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeGroup;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Operation;
@@ -343,6 +344,19 @@ public class RequestBuilderFactory {
     return job -> {
       String projName = K8sObjectUtils.getNamespace(job);
       Optional<String> usernameOpt = UsernameUtils.getUsername(job);
+
+      if (usernameOpt.isPresent()) {
+        String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());
+        return List.of(new Request(projName, roleName));
+      }
+      return List.of();
+    };
+  }
+
+  public Function<V1alpha1ChainJob, List<Request>> chainJobToAipubUserRoles() {
+    return chainJob -> {
+      String projName = K8sObjectUtils.getNamespace(chainJob);
+      Optional<String> usernameOpt = UsernameUtils.getUsername(chainJob);
 
       if (usernameOpt.isPresent()) {
         String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());

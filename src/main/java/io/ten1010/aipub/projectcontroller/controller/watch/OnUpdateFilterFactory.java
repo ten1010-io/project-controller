@@ -21,6 +21,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubJob;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubVolume;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ChainJob;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageHub;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeGroup;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Operation;
@@ -301,6 +302,12 @@ public class OnUpdateFilterFactory {
             ||
             !WorkloadUtils.getPodTemplateSpec(oldObj)
                 .equals(WorkloadUtils.getPodTemplateSpec(newObj));
+  }
+
+  public BiPredicate<V1alpha1ChainJob, V1alpha1ChainJob> chainJobFilter() {
+    return (oldObj, newObj) ->
+        !K8sObjectUtils.getOwnerReferences(oldObj)
+            .equals(K8sObjectUtils.getOwnerReferences(newObj));
   }
 
   public BiPredicate<V1alpha1Operation, V1alpha1Operation> operationFilter() {

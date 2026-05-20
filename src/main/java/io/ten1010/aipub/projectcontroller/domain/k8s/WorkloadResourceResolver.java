@@ -21,6 +21,7 @@ public class WorkloadResourceResolver {
         case "FtpServer" -> "ftpservers";
         case "Job" -> "jobs";
         case "CronJob" -> "cronjobs";
+        case "ChainJob" -> "chainjobs";
         default -> null;
       };
       if (resourceName != null) {
