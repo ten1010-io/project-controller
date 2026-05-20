@@ -6,6 +6,7 @@ import io.kubernetes.client.extended.controller.builder.ControllerBuilder;
 import io.kubernetes.client.extended.controller.reconciler.Request;
 import io.kubernetes.client.extended.workqueue.WorkQueue;
 import io.kubernetes.client.informer.SharedInformerFactory;
+import io.kubernetes.client.openapi.models.V1CronJob;
 import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1Role;
 import io.ten1010.aipub.projectcontroller.controller.ControllerFactory;
@@ -61,6 +62,8 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
         .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
             V1Job.class)::hasSynced)
         .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
+            V1CronJob.class)::hasSynced)
+        .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
             V1alpha1Operation.class)::hasSynced)
         .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
             V1alpha1AipubVolume.class)::hasSynced)
@@ -72,6 +75,7 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
         .watch(this::createWorkspaceWatch)
         .watch(this::createAipubJobWatch)
         .watch(this::createJobWatch)
+        .watch(this::createCronJobWatch)
         .watch(this::createOperationWatch)
         .watch(this::createAipubVolumeWatch)
         .watch(this::createSftpServerWatch)
@@ -125,6 +129,14 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
     DefaultControllerWatch<V1Job> watch = new DefaultControllerWatch<>(workQueue, V1Job.class);
     watch.setOnUpdateFilter(this.onUpdateFilterFactory.jobFilter());
     watch.setRequestBuilder(this.requestBuilderFactory.jobToAipubUserRoles());
+    return watch;
+  }
+
+  private ControllerWatch<V1CronJob> createCronJobWatch(WorkQueue<Request> workQueue) {
+    DefaultControllerWatch<V1CronJob> watch = new DefaultControllerWatch<>(workQueue,
+        V1CronJob.class);
+    watch.setOnUpdateFilter(this.onUpdateFilterFactory.cronJobFilter());
+    watch.setRequestBuilder(this.requestBuilderFactory.cronJobToAipubUserRoles());
     return watch;
   }
 

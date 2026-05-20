@@ -4,6 +4,7 @@ import io.kubernetes.client.common.KubernetesObject;
 import io.kubernetes.client.extended.controller.reconciler.Request;
 import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.informer.cache.Indexer;
+import io.kubernetes.client.openapi.models.V1CronJob;
 import io.kubernetes.client.openapi.models.V1DaemonSet;
 import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1Namespace;
@@ -355,6 +356,19 @@ public class RequestBuilderFactory {
     return job -> {
       String projName = K8sObjectUtils.getNamespace(job);
       Optional<String> usernameOpt = UsernameUtils.getUsername(job);
+
+      if (usernameOpt.isPresent()) {
+        String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());
+        return List.of(new Request(projName, roleName));
+      }
+      return List.of();
+    };
+  }
+
+  public Function<V1CronJob, List<Request>> cronJobToAipubUserRoles() {
+    return cronJob -> {
+      String projName = K8sObjectUtils.getNamespace(cronJob);
+      Optional<String> usernameOpt = UsernameUtils.getUsername(cronJob);
 
       if (usernameOpt.isPresent()) {
         String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());
