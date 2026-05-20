@@ -10,6 +10,8 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUserList;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubVolume;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubVolumeList;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ChainJob;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ChainJobList;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageHub;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageHubList;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeGroup;
@@ -35,6 +37,7 @@ public class K8sApiProvider {
   private final GenericKubernetesApi<V1alpha1ResourceSet, V1alpha1ResourceSetList> resourceSetApi;
   private final GenericKubernetesApi<V1Workspace, V1WorkspaceList> workspaceApi;
   private final GenericKubernetesApi<V1alpha1AipubJob, V1alpha1AipubJobList> aipubJobApi;
+  private final GenericKubernetesApi<V1alpha1ChainJob, V1alpha1ChainJobList> chainJobApi;
   private final GenericKubernetesApi<V1alpha1Operation, V1alpha1OperationList> operationApi;
   private final GenericKubernetesApi<V1alpha1AipubVolume, V1alpha1AipubVolumeList> aipubVolumeApi;
   private final GenericKubernetesApi<V1alpha1SftpServer, V1alpha1SftpServerList> sftpServerApi;
@@ -48,6 +51,7 @@ public class K8sApiProvider {
     this.resourceSetApi = createResourceSetApi(apiClient);
     this.workspaceApi = createWorkspaceApi(apiClient);
     this.aipubJobApi = createAipubJobApi(apiClient);
+    this.chainJobApi = createChainJobApi(apiClient);
     this.operationApi = createOperationApi(apiClient);
     this.aipubVolumeApi = createAipubVolumeApi(apiClient);
     this.sftpServerApi = createSftpServerApi(apiClient);
@@ -129,6 +133,18 @@ public class K8sApiProvider {
         ProjectApiConstants.AIPUB_GROUP,
         ProjectApiConstants.VERSION_V1ALPHA1,
         ProjectApiConstants.AIPUB_JOB_RESOURCE_PLURAL,
+        apiClient
+    );
+  }
+
+  private static GenericKubernetesApi<V1alpha1ChainJob, V1alpha1ChainJobList> createChainJobApi(
+      ApiClient apiClient) {
+    return new GenericKubernetesApi<>(
+        V1alpha1ChainJob.class,
+        V1alpha1ChainJobList.class,
+        ProjectApiConstants.AIPUB_GROUP,
+        ProjectApiConstants.VERSION_V1ALPHA1,
+        ProjectApiConstants.CHAIN_JOB_RESOURCE_PLURAL,
         apiClient
     );
   }

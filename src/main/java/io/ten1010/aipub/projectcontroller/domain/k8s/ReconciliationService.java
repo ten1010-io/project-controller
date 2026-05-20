@@ -738,7 +738,7 @@ public class ReconciliationService {
             .withVerbs(BASIC_VERBS)
             .build();
         V1PolicyRule chainJobsApiRule = new V1PolicyRuleBuilder().withApiGroups("aipub.ten1010.io")
-            .withResources("chainJobs")
+            .withResources("chainjobs")
             .withVerbs(BASIC_VERBS)
             .build();
         V1PolicyRule aipubOperationRevisionApiRule = new V1PolicyRuleBuilder().withApiGroups(

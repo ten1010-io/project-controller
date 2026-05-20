@@ -19,6 +19,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubJob;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubVolume;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ChainJob;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Operation;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1SftpServer;
@@ -60,6 +61,8 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
         .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
             V1alpha1AipubJob.class)::hasSynced)
         .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
+            V1alpha1ChainJob.class)::hasSynced)
+        .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
             V1Job.class)::hasSynced)
         .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
             V1CronJob.class)::hasSynced)
@@ -74,6 +77,7 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
         .watch(this::createAipubUserWatch)
         .watch(this::createWorkspaceWatch)
         .watch(this::createAipubJobWatch)
+        .watch(this::createChainJobWatch)
         .watch(this::createJobWatch)
         .watch(this::createCronJobWatch)
         .watch(this::createOperationWatch)
@@ -122,6 +126,14 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
         V1alpha1AipubJob.class);
     watch.setOnUpdateFilter(this.onUpdateFilterFactory.aipubJobFilter());
     watch.setRequestBuilder(this.requestBuilderFactory.aipubJobToAipubUserRoles());
+    return watch;
+  }
+
+  private ControllerWatch<V1alpha1ChainJob> createChainJobWatch(WorkQueue<Request> workQueue) {
+    DefaultControllerWatch<V1alpha1ChainJob> watch = new DefaultControllerWatch<>(workQueue,
+        V1alpha1ChainJob.class);
+    watch.setOnUpdateFilter(this.onUpdateFilterFactory.chainJobFilter());
+    watch.setRequestBuilder(this.requestBuilderFactory.chainJobToAipubUserRoles());
     return watch;
   }
 
