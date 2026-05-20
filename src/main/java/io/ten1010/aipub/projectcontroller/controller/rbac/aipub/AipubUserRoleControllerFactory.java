@@ -6,6 +6,7 @@ import io.kubernetes.client.extended.controller.builder.ControllerBuilder;
 import io.kubernetes.client.extended.controller.reconciler.Request;
 import io.kubernetes.client.extended.workqueue.WorkQueue;
 import io.kubernetes.client.informer.SharedInformerFactory;
+import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1Role;
 import io.ten1010.aipub.projectcontroller.controller.ControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.watch.DefaultControllerWatch;
@@ -58,6 +59,8 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
         .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
             V1alpha1AipubJob.class)::hasSynced)
         .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
+            V1Job.class)::hasSynced)
+        .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
             V1alpha1Operation.class)::hasSynced)
         .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
             V1alpha1AipubVolume.class)::hasSynced)
@@ -68,6 +71,7 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
         .watch(this::createAipubUserWatch)
         .watch(this::createWorkspaceWatch)
         .watch(this::createAipubJobWatch)
+        .watch(this::createJobWatch)
         .watch(this::createOperationWatch)
         .watch(this::createAipubVolumeWatch)
         .watch(this::createSftpServerWatch)
@@ -114,6 +118,13 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
         V1alpha1AipubJob.class);
     watch.setOnUpdateFilter(this.onUpdateFilterFactory.aipubJobFilter());
     watch.setRequestBuilder(this.requestBuilderFactory.aipubJobToAipubUserRoles());
+    return watch;
+  }
+
+  private ControllerWatch<V1Job> createJobWatch(WorkQueue<Request> workQueue) {
+    DefaultControllerWatch<V1Job> watch = new DefaultControllerWatch<>(workQueue, V1Job.class);
+    watch.setOnUpdateFilter(this.onUpdateFilterFactory.jobFilter());
+    watch.setRequestBuilder(this.requestBuilderFactory.jobToAipubUserRoles());
     return watch;
   }
 
