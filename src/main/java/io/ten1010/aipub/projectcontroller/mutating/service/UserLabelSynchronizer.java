@@ -16,8 +16,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Call;
-import okhttp3.MediaType;
-import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -270,17 +268,13 @@ public class UserLabelSynchronizer {
       Map<String, Object> labels = new HashMap<>();
       labels.put(LabelConstants.OBJECT_OWN_USERNAME_KEY, username);
       labels.put(LabelConstants.OBJECT_OWN_USERID_KEY, userid);
-      String patchBody = this.mapper.writeValueAsString(
+      byte[] bodyBytes = this.mapper.writeValueAsBytes(
           Map.of("metadata", Map.of("labels", labels)));
-
-      RequestBody body = RequestBody.create(
-          patchBody,
-          MediaType.parse("application/merge-patch+json"));
 
       Call call = this.apiClient.buildCall(
           this.apiClient.getBasePath(), path, "PATCH",
           List.of(), List.of(),
-          body,
+          bodyBytes,
           Map.of("Content-Type", "application/merge-patch+json"),
           Map.of(), Map.of(),
           new String[]{"BearerToken"}, null);
