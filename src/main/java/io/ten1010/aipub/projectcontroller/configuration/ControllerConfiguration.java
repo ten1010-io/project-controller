@@ -61,7 +61,6 @@ public class ControllerConfiguration {
   public ControllerManager controllerManager(
       SharedInformerFactory sharedInformerFactory, List<Controller> controllers,
       List<WorkloadControllerFactory<?>> workloadControllerFactories) {
-    System.out.println(controllers);
     ControllerManagerBuilder builder = ControllerBuilder.controllerManagerBuilder(
         sharedInformerFactory);
     controllers.forEach(builder::addController);

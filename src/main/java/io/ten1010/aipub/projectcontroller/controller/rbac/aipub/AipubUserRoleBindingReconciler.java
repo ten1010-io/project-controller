@@ -110,7 +110,6 @@ public class AipubUserRoleBindingReconciler extends AbstractReconciler {
         deleteRoleBinding(roleBindingOpt.get());
         return new Result(false);
       }
-      System.out.println();
       if (ProjectUtils.getStatusAllBoundAipubUsers(projectOpt.get()).stream()
           .noneMatch(e -> e.equals(username))) {
         deleteRoleBinding(roleBindingOpt.get());
