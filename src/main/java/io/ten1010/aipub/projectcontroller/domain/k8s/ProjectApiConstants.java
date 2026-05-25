@@ -32,11 +32,11 @@ public final class ProjectApiConstants {
   public static final String NODE_RESOURCE_RESOURCE_KIND = "NodeResources";
   public static final String NODE_RESOURCE_RESOURCE_PLURAL = "noderesources";
 
-  public static final String TCP_PORT_VALIDATORS_RESOURCE_KIND = "TCPPortValidator";
-  public static final String TCP_PORT_VALIDATORS_RESOURCE_PLURAL = "tcpportvalidators";
+  public static final String TCP_PORT_VALIDATION_RESOURCE_KIND = "TCPPortValidation";
+  public static final String TCP_PORT_VALIDATION_RESOURCE_PLURAL = "tcpportvalidations";
 
-  public static final String INGRESS_HOST_PATH_VALIDATORS_RESOURCE_KIND = "IngressHostPathValidator";
-  public static final String INGRESS_HOST_PATH_VALIDATORS_RESOURCE_PLURAL = "ingresshostpathvalidators";
+  public static final String HOST_PATH_VALIDATION_RESOURCE_KIND = "HostPathValidation";
+  public static final String HOST_PATH_VALIDATION_RESOURCE_PLURAL = "hostpathvalidations";
 
   public static final String USER_WORKSPACE_RECLAIM_RESOURCE_KIND = "UserWorkspaceReclaim";
   public static final String USER_WORKSPACE_RECLAIM_RESOURCE_PLURAL = "userworkspacereclaims";

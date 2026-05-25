@@ -464,23 +464,23 @@ public class ReconciliationService {
       reconciled.add(resourceSetApiRule);
     }
 
-    V1PolicyRule tcpPortValidatorsApiRule = switch (projectRoleEnum) {
+    V1PolicyRule tcpPortValidationsApiRule = switch (projectRoleEnum) {
       case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
           .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
-          .withResources(ProjectApiConstants.TCP_PORT_VALIDATORS_RESOURCE_PLURAL)
+          .withResources(ProjectApiConstants.TCP_PORT_VALIDATION_RESOURCE_PLURAL)
           .withVerbs("create")
           .build();
     };
-    reconciled.add(tcpPortValidatorsApiRule);
+    reconciled.add(tcpPortValidationsApiRule);
 
-    V1PolicyRule ingressHostPathValidatorsApiRule = switch (projectRoleEnum) {
+    V1PolicyRule hostPathValidationsApiRule = switch (projectRoleEnum) {
       case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
           .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
-          .withResources(ProjectApiConstants.INGRESS_HOST_PATH_VALIDATORS_RESOURCE_PLURAL)
+          .withResources(ProjectApiConstants.HOST_PATH_VALIDATION_RESOURCE_PLURAL)
           .withVerbs("create")
           .build();
     };
-    reconciled.add(ingressHostPathValidatorsApiRule);
+    reconciled.add(hostPathValidationsApiRule);
 
     V1PolicyRule nodeGpuUsagesApiRule = switch (projectRoleEnum) {
       case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
