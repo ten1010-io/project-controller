@@ -18,7 +18,6 @@ import io.kubernetes.client.openapi.models.V1StatefulSet;
 import io.ten1010.aipub.projectcontroller.domain.k8s.AipubUserRoleNameResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.RoleNameResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1Workspace;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubJob;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubVolume;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ChainJob;
@@ -289,14 +288,6 @@ public class OnUpdateFilterFactory {
   }
 
   public BiPredicate<V1Workspace, V1Workspace> workspaceFilter() {
-    return (oldObj, newObj) ->
-        !K8sObjectUtils.getOwnerReferences(oldObj).equals(K8sObjectUtils.getOwnerReferences(newObj))
-            ||
-            !WorkloadUtils.getPodTemplateSpec(oldObj)
-                .equals(WorkloadUtils.getPodTemplateSpec(newObj));
-  }
-
-  public BiPredicate<V1alpha1AipubJob, V1alpha1AipubJob> aipubJobFilter() {
     return (oldObj, newObj) ->
         !K8sObjectUtils.getOwnerReferences(oldObj).equals(K8sObjectUtils.getOwnerReferences(newObj))
             ||
