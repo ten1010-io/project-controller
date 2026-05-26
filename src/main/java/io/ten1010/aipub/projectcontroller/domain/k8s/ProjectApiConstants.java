@@ -56,9 +56,6 @@ public final class ProjectApiConstants {
   public static final String WORKSPACE_RESOURCE_KIND = "Workspace";
   public static final String WORKSPACE_RESOURCE_PLURAL = "workspaces";
 
-  public static final String AIPUB_JOB_RESOURCE_KIND = "AIPubJob";
-  public static final String AIPUB_JOB_RESOURCE_PLURAL = "aipubjobs";
-
   public static final String CHAIN_JOB_RESOURCE_KIND = "ChainJob";
   public static final String CHAIN_JOB_RESOURCE_PLURAL = "chainjobs";
 

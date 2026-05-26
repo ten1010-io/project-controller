@@ -14,7 +14,6 @@ public class WorkloadResourceResolver {
     if (kind != null) {
       String resourceName = switch (kind) {
         case "Workspace" -> "workspaces";
-        case "AIPubJob" -> "aipubjobs";
         case "Operation" -> "operations";
         case "AIPubVolume" -> "aipubvolumes";
         case "SFTPServer" -> "sftpservers";
