@@ -20,6 +20,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.ProjectRoleEnum;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ResourceQuotaNameResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.RoleNameResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1Workspace;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1beta1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubVolume;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ChainJob;
@@ -328,6 +329,18 @@ public class RequestBuilderFactory {
   }
 
   public Function<V1Workspace, List<Request>> workspaceToAipubUserRoles() {
+    return job -> {
+      String projName = K8sObjectUtils.getNamespace(job);
+      Optional<String> usernameOpt = UsernameUtils.getUsername(job);
+      if (usernameOpt.isPresent()) {
+        String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());
+        return List.of(new Request(projName, roleName));
+      }
+      return List.of();
+    };
+  }
+
+  public Function<V1beta1Workspace, List<Request>> v1beta1WorkspaceToAipubUserRoles() {
     return job -> {
       String projName = K8sObjectUtils.getNamespace(job);
       Optional<String> usernameOpt = UsernameUtils.getUsername(job);

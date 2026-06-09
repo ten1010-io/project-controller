@@ -6,6 +6,7 @@ public final class ProjectApiConstants {
   public static final String AIPUB_GROUP = "aipub.ten1010.io";
   public static final String COASTER_GROUP = "coaster.ten1010.io";
   public static final String VERSION_V1ALPHA1 = "v1alpha1";
+  public static final String VERSION_V1BETA1 = "v1beta1";
   public static final String VERSION_V1 = "v1";
   public static final String PROJECT_API_VERSION = PROJECT_GROUP + "/" + VERSION_V1ALPHA1;
   public static final String AIPUB_API_VERSION = AIPUB_GROUP + "/" + VERSION_V1ALPHA1;

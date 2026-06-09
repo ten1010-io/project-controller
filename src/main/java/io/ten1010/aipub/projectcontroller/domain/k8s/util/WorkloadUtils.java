@@ -13,6 +13,7 @@ import io.kubernetes.client.openapi.models.V1ReplicaSet;
 import io.kubernetes.client.openapi.models.V1StatefulSet;
 import io.kubernetes.client.openapi.models.V1Toleration;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1Workspace;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1beta1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Operation;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1SftpServer;
 import java.util.List;
@@ -225,6 +226,26 @@ public abstract class WorkloadUtils {
   }
 
   public static List<V1LocalObjectReference> getImageRegistrySecrets(V1Workspace object) {
+    V1PodTemplateSpec templateSpec = getPodTemplateSpec(object);
+    return getImageRegistrySecrets(templateSpec);
+  }
+
+  public static V1PodTemplateSpec getPodTemplateSpec(V1beta1Workspace object) {
+    Objects.requireNonNull(object.getSpec());
+    return object.getSpec().getTemplate();
+  }
+
+  public static List<V1Toleration> getTolerations(V1beta1Workspace object) {
+    V1PodTemplateSpec templateSpec = getPodTemplateSpec(object);
+    return getTolerations(templateSpec);
+  }
+
+  public static List<V1NodeSelectorTerm> getNodeSelectorTerms(V1beta1Workspace object) {
+    V1PodTemplateSpec templateSpec = getPodTemplateSpec(object);
+    return getNodeSelectorTerms(templateSpec);
+  }
+
+  public static List<V1LocalObjectReference> getImageRegistrySecrets(V1beta1Workspace object) {
     V1PodTemplateSpec templateSpec = getPodTemplateSpec(object);
     return getImageRegistrySecrets(templateSpec);
   }

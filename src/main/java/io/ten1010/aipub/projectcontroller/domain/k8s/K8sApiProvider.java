@@ -4,6 +4,8 @@ import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.util.generic.GenericKubernetesApi;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1WorkspaceList;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1beta1Workspace;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1beta1WorkspaceList;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUserList;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubVolume;
@@ -34,6 +36,7 @@ public class K8sApiProvider {
   private final GenericKubernetesApi<V1alpha1ImageHub, V1alpha1ImageHubList> imageHubApi;
   private final GenericKubernetesApi<V1alpha1ResourceSet, V1alpha1ResourceSetList> resourceSetApi;
   private final GenericKubernetesApi<V1Workspace, V1WorkspaceList> workspaceApi;
+  private final GenericKubernetesApi<V1beta1Workspace, V1beta1WorkspaceList> v1beta1WorkspaceApi;
   private final GenericKubernetesApi<V1alpha1ChainJob, V1alpha1ChainJobList> chainJobApi;
   private final GenericKubernetesApi<V1alpha1Operation, V1alpha1OperationList> operationApi;
   private final GenericKubernetesApi<V1alpha1AipubVolume, V1alpha1AipubVolumeList> aipubVolumeApi;
@@ -47,6 +50,7 @@ public class K8sApiProvider {
     this.imageHubApi = createImageHubApi(apiClient);
     this.resourceSetApi = createResourceSetApi(apiClient);
     this.workspaceApi = createWorkspaceApi(apiClient);
+    this.v1beta1WorkspaceApi = createV1beta1WorkspaceApi(apiClient);
     this.chainJobApi = createChainJobApi(apiClient);
     this.operationApi = createOperationApi(apiClient);
     this.aipubVolumeApi = createAipubVolumeApi(apiClient);
@@ -116,6 +120,18 @@ public class K8sApiProvider {
         V1WorkspaceList.class,
         ProjectApiConstants.AIPUB_GROUP,
         ProjectApiConstants.VERSION_V1,
+        ProjectApiConstants.WORKSPACE_RESOURCE_PLURAL,
+        apiClient
+    );
+  }
+
+  private static GenericKubernetesApi<V1beta1Workspace, V1beta1WorkspaceList> createV1beta1WorkspaceApi(
+      ApiClient apiClient) {
+    return new GenericKubernetesApi<>(
+        V1beta1Workspace.class,
+        V1beta1WorkspaceList.class,
+        ProjectApiConstants.AIPUB_GROUP,
+        ProjectApiConstants.VERSION_V1BETA1,
         ProjectApiConstants.WORKSPACE_RESOURCE_PLURAL,
         apiClient
     );
