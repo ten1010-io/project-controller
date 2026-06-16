@@ -203,11 +203,13 @@ public class ReconciliationService {
               .stream()
               .filter(expr -> !expr.getKey().equals(LabelConstants.PROJECT_MANAGED_KEY))
               .toList();
-          if (filtered.isEmpty()) {
+          // matchFields(예: DaemonSet 컨트롤러가 주입하는 metadata.name 노드 핀)는
+          // matchExpressions가 비어도 보존해야 한다. 둘 다 비었을 때만 term을 제거한다.
+          if (filtered.isEmpty() && WorkloadUtils.getMatchFields(term).isEmpty()) {
             return null;
           }
           return new V1NodeSelectorTermBuilder(term)
-              .withMatchExpressions(filtered)
+              .withMatchExpressions(filtered.isEmpty() ? null : filtered)
               .build();
         })
         .filter(Objects::nonNull)
