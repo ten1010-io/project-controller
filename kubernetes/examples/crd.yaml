@@ -252,12 +252,21 @@ spec:
   scope: Namespaced
   versions:
     - additionalPrinterColumns:
-        - jsonPath: .status.availableCondition.status
+        - jsonPath: .status.conditions[?(@.type=="Available")].status
           name: AVAILABLE
-          type: boolean
-        - jsonPath: .spec.replicas
+          type: string
+        - jsonPath: .status.replicas
           name: REPLICAS
           type: integer
+        - jsonPath: .status.readyReplicas
+          name: READY
+          type: integer
+        - jsonPath: .status.conditions[?(@.type=="Suspended")].status
+          name: SUSPENDED
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: AGE
+          type: date
       name: v1alpha1
       schema:
         openAPIV3Schema:
@@ -265,7 +274,7 @@ spec:
             metadata:
               properties:
                 name:
-                  maxLength: 63
+                  maxLength: 40
                   minLength: 1
                   pattern: ^[a-z]([-a-z0-9]*[a-z0-9])?$
                   type: string
@@ -335,19 +344,30 @@ spec:
                 ports:
                   items:
                     properties:
-                      host:
-                        minLength: 1
+                      appProtocol:
+                        maxLength: 317
+                        pattern: ^(([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)/)?[A-Za-z0-9]([-A-Za-z0-9_.]{0,61}[A-Za-z0-9])?$
                         type: string
+                      external:
+                        default:
+                          enabled: false
+                        properties:
+                          enabled:
+                            default: false
+                            type: boolean
+                          host:
+                            minLength: 1
+                            type: string
+                          path:
+                            default: /
+                            minLength: 1
+                            pattern: ^/.*
+                            type: string
+                        type: object
                       name:
-                        allOf:
-                          - pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                          - pattern: .*[a-z].*
                         maxLength: 15
                         minLength: 1
-                        type: string
-                      path:
-                        default: /
-                        minLength: 1
+                        pattern: ^[a-z]([-a-z0-9]*[a-z0-9])?$
                         type: string
                       port:
                         maximum: 65535
@@ -357,8 +377,14 @@ spec:
                       - port
                       - name
                     type: object
+                  maxItems: 100
                   minItems: 1
                   type: array
+                  x-kubernetes-validations:
+                    - message: port must be unique
+                      rule: self.all(x, size(self.filter(y, y.port == x.port)) == 1)
+                    - message: name must be unique
+                      rule: self.all(x, size(self.filter(y, y.name == x.name)) == 1)
                 replicas:
                   maximum: 2147483647
                   minimum: 0
@@ -367,6 +393,9 @@ spec:
                   default: 10
                   minimum: 0
                   type: integer
+                suspend:
+                  default: false
+                  type: boolean
                 template:
                   properties:
                     metadata:
@@ -391,12 +420,10 @@ spec:
                               args:
                                 items:
                                   type: string
-                                minItems: 1
                                 type: array
                               command:
                                 items:
                                   type: string
-                                minItems: 1
                                 type: array
                               env:
                                 items:
@@ -446,7 +473,6 @@ spec:
                                   required:
                                     - name
                                   type: object
-                                minItems: 1
                                 type: array
                               image:
                                 minLength: 1
@@ -487,14 +513,13 @@ spec:
                                     - name
                                     - mountPath
                                   type: object
-                                minItems: 1
                                 type: array
                               workingDir:
                                 minLength: 1
                                 type: string
                             required:
-                              - image
                               - name
+                              - image
                             type: object
                           type: array
                           x-kubernetes-preserve-unknown-fields: true
@@ -524,145 +549,83 @@ spec:
                 - template
               type: object
             status:
-              default:
-                availableCondition:
-                  status: false
               properties:
-                addresses:
+                conditions:
                   items:
                     properties:
-                      address:
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                observedGeneration:
+                  format: int64
+                  type: integer
+                ports:
+                  items:
+                    properties:
+                      externalAddress:
+                        type: string
+                      internalAddress:
+                        type: string
+                      name:
                         type: string
                       port:
                         type: integer
+                    required:
+                      - name
                     type: object
                   type: array
-                availableCondition:
-                  properties:
-                    lastTransitionTimestamp:
-                      format: date-time
-                      type: string
-                    message:
-                      type: string
-                    reason:
-                      type: string
-                    status:
-                      type: boolean
-                  type: object
-                deployName:
-                  type: string
-                hpaName:
-                  type: string
-                ingressName:
-                  type: string
-                pods:
-                  properties:
-                    pending:
-                      items:
-                        properties:
-                          creationTimestamp:
-                            type: string
-                          lastTerminationState:
-                            properties:
-                              exitCode:
-                                type: integer
-                              message:
-                                type: string
-                              reason:
-                                type: string
-                              timestamp:
-                                type: string
-                            type: object
-                          message:
-                            type: string
-                          name:
-                            type: string
-                          nodeName:
-                            type: string
-                          reason:
-                            type: string
-                          restartCount:
-                            type: integer
-                          terminating:
-                            type: boolean
-                          timestamp:
-                            type: string
-                          uid:
-                            type: string
-                        type: object
-                      type: array
-                    progressing:
-                      items:
-                        properties:
-                          creationTimestamp:
-                            type: string
-                          lastTerminationState:
-                            properties:
-                              exitCode:
-                                type: integer
-                              message:
-                                type: string
-                              reason:
-                                type: string
-                              timestamp:
-                                type: string
-                            type: object
-                          message:
-                            type: string
-                          name:
-                            type: string
-                          nodeName:
-                            type: string
-                          reason:
-                            type: string
-                          restartCount:
-                            type: integer
-                          terminating:
-                            type: boolean
-                          timestamp:
-                            type: string
-                          uid:
-                            type: string
-                        type: object
-                      type: array
-                    ready:
-                      items:
-                        properties:
-                          creationTimestamp:
-                            type: string
-                          lastTerminationState:
-                            properties:
-                              exitCode:
-                                type: integer
-                              message:
-                                type: string
-                              reason:
-                                type: string
-                              timestamp:
-                                type: string
-                            type: object
-                          name:
-                            type: string
-                          nodeName:
-                            type: string
-                          restartCount:
-                            type: integer
-                          terminating:
-                            type: boolean
-                          timestamp:
-                            type: string
-                          uid:
-                            type: string
-                        type: object
-                      type: array
-                  type: object
-                serviceName:
-                  type: string
+                  x-kubernetes-list-map-keys:
+                    - name
+                  x-kubernetes-list-type: map
+                readyReplicas:
+                  format: int32
+                  type: integer
+                replicas:
+                  format: int32
+                  type: integer
               type: object
           required:
             - metadata
             - spec
           type: object
+          x-kubernetes-validations:
+            - message: Exactly one container must be defined.
+              rule: self.spec.template.spec.containers.size() == 1
+            - message: Container name must match metadata.name of the Operation.
+              rule: self.spec.template.spec.containers[0].name == self.metadata.name
       served: true
       storage: true
       subresources:
@@ -1080,12 +1043,21 @@ spec:
   scope: Namespaced
   versions:
     - additionalPrinterColumns:
-        - jsonPath: .status.availableCondition.status
+        - jsonPath: .status.conditions[?(@.type=="Available")].status
           name: AVAILABLE
-          type: boolean
-        - jsonPath: .spec.replicas
+          type: string
+        - jsonPath: .status.replicas
           name: REPLICAS
           type: integer
+        - jsonPath: .status.readyReplicas
+          name: READY
+          type: integer
+        - jsonPath: .status.conditions[?(@.type=="Suspended")].status
+          name: SUSPENDED
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: AGE
+          type: date
       name: v1alpha1
       schema:
         openAPIV3Schema:
@@ -1093,7 +1065,7 @@ spec:
             metadata:
               properties:
                 name:
-                  maxLength: 63
+                  maxLength: 40
                   minLength: 1
                   pattern: ^[a-z]([-a-z0-9]*[a-z0-9])?$
                   type: string
@@ -1163,19 +1135,30 @@ spec:
                 ports:
                   items:
                     properties:
-                      host:
-                        minLength: 1
+                      appProtocol:
+                        maxLength: 317
+                        pattern: ^(([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)/)?[A-Za-z0-9]([-A-Za-z0-9_.]{0,61}[A-Za-z0-9])?$
                         type: string
+                      external:
+                        default:
+                          enabled: false
+                        properties:
+                          enabled:
+                            default: false
+                            type: boolean
+                          host:
+                            minLength: 1
+                            type: string
+                          path:
+                            default: /
+                            minLength: 1
+                            pattern: ^/.*
+                            type: string
+                        type: object
                       name:
-                        allOf:
-                          - pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                          - pattern: .*[a-z].*
                         maxLength: 15
                         minLength: 1
-                        type: string
-                      path:
-                        default: /
-                        minLength: 1
+                        pattern: ^[a-z]([-a-z0-9]*[a-z0-9])?$
                         type: string
                       port:
                         maximum: 65535
@@ -1185,8 +1168,14 @@ spec:
                       - port
                       - name
                     type: object
+                  maxItems: 100
                   minItems: 1
                   type: array
+                  x-kubernetes-validations:
+                    - message: port must be unique
+                      rule: self.all(x, size(self.filter(y, y.port == x.port)) == 1)
+                    - message: name must be unique
+                      rule: self.all(x, size(self.filter(y, y.name == x.name)) == 1)
                 replicas:
                   maximum: 2147483647
                   minimum: 0
@@ -1195,6 +1184,9 @@ spec:
                   default: 10
                   minimum: 0
                   type: integer
+                suspend:
+                  default: false
+                  type: boolean
                 template:
                   properties:
                     metadata:
@@ -1219,12 +1211,10 @@ spec:
                               args:
                                 items:
                                   type: string
-                                minItems: 1
                                 type: array
                               command:
                                 items:
                                   type: string
-                                minItems: 1
                                 type: array
                               env:
                                 items:
@@ -1274,7 +1264,6 @@ spec:
                                   required:
                                     - name
                                   type: object
-                                minItems: 1
                                 type: array
                               image:
                                 minLength: 1
@@ -1315,14 +1304,13 @@ spec:
                                     - name
                                     - mountPath
                                   type: object
-                                minItems: 1
                                 type: array
                               workingDir:
                                 minLength: 1
                                 type: string
                             required:
-                              - image
                               - name
+                              - image
                             type: object
                           type: array
                           x-kubernetes-preserve-unknown-fields: true
@@ -1352,145 +1340,83 @@ spec:
                 - template
               type: object
             status:
-              default:
-                availableCondition:
-                  status: false
               properties:
-                addresses:
+                conditions:
                   items:
                     properties:
-                      address:
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                observedGeneration:
+                  format: int64
+                  type: integer
+                ports:
+                  items:
+                    properties:
+                      externalAddress:
+                        type: string
+                      internalAddress:
+                        type: string
+                      name:
                         type: string
                       port:
                         type: integer
+                    required:
+                      - name
                     type: object
                   type: array
-                availableCondition:
-                  properties:
-                    lastTransitionTimestamp:
-                      format: date-time
-                      type: string
-                    message:
-                      type: string
-                    reason:
-                      type: string
-                    status:
-                      type: boolean
-                  type: object
-                deployName:
-                  type: string
-                hpaName:
-                  type: string
-                ingressName:
-                  type: string
-                pods:
-                  properties:
-                    pending:
-                      items:
-                        properties:
-                          creationTimestamp:
-                            type: string
-                          lastTerminationState:
-                            properties:
-                              exitCode:
-                                type: integer
-                              message:
-                                type: string
-                              reason:
-                                type: string
-                              timestamp:
-                                type: string
-                            type: object
-                          message:
-                            type: string
-                          name:
-                            type: string
-                          nodeName:
-                            type: string
-                          reason:
-                            type: string
-                          restartCount:
-                            type: integer
-                          terminating:
-                            type: boolean
-                          timestamp:
-                            type: string
-                          uid:
-                            type: string
-                        type: object
-                      type: array
-                    progressing:
-                      items:
-                        properties:
-                          creationTimestamp:
-                            type: string
-                          lastTerminationState:
-                            properties:
-                              exitCode:
-                                type: integer
-                              message:
-                                type: string
-                              reason:
-                                type: string
-                              timestamp:
-                                type: string
-                            type: object
-                          message:
-                            type: string
-                          name:
-                            type: string
-                          nodeName:
-                            type: string
-                          reason:
-                            type: string
-                          restartCount:
-                            type: integer
-                          terminating:
-                            type: boolean
-                          timestamp:
-                            type: string
-                          uid:
-                            type: string
-                        type: object
-                      type: array
-                    ready:
-                      items:
-                        properties:
-                          creationTimestamp:
-                            type: string
-                          lastTerminationState:
-                            properties:
-                              exitCode:
-                                type: integer
-                              message:
-                                type: string
-                              reason:
-                                type: string
-                              timestamp:
-                                type: string
-                            type: object
-                          name:
-                            type: string
-                          nodeName:
-                            type: string
-                          restartCount:
-                            type: integer
-                          terminating:
-                            type: boolean
-                          timestamp:
-                            type: string
-                          uid:
-                            type: string
-                        type: object
-                      type: array
-                  type: object
-                serviceName:
-                  type: string
+                  x-kubernetes-list-map-keys:
+                    - name
+                  x-kubernetes-list-type: map
+                readyReplicas:
+                  format: int32
+                  type: integer
+                replicas:
+                  format: int32
+                  type: integer
               type: object
           required:
             - metadata
             - spec
           type: object
+          x-kubernetes-validations:
+            - message: Exactly one container must be defined.
+              rule: self.spec.template.spec.containers.size() == 1
+            - message: Container name must match metadata.name of the Operation.
+              rule: self.spec.template.spec.containers[0].name == self.metadata.name
       served: true
       storage: true
       subresources:

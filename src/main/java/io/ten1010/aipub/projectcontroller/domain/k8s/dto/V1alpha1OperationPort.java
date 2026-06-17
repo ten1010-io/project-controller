@@ -7,11 +7,11 @@ import org.jspecify.annotations.Nullable;
 public class V1alpha1OperationPort {
 
   @Nullable
-  String host;
+  String appProtocol;
+  @Nullable
+  V1alpha1OperationPortExternal external;
   @Nullable
   String name;
-  @Nullable
-  String path;
   @Nullable
   Integer port;
 

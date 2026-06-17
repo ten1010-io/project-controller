@@ -15,7 +15,9 @@ public class V1alpha1OperationSpec {
   @Nullable
   Integer replicas;
   @Nullable
-  Integer reversionHistoryLimit;
+  Integer revisionHistoryLimit;
+  @Nullable
+  Boolean suspend;
   @Nullable
   V1PodTemplateSpec template;
 

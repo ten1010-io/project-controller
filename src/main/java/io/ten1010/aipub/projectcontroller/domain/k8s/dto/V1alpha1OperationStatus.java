@@ -1,5 +1,6 @@
 package io.ten1010.aipub.projectcontroller.domain.k8s.dto;
 
+import io.kubernetes.client.openapi.models.V1Condition;
 import java.util.List;
 import lombok.Data;
 import org.jspecify.annotations.Nullable;
@@ -8,18 +9,14 @@ import org.jspecify.annotations.Nullable;
 public class V1alpha1OperationStatus {
 
   @Nullable
-  List<V1alpha1OperationStatusAddress> addresses;
+  Long observedGeneration;
   @Nullable
-  V1alpha1OperationCondition availableCondition;
+  Integer replicas;
   @Nullable
-  String deployName;
+  Integer readyReplicas;
   @Nullable
-  String hpaName;
+  List<V1alpha1OperationStatusPort> ports;
   @Nullable
-  String ingressName;
-  @Nullable
-  String serviceName;
-  @Nullable
-  V1alpha1OperationPodStatus pods;
+  List<V1Condition> conditions;
 
 }
