@@ -27,7 +27,6 @@ import io.kubernetes.client.openapi.models.V1SecretList;
 import io.kubernetes.client.util.CallGeneratorParams;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1beta1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubVolume;
@@ -81,7 +80,6 @@ public class SharedInformerFactoryProvider {
     registerResourceQuotaInformer(informerFactory);
     registerSecretInformer(informerFactory);
     registerOperationInformer(informerFactory);
-    registerWorkspaceInformer(informerFactory);
     registerV1beta1WorkspaceInformer(informerFactory);
     registerAipubVolumeInformer(informerFactory);
     registerChainJobInformer(informerFactory);
@@ -315,16 +313,6 @@ public class SharedInformerFactoryProvider {
     SharedIndexInformer<V1alpha1Operation> informer = informerFactory.sharedIndexInformerFor(
         this.k8sApiProvider.getOperationApi(),
         V1alpha1Operation.class,
-        DEFAULT_RESYNC_PERIOD);
-    informer.addIndexers(Map.of(
-        IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
-        obj -> List.of(K8sObjectUtils.getNamespace(obj))));
-  }
-
-  private void registerWorkspaceInformer(SharedInformerFactory informerFactory) {
-    SharedIndexInformer<V1Workspace> informer = informerFactory.sharedIndexInformerFor(
-        this.k8sApiProvider.getWorkspaceApi(),
-        V1Workspace.class,
         DEFAULT_RESYNC_PERIOD);
     informer.addIndexers(Map.of(
         IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
