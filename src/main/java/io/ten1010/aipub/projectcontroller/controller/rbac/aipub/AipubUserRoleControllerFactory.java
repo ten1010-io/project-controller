@@ -15,7 +15,6 @@ import io.ten1010.aipub.projectcontroller.controller.watch.OnUpdateFilterFactory
 import io.ten1010.aipub.projectcontroller.controller.watch.RequestBuilderFactory;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1beta1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubVolume;
@@ -56,8 +55,6 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
             V1alpha1Project.class)::hasSynced)
         .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
             V1alpha1AipubUser.class)::hasSynced)
-        .withReadyFunc(
-            this.sharedInformerFactory.getExistingSharedIndexInformer(V1Workspace.class)::hasSynced)
         .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
             V1beta1Workspace.class)::hasSynced)
         .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
@@ -75,7 +72,6 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
         .watch(this::createRoleWatch)
         .watch(this::createProjectWatch)
         .watch(this::createAipubUserWatch)
-        .watch(this::createWorkspaceWatch)
         .watch(this::createV1beta1WorkspaceWatch)
         .watch(this::createChainJobWatch)
         .watch(this::createJobWatch)
@@ -110,14 +106,6 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
     watch.setOnUpdateFilter(this.onUpdateFilterFactory.aipubUserStatusBoundProjectsFieldFilter());
     watch.setRequestBuilder(this.requestBuilderFactory.aipubUserToAipubUserRoles());
 
-    return watch;
-  }
-
-  private ControllerWatch<V1Workspace> createWorkspaceWatch(WorkQueue<Request> workQueue) {
-    DefaultControllerWatch<V1Workspace> watch = new DefaultControllerWatch<>(workQueue,
-        V1Workspace.class);
-    watch.setOnUpdateFilter(this.onUpdateFilterFactory.workspaceFilter());
-    watch.setRequestBuilder(this.requestBuilderFactory.workspaceToAipubUserRoles());
     return watch;
   }
 

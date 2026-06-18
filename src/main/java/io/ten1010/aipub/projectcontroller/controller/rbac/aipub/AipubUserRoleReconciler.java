@@ -22,7 +22,6 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceNameResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
 import io.ten1010.aipub.projectcontroller.domain.k8s.RoleNameResolver;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1beta1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubVolume;
@@ -50,7 +49,6 @@ public class AipubUserRoleReconciler extends AbstractReconciler {
   private final Indexer<V1Role> roleIndexer;
   private final Indexer<V1alpha1AipubUser> userIndexer;
   private final Indexer<V1alpha1Project> projectIndexer;
-  private final Indexer<V1Workspace> workspaceIndexer;
   private final Indexer<V1beta1Workspace> v1beta1WorkspaceIndexer;
   private final Indexer<V1alpha1ChainJob> chainJobIndexer;
   private final Indexer<V1Job> jobIndexer;
@@ -79,9 +77,6 @@ public class AipubUserRoleReconciler extends AbstractReconciler {
         .getIndexer();
     this.projectIndexer = sharedInformerFactory
         .getExistingSharedIndexInformer(V1alpha1Project.class)
-        .getIndexer();
-    this.workspaceIndexer = sharedInformerFactory
-        .getExistingSharedIndexInformer(V1Workspace.class)
         .getIndexer();
     this.v1beta1WorkspaceIndexer = sharedInformerFactory
         .getExistingSharedIndexInformer(V1beta1Workspace.class)
@@ -143,8 +138,6 @@ public class AipubUserRoleReconciler extends AbstractReconciler {
     }
 
     List<KubernetesObject> workloads = new ArrayList<>();
-    List<V1Workspace> workspaces = this.workspaceIndexer.byIndex(
-        IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME, request.getNamespace());
     List<V1beta1Workspace> v1beta1Workspaces = this.v1beta1WorkspaceIndexer.byIndex(
         IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME, request.getNamespace());
     List<V1alpha1ChainJob> chainJobs = this.chainJobIndexer.byIndex(
@@ -159,7 +152,6 @@ public class AipubUserRoleReconciler extends AbstractReconciler {
         IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME, request.getNamespace());
     List<V1alpha1SftpServer> sftpServers = this.sftpServerIndexer.byIndex(
         IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME, request.getNamespace());
-    workloads.addAll(workspaces);
     workloads.addAll(v1beta1Workspaces);
     workloads.addAll(chainJobs);
     workloads.addAll(jobs);
