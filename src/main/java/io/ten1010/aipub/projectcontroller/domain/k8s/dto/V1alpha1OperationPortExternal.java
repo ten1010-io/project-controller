@@ -4,15 +4,13 @@ import lombok.Data;
 import org.jspecify.annotations.Nullable;
 
 @Data
-public class V1alpha1OperationCondition {
+public class V1alpha1OperationPortExternal {
 
   @Nullable
-  String lastTransitionTime;
+  Boolean enabled;
   @Nullable
-  String message;
+  String host;
   @Nullable
-  String reason;
-  @Nullable
-  Boolean status;
+  String path;
 
 }

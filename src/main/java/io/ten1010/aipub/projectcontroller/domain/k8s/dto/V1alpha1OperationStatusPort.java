@@ -4,11 +4,15 @@ import lombok.Data;
 import org.jspecify.annotations.Nullable;
 
 @Data
-public class V1alpha1OperationStatusAddress {
+public class V1alpha1OperationStatusPort {
 
   @Nullable
-  String address;
+  String name;
   @Nullable
   Integer port;
+  @Nullable
+  String internalAddress;
+  @Nullable
+  String externalAddress;
 
 }
