@@ -654,6 +654,11 @@ public class ReconciliationService {
             .withResources("commits")
             .withVerbs("*")
             .build();
+        V1PolicyRule imageBuildApiRule = new V1PolicyRuleBuilder()
+            .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
+            .withResources(ProjectApiConstants.IMAGE_BUILD_RESOURCE_PLURAL)
+            .withVerbs("*")
+            .build();
         //todo --
 
         yield List.of(
@@ -671,7 +676,8 @@ public class ReconciliationService {
             aipubSFtpServerApiRule,
             aipubVolumesApiRule,
             resourceQuotaApiRule,
-            commitApiRule
+            commitApiRule,
+            imageBuildApiRule
         );
       }
 
@@ -759,6 +765,11 @@ public class ReconciliationService {
             .withResources("commits")
             .withVerbs(BASIC_VERBS)
             .build();
+        V1PolicyRule imageBuildApiRule = new V1PolicyRuleBuilder()
+            .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
+            .withResources(ProjectApiConstants.IMAGE_BUILD_RESOURCE_PLURAL)
+            .withVerbs(BASIC_VERBS)
+            .build();
         //todo --
 
         yield List.of(
@@ -776,7 +787,8 @@ public class ReconciliationService {
             aipubSFtpServerApiRule,
             aipubVolumesApiRule,
             resourceQuotaApiRule,
-            commitApiRule
+            commitApiRule,
+            imageBuildApiRule
         );
       }
     };

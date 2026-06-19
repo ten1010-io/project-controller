@@ -3,6 +3,7 @@ package io.ten1010.aipub.projectcontroller.domain.k8s;
 import io.kubernetes.client.common.KubernetesObject;
 import io.kubernetes.client.openapi.models.V1CronJob;
 import io.kubernetes.client.openapi.models.V1Job;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageBuild;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
@@ -21,6 +22,7 @@ public class WorkloadResourceResolver {
         case "Job" -> "jobs";
         case "CronJob" -> "cronjobs";
         case "ChainJob" -> "chainjobs";
+        case "ImageBuild" -> "imagebuilds";
         default -> null;
       };
       if (resourceName != null) {
@@ -32,6 +34,9 @@ public class WorkloadResourceResolver {
     }
     if (workload instanceof V1CronJob) {
       return Optional.of("cronjobs");
+    }
+    if (workload instanceof V1alpha1ImageBuild) {
+      return Optional.of("imagebuilds");
     }
     return Optional.empty();
   }
