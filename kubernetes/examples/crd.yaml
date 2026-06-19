@@ -292,11 +292,12 @@ spec:
                       minimum: 1
                       type: integer
                     rps:
+                      maxLength: 19
                       minLength: 1
                       type: string
                       x-kubernetes-validations:
-                        - message: rps must be a positive integer string
-                          rule: self.matches("^[1-9]\\d*$")
+                        - message: rps must be a positive integer string within int64 range
+                          rule: self.matches("^[1-9]\\d*$") && (size(self) < 19 || self <= "9223372036854775807")
                     scaleDown:
                       default:
                         maxScalingSizeAtOnce: 1
@@ -614,6 +615,9 @@ spec:
                   format: int32
                   type: integer
                 replicas:
+                  format: int32
+                  type: integer
+                updatedReplicas:
                   format: int32
                   type: integer
               type: object

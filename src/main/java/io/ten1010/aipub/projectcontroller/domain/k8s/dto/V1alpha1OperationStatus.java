@@ -15,6 +15,8 @@ public class V1alpha1OperationStatus {
   @Nullable
   Integer readyReplicas;
   @Nullable
+  Integer updatedReplicas;
+  @Nullable
   List<V1alpha1OperationStatusPort> ports;
   @Nullable
   List<V1Condition> conditions;
