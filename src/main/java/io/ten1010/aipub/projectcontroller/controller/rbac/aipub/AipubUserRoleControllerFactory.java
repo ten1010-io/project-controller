@@ -19,6 +19,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1beta1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubVolume;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ChainJob;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageBuild;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Operation;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1SftpServer;
@@ -69,6 +70,8 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
             V1alpha1AipubVolume.class)::hasSynced)
         .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
             V1alpha1SftpServer.class)::hasSynced)
+        .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
+            V1alpha1ImageBuild.class)::hasSynced)
         .watch(this::createRoleWatch)
         .watch(this::createProjectWatch)
         .watch(this::createAipubUserWatch)
@@ -79,6 +82,7 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
         .watch(this::createOperationWatch)
         .watch(this::createAipubVolumeWatch)
         .watch(this::createSftpServerWatch)
+        .watch(this::createImageBuildWatch)
         .withReconciler(new AipubUserRoleReconciler(this.sharedInformerFactory, this.k8sApiProvider,
             this.reconciliationService))
         .build();
@@ -163,6 +167,14 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
         V1alpha1SftpServer.class);
     watch.setOnUpdateFilter(this.onUpdateFilterFactory.sftpServerFilter());
     watch.setRequestBuilder(this.requestBuilderFactory.sftpServerToAipubUserRoles());
+    return watch;
+  }
+
+  private ControllerWatch<V1alpha1ImageBuild> createImageBuildWatch(WorkQueue<Request> workQueue) {
+    DefaultControllerWatch<V1alpha1ImageBuild> watch = new DefaultControllerWatch<>(workQueue,
+        V1alpha1ImageBuild.class);
+    watch.setOnUpdateFilter(this.onUpdateFilterFactory.imageBuildFilter());
+    watch.setRequestBuilder(this.requestBuilderFactory.imageBuildToAipubUserRoles());
     return watch;
   }
 
