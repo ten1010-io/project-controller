@@ -34,3 +34,6 @@ app:
       - "aipub.ten1010.io/v1/Commit"
       - "aipub.ten1010.io/v1alpha1/UserAuthorityReview"
       - "aipub.ten1010.io/v1/UserAuthorityReview"
+    reconcile-excluded-label-selectors:
+      - "app.kubernetes.io/part-of=cilium"
+      - "kubevirt.io"

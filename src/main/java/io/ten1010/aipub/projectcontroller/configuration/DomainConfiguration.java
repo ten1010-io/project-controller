@@ -6,6 +6,7 @@ import io.kubernetes.client.util.KubeConfig;
 import io.ten1010.aipub.projectcontroller.domain.k8s.DockerConfigJsonResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.WorkloadExclusionResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.SubjectResolver;
 import java.io.FileReader;
 import java.io.IOException;
@@ -49,7 +50,8 @@ public class DomainConfiguration {
   public ReconciliationService reconciliationService(SubjectResolver subjectResolver,
       DockerConfigJsonResolver dockerConfigJsonResolver, AipubProperties aipubProperties) {
     return new ReconciliationService(subjectResolver, dockerConfigJsonResolver,
-        aipubProperties.getReservedNamespace());
+        aipubProperties.getReservedNamespace(),
+        new WorkloadExclusionResolver(aipubProperties.getReconcileExcludedLabelSelectors()));
   }
 
 }

@@ -47,7 +47,7 @@ public class DeploymentReviewHandler extends AbstractReviewHandler<V1Deployment>
 
     V1Deployment deployment = getRequestObject(review);
 
-    if (K8sObjectUtils.isCiliumComponent(deployment)) {
+    if (this.reconciliationService.isExcludedFromReconciliation(deployment)) {
       V1AdmissionReviewUtils.allow(review);
       return;
     }

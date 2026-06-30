@@ -66,7 +66,7 @@ public class WorkloadControllerReconciler extends AbstractReconciler {
       return new Result(false);
     }
     KubernetesObject controller = controllerOpt.get();
-    if (K8sObjectUtils.isCiliumComponent(controller)) {
+    if (this.reconciliationService.isExcludedFromReconciliation(controller)) {
       return new Result(false);
     }
     if (K8sObjectUtils.findControllerOwnerReference(controller).isPresent()) {
