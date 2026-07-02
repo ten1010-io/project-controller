@@ -1,38 +1,55 @@
-# AIP-1998 — KubeVirt virt-handler 파드 churn 진단 노트
+# AIP-1998 — KubeVirt virt-handler 파드 churn 진단/조치 노트
 
-> 퇴근 전 인계용 메모. 집에서 이어서 확인하기 위한 스냅샷.
-> 진단 로그 커밋(`[AIP-1998-EXCLUDE]`)이 적용된 이미지로 배포한 뒤의 관찰 기록이다.
+> 원인 확정 및 조치 완료 기록. (초기 인계 메모 → 클러스터 실측으로 결론 확정)
 
 ## TL;DR
 
-- **project controller ↔ virt-operator 패치 루프 자체(AIP-1998 본래 문제)는 fix가 동작 중.** project controller 로그에 virt-handler를 skip하는 로그가 정상적으로 찍힌다.
-- **그런데 virt-handler 파드는 여전히 약 30초 주기로 죽고, DaemonSet generation도 계속 오른다.**
-- generation이 계속 오른다 = **누군가 DaemonSet 템플릿(spec)을 반복적으로 패치하고 있다.** project controller는 skip 중이므로 **그 writer는 project controller가 아니다.** → virt-operator 또는 coaster(GPU 오퍼레이터) 등 다른 주체가 유력.
-- 즉 **남은 churn은 AIP-1998(project controller)과 별개의 원인**이며, 별도 진단이 필요하다. AIP-1998 PR 자체는 이대로 머지 가능하고, 진단 로그 커밋만 나중에 revert하면 된다.
+- virt-handler 파드가 ~10~30초 주기로 재생성되고 DaemonSet generation이 무한 증가하던 현상의 원인은 **virt-handler DS 템플릿을 두고 벌어지는 두 개의 독립적인 패치 전쟁**이었다.
+  - **War A** — `template.spec.affinity` 를 두고 **coaster ↔ virt-operator** 가 다툼.
+  - **War B** — `template.spec.tolerations` 를 두고 **project-controller ↔ virt-operator** 가 다툼.
+- 두 전쟁 모두 "제3의 writer가 virt-operator 소유 DS를 직접 패치 → virt-operator가 KubeVirt CR 기준 desired로 되돌림" 이라는 동일 구조다.
+- 조치: **(A)** KubeVirt CR `spec.workloads.nodePlacement.affinity` 에 coaster의 evict-ds affinity를 동일하게 선언, **(B)** project-controller의 `kubevirt.io` reconcile 제외 유지. 두 조치는 서로 독립적이며 **둘 다 필요**하다(실험으로 확인).
 
-## 확정된 사실 (fix 동작 증거)
+## 근본 원인: virt-operator의 DaemonSet 소유/재조정
 
-project controller 로그:
+KubeVirt `pkg/virt-operator/resource/apply/apps.go` 의 `syncDaemonSet`:
+
+- `DaemonSetIsUpToDate(...)` + generation 비교(`GetExpectedGeneration`)로 실제 DS가 desired와 다른지 감지한다.
+- `placement.InjectPlacementMetadata(kv.Spec.Workloads, &daemonSet.Spec.Template.Spec, ...)` 로 **KubeVirt CR `spec.workloads` 기준의 desired 템플릿(affinity/nodeSelector/tolerations)을 강제**한다.
+- 차이가 있으면 `patchDaemonSet` 으로 되돌린다.
+
+즉 **누가 virt-handler DS 템플릿을 직접 패치하든, 그 값이 KubeVirt CR에 반영돼 있지 않으면 virt-operator가 매번 원복**한다. 상대 writer가 다시 쓰면 → 무한 패치 루프 → generation 증가 → rolling update → 파드 churn.
+
+> 일반 DaemonSet(csi-nfs-node, dcgm-exporter 등)은 이런 능동적 소유자가 없어 외부 주입이 그대로 유지되므로 문제가 없다. **virt-handler만 소유자(virt-operator)가 지속 reconcile하기 때문에** 전쟁이 난다.
+
+## War A — affinity (coaster ↔ virt-operator)
+
+- coaster(GPU 오퍼레이터)는 GPU 재구성 시 노드에서 DaemonSet을 드레인하기 위해 **클러스터의 거의 모든 DaemonSet에 evict-ds nodeAffinity를 주입**한다. virt-handler에 주입하는 값은:
+
+  ```yaml
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: gpuconfig.coaster.ten1010.io/evict-ds
+          operator: DoesNotExist
+  ```
+
+- KubeVirt CR에는 affinity가 선언돼 있지 않았으므로(→ virt-operator의 desired에는 affinity 없음), virt-operator가 이 affinity를 drift로 보고 계속 제거 → coaster가 재주입 → 전쟁.
+- managedFields상 affinity 필드 소유자는 `OpenAPI-Generator` (coaster의 Kubernetes 클라이언트 기본 field manager).
+
+**직접 관찰(조치 전):**
 
 ```
-[AIP-1998-EXCLUDE] reconcile skipped for excluded workload: kind=V1DaemonSet namespace=kubevirt name=virt-handler
+gen=15853  affinityKey=[gpuconfig.coaster.ten1010.io/evict-ds]   ← coaster 주입
+gen=15854  affinityKey=[]                                         ← virt-operator 제거 (gen++)
+gen=15857  affinityKey=[gpuconfig.coaster.ten1010.io/evict-ds]    ← coaster 재주입 (gen++)
 ```
 
-→ `reconcile-excluded-label-selectors` 의 `kubevirt.io` 셀렉터가 적용되어, project controller의 DaemonSet reconciler가 virt-handler를 더 이상 패치하지 않는다. (scale-to-0 테스트 때도 generation 증가가 멈췄던 것과 일관)
-
-## 미해결: 남은 30초 주기 파드 churn
-
-관찰된 증상:
-
-- virt-handler 파드가 Running 까지 갔다가 `Killing/Stopping` 되고 **새 파드 이름으로 재생성**된다 (컨테이너 in-place 재시작이 아님, RESTARTS=0).
-- 이벤트:
-  - `Warning FailedUpdate  daemonSet virt-handler rollout failed`
-  - `Warning PodFailed     Pod is in Failed state` (반복)
-- **DaemonSet generation 계속 증가** (project controller skip 중인데도) → 다른 writer가 템플릿을 패치 중.
-
-유력 단서 — DaemonSet 템플릿의 nodeAffinity:
+**조치 A:** KubeVirt CR에 coaster가 원하는 affinity를 **정확히 동일하게** 선언 → virt-operator의 desired에 포함되어 더 이상 원복하지 않음. 값이 다르면(예: 키 추가) 새 전쟁이 나므로 관찰된 단일 키를 그대로 사용해야 한다.
 
 ```yaml
+# KubeVirt CR spec.workloads.nodePlacement
 affinity:
   nodeAffinity:
     requiredDuringSchedulingIgnoredDuringExecution:
@@ -40,52 +57,52 @@ affinity:
       - matchExpressions:
         - key: gpuconfig.coaster.ten1010.io/evict-ds
           operator: DoesNotExist
+tolerations:                       # 기존 유지
+- { effect: NoSchedule, key: project.aipub.ten1010.io/project-managed, operator: Exists }
+- { effect: NoExecute,  key: project.aipub.ten1010.io/project-managed, operator: Exists }
 ```
 
-- `evict-ds`(DaemonSet 축출)라는 이름 + reservedNamespace 목록에 `coaster`가 포함됨.
-- 가설: **coaster(GPU 오퍼레이터)가 노드에 `gpuconfig.coaster.ten1010.io/evict-ds` 라벨을 붙였다/뗐다 하며 virt-handler 파드를 축출·재생성**시키고 있을 가능성. 또는 virt-operator가 자신의 desired state와 어긋남을 감지해 파드를 지우는 루프.
-- generation이 오르는 것까지 설명하려면, 누군가 **템플릿(affinity 등)을 주기적으로 바꾸는** 쪽을 의심해야 한다 (coaster ↔ virt-operator 간 또다른 2-writer 충돌 가능성).
+**검증(조치 후):** apply 직후 gen +1(반영) 후 **고정**, affinity present 유지, 파드 안정(RESTARTS=0, AGE 지속 증가).
 
-## 집에서 확인할 진단 명령
+## War B — tolerations (project-controller ↔ virt-operator)
 
-```bash
-# 1. 파드가 왜 죽는지 — Last State / Exit Code / 종료 사유
-kubectl describe pod -n kubevirt <virt-handler-파드명> | grep -A15 "State\|Last State\|Events"
+`kubevirt.io` 제외를 걷어내고 project-controller를 재기동해 **격리 실험**으로 확정했다.
 
-# 2. 직전 컨테이너 종료 로그
-kubectl logs -n kubevirt <virt-handler-파드명> --previous
+- virt-handler DS는 **ownerReference가 없어서**, project-controller의 `WorkloadControllerReconciler` owner-ref skip에 걸리지 않는다. `kubevirt` 네임스페이스는 reserved 목록에 없어 project는 null.
+- 제외가 없으면 reconciler가 tolerations를 재조정: CR의 `project-managed Exists` 를 **per-node `project-managed Equal value=node01/node02`** 로 치환(`buildProjectManagedTolerations`). virt-operator는 CR 기준 `Exists`로 원복 → 전쟁.
+- managedFields상 tolerations를 쓰는 writer는 `Kubernetes Java Client` (**project-controller**의 field manager). → affinity를 쓰던 `OpenAPI-Generator`(coaster)와 **field manager 이름이 달라 둘이 명확히 구분**된다.
 
-# 3. 노드에 evict-ds 라벨이 붙는지 (핵심 가설) — 시간차로 여러 번 확인
-kubectl get node node02 --show-labels | tr ',' '\n' | grep -i "coaster\|evict\|gpu"
-kubectl get node node01 --show-labels | tr ',' '\n' | grep -i "coaster\|evict\|gpu"
+**직접 관찰(제외 제거 상태):** tolerations가 두 값 사이를 flip하며 generation 증가, 파드 ~7초 주기 롤링.
 
-# 4. 누가 파드를 지우는지 — virt-operator가 지우는지 확인
-kubectl logs -n kubevirt -l kubevirt.io=virt-operator --tail=200 | grep -i "virt-handler\|delete\|evict"
-
-# 5. coaster 컴포넌트 확인
-kubectl get pods -n coaster 2>/dev/null
-
-# 6. DaemonSet generation이 정말 계속 오르는지 + 무엇이 바뀌는지
-kubectl get ds virt-handler -n kubevirt -w
-#   generation이 오르는 순간 spec diff를 떠서 어떤 필드가 바뀌는지 확인
-kubectl get ds virt-handler -n kubevirt -o yaml > /tmp/ds-1.yaml
-# (수 초 후)
-kubectl get ds virt-handler -n kubevirt -o yaml > /tmp/ds-2.yaml
-diff /tmp/ds-1.yaml /tmp/ds-2.yaml
+```
+gen=16607 tolOperators=[Exists Equal Equal Equal Equal]   ← project-controller (per-node Equal)
+gen=16608 tolOperators=[Exists Exists Exists]             ← virt-operator 원복 (gen++)
+gen=16611 tolOperators=[Exists Equal Equal Equal Equal]   ← project-controller 재적용 (gen++)
+gen=16614 tolOperators=[Exists Exists Exists]             ← virt-operator 원복 (gen++)
 ```
 
-**핵심 질문**: 6번 diff에서 generation이 오를 때 **어떤 spec 필드가 바뀌는가?** 그게 바뀌는 필드를 보면 어떤 writer(virt-operator vs coaster)인지 특정할 수 있다. 그리고 3번에서 node01/node02에 `evict-ds` 라벨이 들락거리는지 확인.
+**조치 B:** project-controller의 `app.aipub.reconcile-excluded-label-selectors` 에 `kubevirt.io` 유지(운영에서는 `project-controller-envs` ConfigMap의 `APP_AIPUB_RECONCILE_EXCLUDED_LABEL_SELECTORS`). 제외가 걸리면 reconciler·Pod/Deployment webhook 3개 지점 모두 virt-handler를 건드리지 않는다.
 
-## 정리 표
+**검증(제외 복구 후):** gen 고정, tolerations가 `[Exists Exists Exists]`(virt-operator desired)로 정착, 파드 안정. Pod webhook 로그에 `allowed without patch ... virt-handler-` 재확인.
 
-| 항목 | 상태 |
-|---|---|
-| project controller ↔ virt-operator 패치 루프 (AIP-1998) | **해결** (skip 로그 확인) |
-| AIP-1998 fix 동작 | **검증 완료** |
-| 남은 30초 파드 churn + generation 증가 | **별개 원인 (project controller 아님)** — coaster `evict-ds` / virt-operator 재패치 추정, 추가 진단 필요 |
+## 두 전쟁 요약
 
-## 후속 작업
+| | War A | War B |
+|---|---|---|
+| 다투는 필드 | `template.spec.affinity` | `template.spec.tolerations` |
+| 상대 writer | coaster (`OpenAPI-Generator`) | project-controller (`Kubernetes Java Client`) |
+| 트리거 | coaster의 evict-ds affinity 주입 | project-controller의 per-node tolerations 재조정 |
+| 조치 | KubeVirt CR에 affinity 동일 선언 | project-controller `kubevirt.io` 제외 유지 |
+| 상태 | **해결** | **해결(제외 유지)** |
 
-- AIP-1998 PR(#69 resource-group-controller, #140 aipub-installer)은 이대로 머지 가능.
-- 진단 로그 커밋(`[AIP-1998-EXCLUDE]`)은 검증 종료 후 `git revert` 로 되돌린다.
-- 남은 churn은 coaster/kubevirt 쪽 별도 티켓으로 분리해 다루는 것을 권장.
+## 현재 적용 상태
+
+- KubeVirt CR: `spec.workloads.nodePlacement.affinity` 에 evict-ds affinity 추가 적용됨. (설치 소스: `mdc-root:/root/kubevirt/pjw/kubevirt-cr.yaml`, 리포 사본: `kubernetes/kubevirt-cr-pjw.yaml`)
+- project-controller: `kubevirt.io` 제외 유지, 재기동 완료.
+
+## 남은 과제 / 주의
+
+- **근본 해결(권장)**: coaster가 오퍼레이터 소유(virt-operator 등) DaemonSet을 직접 패치하지 않고, 해당 오퍼레이터의 API(KubeVirt CR nodePlacement 등)를 통해 배치를 구성하도록 개선. 별도 티켓 권장.
+- **취약한 결합**: 조치 A는 coaster가 virt-handler에 주입하는 affinity 값과 CR 값이 **정확히 일치**해야 no-op이 된다. coaster가 주입 형태를 바꾸면(예: `tpc-discovery.coaster.ten1010.io/evict-ds` 키 추가) War A가 재발하므로 CR도 함께 갱신해야 한다.
+- **Helm 관리**: `project-controller-envs`, KubeVirt CR 모두 배포 도구로 관리되므로, 위 조치는 각 설치 매니페스트/차트에도 반영해야 재배포 시 유지된다.
+- 진단용 임시 로그 커밋(`[AIP-1998-EXCLUDE]`)은 검증 완료 후 히스토리에서 제거함(별도 revert 커밋 없이 정리).
