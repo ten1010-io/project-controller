@@ -45,6 +45,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.util.NodeUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.ProjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.ResourceQuotaUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.UsernameUtils;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.WorkloadExclusionResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.WorkloadUtils;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -72,9 +73,11 @@ public class ReconciliationService {
   private final Gson gson;
   private final ObjectMapper mapper;
   private final List<String> reservedNamespaces;
+  private final WorkloadExclusionResolver workloadExclusionResolver;
 
   public ReconciliationService(SubjectResolver subjectResolver,
-      DockerConfigJsonResolver dockerConfigJsonResolver, List<String> reservedNamespaces) {
+      DockerConfigJsonResolver dockerConfigJsonResolver, List<String> reservedNamespaces,
+      WorkloadExclusionResolver workloadExclusionResolver) {
     this.subjectResolver = subjectResolver;
     this.dockerConfigJsonResolver = dockerConfigJsonResolver;
     this.roleNameResolver = new RoleNameResolver();
@@ -83,6 +86,16 @@ public class ReconciliationService {
     this.gson = new Gson();
     this.mapper = new ObjectMapperFactory().createObjectMapper();
     this.reservedNamespaces = reservedNamespaces;
+    this.workloadExclusionResolver = workloadExclusionResolver;
+  }
+
+  /**
+   * 주어진 워크로드가 reconcile/mutating 대상에서 제외되어야 하는지 판정한다. virt-operator처럼
+   * 자체 워크로드를 직접 소유하는 인프라 오퍼레이터의 객체를 project controller가 건드리지 않도록
+   * {@code app.aipub.reconcile-excluded-label-selectors} 설정으로 지정한다.
+   */
+  public boolean isExcludedFromReconciliation(KubernetesObject object) {
+    return this.workloadExclusionResolver.isExcluded(object);
   }
 
   private static List<V1OwnerReference> removeOwnerReferencesThatReferToProjectKind(

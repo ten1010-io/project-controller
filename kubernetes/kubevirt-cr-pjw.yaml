@@ -1,0 +1,37 @@
+---
+apiVersion: kubevirt.io/v1
+kind: KubeVirt
+metadata:
+  name: kubevirt
+  namespace: kubevirt
+spec:
+  certificateRotateStrategy: {}
+  configuration:
+    developerConfiguration:
+      featureGates: []
+    imagePullPolicy: IfNotPresent
+  customizeComponents: {}
+  imagePullPolicy: IfNotPresent
+  workloadUpdateStrategy: {}
+  workloads:
+    nodePlacement:
+      # AIP-1998: coaster(gpuconfig-controller)가 virt-handler DS 템플릿에 주입하는
+      # evict-ds nodeAffinity와 "정확히 동일한" 값을 KubeVirt CR에 선언한다.
+      # 이렇게 해야 virt-operator의 desired 템플릿에 이 affinity가 포함되어
+      # coaster의 주입을 drift로 보지 않고 되돌리지 않는다 → generation churn 전쟁 종료.
+      # 값이 coaster가 원하는 것과 다르면(예: 키 추가) 새로운 전쟁이 발생하므로
+      # 관찰된 단일 키를 그대로 사용한다.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: gpuconfig.coaster.ten1010.io/evict-ds
+                    operator: DoesNotExist
+      tolerations:
+        - effect: NoSchedule
+          key: project.aipub.ten1010.io/project-managed
+          operator: Exists
+        - effect: NoExecute
+          key: project.aipub.ten1010.io/project-managed
+          operator: Exists

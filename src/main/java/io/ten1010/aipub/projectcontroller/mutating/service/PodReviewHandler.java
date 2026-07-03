@@ -47,7 +47,7 @@ public class PodReviewHandler extends AbstractReviewHandler<V1Pod> {
 
     V1Pod pod = getRequestObject(review);
 
-    if (K8sObjectUtils.isCiliumComponent(pod)) {
+    if (this.reconciliationService.isExcludedFromReconciliation(pod)) {
       V1AdmissionReviewUtils.allow(review);
       return;
     }
