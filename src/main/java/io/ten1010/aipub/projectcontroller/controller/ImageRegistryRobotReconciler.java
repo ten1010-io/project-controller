@@ -120,8 +120,15 @@ public class ImageRegistryRobotReconciler extends AbstractReconciler {
     return ProjectUtils.getSpecBindingImageHubs(project).stream()
         .map(e -> this.imageHubIndexer.getByKey(this.keyResolver.resolveKey(e)))
         .filter(Objects::nonNull)
+        .filter(ImageRegistryRobotReconciler::hasSpecId)
         .map(ImageRegistryRobotReconciler::createPermission)
         .toList();
+  }
+
+  private static boolean hasSpecId(V1alpha1ImageHub imageHub) {
+    return imageHub.getSpec() != null
+        && imageHub.getSpec().getId() != null
+        && !imageHub.getSpec().getId().isBlank();
   }
 
 }

@@ -29,8 +29,13 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.util.WorkloadUtils;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class JobWorkloadControllerFactory extends WorkloadControllerFactory {
+
+  private static final Logger log = LoggerFactory.getLogger(JobWorkloadControllerFactory.class);
+  private static final int HTTP_UNPROCESSABLE_ENTITY = 422;
 
   private final BatchV1Api batchV1Api;
   private final OnUpdateFilterFactory onUpdateFilterFactory;
@@ -154,7 +159,22 @@ public class JobWorkloadControllerFactory extends WorkloadControllerFactory {
           .endSpec()
           .build();
     }
-    updateJob(K8sObjectUtils.getNamespace(controller), K8sObjectUtils.getName(controller), edited);
+    try {
+      updateJob(K8sObjectUtils.getNamespace(controller), K8sObjectUtils.getName(controller), edited);
+    } catch (ApiException e) {
+      // A Job's spec.template is immutable after creation. When an existing Job's desired
+      // tolerations/affinity/imagePullSecrets drift from the template it was created with, the
+      // API server rejects the update with 422. There is nothing we can do about an already
+      // admitted Job, so treat it as terminal instead of requeueing forever and spamming error
+      // logs. The initial injection is applied when the Job is first admitted.
+      if (e.getCode() == HTTP_UNPROCESSABLE_ENTITY) {
+        log.debug(
+            "Skipping update of Job [namespace={} name={}] because its spec.template is immutable",
+            K8sObjectUtils.getNamespace(controller), K8sObjectUtils.getName(controller));
+        return new Result(false);
+      }
+      throw e;
+    }
     return new Result(false);
   }
 
