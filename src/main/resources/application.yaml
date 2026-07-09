@@ -25,6 +25,7 @@ app:
   aipub:
     enabled: false
     server-url: "https://aipub.example.com"
+    harbor-external-url: "https://aipub-harbor.example.com"
     verifying-ssl: false
     username: "testuser"
     password: "asdasdasd"

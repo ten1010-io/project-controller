@@ -4,7 +4,7 @@
 
 ```bash
 # 이미지 빌드 & Harbor push
-./image_push.sh 1.5.0
+./image_push.sh 1.7.5
 ```
 
 ## 프로덕션 서버에서 실행
@@ -21,7 +21,7 @@ echo $CA_BUNDLE
 
 ```bash
 sudo kubectl -n project-controller set image deployment/project-controller \
-  project-controller=<HARBOR_REGISTRY>/project-controller/project-controller:1.5.0
+  project-controller=<HARBOR_REGISTRY>/project-controller/project-controller:1.7.5
 
 # 롤아웃 확인
 sudo kubectl -n project-controller rollout status deployment/project-controller --timeout=120s

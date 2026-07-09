@@ -21,12 +21,11 @@ public class AipubDockerConfigJsonResolver implements DockerConfigJsonResolver {
   private final ImageRegistryRobotUsernameResolver imageRegistryRobotUsernameResolver;
 
   public AipubDockerConfigJsonResolver(
-      ImageRegistryInfoService imageRegistryInfoService,
+      String harborExternalUrl,
       ImageRegistryRobotService imageRegistryRobotService,
       ImageRegistryRobotUsernameResolver imageRegistryRobotUsernameResolver) {
-    String uri = imageRegistryInfoService.getImageRegistryInfo().getUri();
-    Objects.requireNonNull(uri);
-    this.registryDomain = removeHttpProtocolPrefix(uri);
+    Objects.requireNonNull(harborExternalUrl);
+    this.registryDomain = removeHttpProtocolPrefix(harborExternalUrl);
     this.imageRegistryRobotService = imageRegistryRobotService;
     this.imageRegistryRobotUsernameResolver = imageRegistryRobotUsernameResolver;
   }
