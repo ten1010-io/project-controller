@@ -7,13 +7,11 @@ import io.ten1010.aipub.projectcontroller.domain.aipubbackend.AipubDockerConfigJ
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.AipubSubjectResolver;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ArtifactService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageHubService;
-import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryInfoService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotUsernameResolver;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.RepositoryService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.impl.ArtifactServiceImpl;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.impl.ImageHubServiceImpl;
-import io.ten1010.aipub.projectcontroller.domain.aipubbackend.impl.ImageRegistryInfoServiceImpl;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.impl.ImageRegistryRobotServiceImpl;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.impl.ImageRegistryRobotUsernameResolverImpl;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.impl.RepositoryServiceImpl;
@@ -39,6 +37,8 @@ public class AipubConfiguration {
   private final boolean aipubEnabled;
   @Nullable
   private final ApiClient aipubBackendClient;
+  @Nullable
+  private final String harborExternalUrl;
 
   public AipubConfiguration(AipubProperties aipubProperties) {
     Objects.requireNonNull(aipubProperties.getEnabled());
@@ -46,9 +46,12 @@ public class AipubConfiguration {
 
     if (this.aipubEnabled) {
       Objects.requireNonNull(aipubProperties.getServerUrl());
+      Objects.requireNonNull(aipubProperties.getHarborExternalUrl());
       Objects.requireNonNull(aipubProperties.getVerifyingSsl());
       Objects.requireNonNull(aipubProperties.getUsername());
       Objects.requireNonNull(aipubProperties.getPassword());
+
+      this.harborExternalUrl = aipubProperties.getHarborExternalUrl();
 
       ApiClient client = new ApiClient();
       client.setBasePath(aipubProperties.getServerUrl() + "/api/v1alpha1");
@@ -60,6 +63,7 @@ public class AipubConfiguration {
       this.aipubBackendClient = client;
     } else {
       this.aipubBackendClient = null;
+      this.harborExternalUrl = null;
     }
   }
 
@@ -75,12 +79,11 @@ public class AipubConfiguration {
   public DockerConfigJsonResolver dockerConfigJsonResolver() {
     if (this.aipubEnabled) {
       Objects.requireNonNull(this.aipubBackendClient);
-      ImageRegistryInfoService infoService = new ImageRegistryInfoServiceImpl(
-          this.aipubBackendClient);
+      Objects.requireNonNull(this.harborExternalUrl);
       ImageRegistryRobotService robotService = new ImageRegistryRobotServiceImpl(
           this.aipubBackendClient);
       ImageRegistryRobotUsernameResolver usernameResolver = new ImageRegistryRobotUsernameResolverImpl();
-      return new AipubDockerConfigJsonResolver(infoService, robotService, usernameResolver);
+      return new AipubDockerConfigJsonResolver(this.harborExternalUrl, robotService, usernameResolver);
     }
     return new DefaultDockerConfigJsonResolver();
   }

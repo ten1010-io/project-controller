@@ -14,6 +14,9 @@ public class AipubProperties {
   private Boolean enabled;
   @Nullable
   private String serverUrl;
+  /** 이미지 레지스트리(harbor)의 외부 접근 주소. (예: https://aipub-harbor.example.com) */
+  @Nullable
+  private String harborExternalUrl;
   @Nullable
   private Boolean verifyingSsl;
   @Nullable
