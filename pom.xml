@@ -67,6 +67,14 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
+        <!-- kubernetes-client-extended 의 DefaultController 가 workqueue 메트릭에 사용(런타임 필수).
+             소스에서 직접 import 하지 않지만 제거하면 io.prometheus.client.Gauge NoClassDefFoundError 로
+             기동에 실패한다. micrometer-registry-prometheus(io.prometheus.metrics 1.x)로는 대체 불가. -->
+        <dependency>
+            <groupId>io.prometheus</groupId>
+            <artifactId>simpleclient</artifactId>
+            <version>0.16.0</version>
+        </dependency>
 
         <!-- Etc dependencies -->
         <dependency>
