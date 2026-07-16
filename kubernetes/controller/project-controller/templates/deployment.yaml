@@ -33,8 +33,8 @@ spec:
           ports:
             - name: webhook
               containerPort: 8080
-            - name: metrics
-              containerPort: 8081
+            - name: management
+              containerPort: 8082
           envFrom:
             - configMapRef:
                 name: project-controller-envs

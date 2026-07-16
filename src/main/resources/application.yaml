@@ -41,8 +41,8 @@ app:
 
 management:
   server:
-    # webhook(메인 8080)은 TLS 이므로 actuator/prometheus 는 평문 포트로 분리한다.
-    port: 8081
+    # webhook(메인 8080)은 TLS 라 actuator 를 평문 포트로 분리. backend Java 서비스(8082)와 통일.
+    port: 8082
   endpoints:
     web:
       exposure:
