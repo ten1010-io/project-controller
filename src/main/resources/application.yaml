@@ -43,6 +43,9 @@ management:
   server:
     # webhook(메인 8080)은 TLS 라 actuator 를 평문 포트로 분리. backend Java 서비스(8082)와 통일.
     port: 8082
+    ssl:
+      # webhook 의 server.ssl 을 management 커넥터가 상속하지 않도록 평문(http)으로 강제한다.
+      enabled: false
   endpoints:
     web:
       exposure:
