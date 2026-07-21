@@ -2,4 +2,3 @@ generatorOptions:
   disableNameSuffixHash: true
 resources:
   - project-controller
-  - dashboard

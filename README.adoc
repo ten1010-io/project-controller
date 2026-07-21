@@ -1,0 +1,198 @@
+= AIPub
+:github: https://github.com/ten1010-io/project-controller
+
+*세상을 널리 AI롭게 합니다.*
+
+AIPub은 TEN(주식회사 텐)이 만드는 Kubernetes 기반 워크로드 오케스트레이션 플랫폼입니다.
+GPU 자원과 사용자 권한에 대한 확장 기능을 제공하여, AI 모델러·IT 엔지니어·관리자가
+하나의 통합된 환경에서 협업할 수 있도록 돕습니다.
+
+== 이 저장소는 무엇인가요
+
+이 프로젝트는 AIPub을 구성하는 컴포넌트 중 하나입니다.
+전체 플랫폼 소개는 https://ten1010.io[ten1010.io] 를 참고해주세요.
+
+== AIPub이 하는 일
+
+* *GPU 리소스 관리* — Block(1% 단위 소프트웨어 분할) / MIG(하드웨어 분할) 두 방식으로
+  물리 GPU 하나를 여러 워크로드가 나눠 쓸 수 있게 합니다.
+* *유휴 자원 자동 회수(Dynamic Allocation)* — 사용하지 않는 GPU 조각을
+  실시간으로 감지해 다른 워크로드에 재분배합니다.
+* *워크로드 3종* — Workspace(개발/디버깅), Operation(운영 서비스),
+  Job(일회성 작업)으로 목적에 맞는 실행 환경을 제공합니다.
+* *우선순위 스케줄링* — 중요한 작업이 먼저 자원을 할당받도록 큐를 직접 제어할 수 있습니다.
+
+== 관련 링크
+
+* 제품 소개: https://ten1010.io/products/aipub-dev , https://ten1010.io/products/aipub-ops
+* 문의: helloten@ten1010.io
+
+== Project Controller
+
+Project Controller는 AIPub 플랫폼에서 프로젝트(테넌트) 단위의 자원과 권한을 책임지는 쿠버네티스 컨트롤러입니다.
+
+=== 개요
+
+하나의 클러스터를 여러 프로젝트가 나눠 쓰는 환경에서, 각 프로젝트가 자신에게 할당된 자원 안에서만 동작하고 허가된 사용자만 접근할 수 있도록 경계를 세우고 유지하는 역할을 합니다.
+
+주요 책임은 다음과 같습니다.
+
+* *프로젝트 관리* — 프로젝트와 그 구성원, 자원 할당량, 프로젝트에 연결된 자원(노드, 노드 그룹, 이미지 허브)을 하나의 명세로 다루고 실제 상태를 그에 맞게 유지합니다.
+* *자원 격리* — 프로젝트에 할당된 노드와 네임스페이스를 해당 프로젝트 전용으로 묶어, 다른 프로젝트의 워크로드가 넘어오지 않도록 격리합니다.
+* *접근 권한 관리* — 프로젝트 구성원에게 자신이 속한 프로젝트의 자원에 한해 알맞은 권한을 부여하고, 프로젝트 구성이 바뀌면 권한도 함께 갱신합니다.
+* *이미지 레지스트리 연동* — 프로젝트가 사용할 이미지 허브 접근 수단을 마련하고 관리합니다.
+* *경계 유지* — 새로 만들어지는 자원이 올바른 프로젝트와 사용자에 귀속되도록 하고, 사용자가 요청한 작업이 권한 범위 안에 있는지 확인합니다.
+
+=== 설치법
+
+* Prerequisites
+** kubectl 사용 가능 상태
+** ClusterRole(cluster-admin) 권한
+** 소스를 직접 빌드하지 않고 배포된 이미지를 사용하려면 반드시 릴리즈 태그로 체크아웃하세요
+*** 예: git checkout tags/aipub-3
+
+//-
+
+. 프로젝트 클론
++
+----
+git clone https://github.com/ten1010-io/project-controller.git
+cd project-controller
+# checkout branch or tag you want to use
+# example: git checkout tags/aipub-3
+----
+
+. 빌드 (릴리즈 태그 체크아웃시 생략 가능)
++
+----
+./build-images.sh
+# distribute image to all nodes
+----
+
+. 인증서 설정 및 쿠버네티스에 배포
++
+----
+cd kubernetes/controller/cert
+./configure.sh
+cd ..
+kubectl apply -k .
+----
+
+프로덕션 배포 절차와 Python에서 Java webhook으로 전환하거나 롤백하는 방법은 link:./DEPLOY.md[DEPLOY.md]를 참고하세요.
+
+=== 커스텀 리소스
+
+Project Controller의 모든 동작은 커스텀 리소스로 이루어집니다.
+사용자가 아래 리소스로 원하는 상태를 선언하면, 컨트롤러가 실제 클러스터 상태를 거기에 맞춥니다.
+모든 리소스는 group `project.aipub.ten1010.io`, version `v1alpha1`이며 클러스터 범위(cluster-scoped)입니다.
+
+[cols="1,1,3"]
+|===
+| Kind | 축약형 | 설명
+
+| Project | proj | 테넌트의 기본 단위입니다. 구성원과 자원 할당량, 프로젝트에 연결할 노드·노드 그룹·이미지 허브를 정의합니다.
+| NodeGroup | ng | 여러 노드를 하나로 묶은 그룹입니다. 프로젝트에 연결해 자원 격리 단위로 사용합니다.
+| AipubUser | au | 플랫폼 사용자입니다. 어떤 프로젝트와 이미지 허브에 속해 있는지를 나타냅니다.
+| ImageHub | imghub | 프로젝트가 사용하는 컨테이너 이미지 허브입니다.
+| ImageReview | imgrv | 이미지 허브에 있는 이미지 정보를 조회하기 위한 요청입니다.
+|===
+
+=== 사용법
+
+* case 1 : 사용자(AipubUser)와 이미지 허브(ImageHub) 등록하기
++
+----
+apiVersion: project.aipub.ten1010.io/v1alpha1
+kind: AipubUser
+metadata:
+  name: au1
+spec:
+  id: "1"
+---
+apiVersion: project.aipub.ten1010.io/v1alpha1
+kind: ImageHub
+metadata:
+  name: img-hub1
+spec:
+  id: "1"
+----
+
+* case 2 : 노드 그룹(NodeGroup) 만들기
++
+아래 예제는 node2 노드를 묶어 노드 그룹 ng1을 만듭니다.
++
+----
+apiVersion: project.aipub.ten1010.io/v1alpha1
+kind: NodeGroup
+metadata:
+  name: ng1
+spec:
+  policy:
+    daemonSet:
+      allowAllDaemonSets: false
+      allowedNamespaces: []
+      allowedDaemonSets: []
+  enableNodeSelector: false
+  nodeSelector: {}
+  nodes:
+    - node2
+----
+
+* case 3 : 프로젝트(Project) 만들기
++
+아래 예제는 au1(project-manager)과 au2(project-developer)를 구성원으로 두고, node1 노드와 ng1 노드 그룹, img-hub1 이미지 허브를 연결하며, PVC 스토리지 할당량을 500Gi로 지정한 프로젝트입니다.
+구성원으로 등록한 사용자에게는 각자의 역할(project-manager/project-developer)에 맞는 권한이 이 프로젝트에 자동으로 부여됩니다.
++
+----
+apiVersion: project.aipub.ten1010.io/v1alpha1
+kind: Project
+metadata:
+  name: proj1
+spec:
+  members:
+    - aipubUser: au1
+      role: project-manager
+    - aipubUser: au2
+      role: project-developer
+  quota:
+    pvcStorage: 500Gi
+  binding:
+    nodes:
+      - node1
+    nodeGroups:
+      - ng1
+    imageHubs:
+      - img-hub1
+----
+
+* case 4 : 이미지 조회하기(ImageReview)
++
+아래 예제는 img-hub1 이미지 허브의 ubuntu repository를 조회하며, 결과는 status에 담겨 돌아옵니다.
++
+----
+apiVersion: project.aipub.ten1010.io/v1alpha1
+kind: ImageReview
+metadata:
+  name: img-review
+spec:
+  imgHub: "img-hub1"
+  repo: "ubuntu"
+----
+
+=== 프로젝트 구성원 권한
+
+프로젝트를 만들면 구성원에게 각자의 역할(project-manager 또는 project-developer)에 맞는 권한이 자동으로 부여됩니다.
+구성원은 자신이 속한 프로젝트의 자원만 다룰 수 있으며, 프로젝트 구성이 바뀌면 부여된 권한도 그에 맞게 자동으로 조정됩니다.
+
+=== 경계 유지 (Admission Webhook)
+
+Project Controller는 리소스가 만들어지거나 바뀌는 시점에 admission webhook을 통해 프로젝트 경계를 지킵니다.
+새로 만들어지는 리소스에는 어느 프로젝트와 사용자에 속하는지를 표시해 소유 관계를 분명히 하고, 사용자가 요청한 작업이 그가 가진 권한 범위 안에 있는지 확인합니다.
+
+=== 버그 리포팅 및 개선 사항, 질의
+
+버그를 발견하시거나 개선 사항, 질의가 있다면 link:https://github.com/ten1010-io/project-controller/issues[Github Issue]를 열어주세요.
+
+=== License
+
+link:https://www.apache.org/licenses/LICENSE-2.0[Apache License, Version 2.0]
