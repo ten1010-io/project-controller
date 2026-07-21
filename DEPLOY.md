@@ -53,16 +53,16 @@ sudo kubectl -n project-controller logs deployment/project-controller -f --tail=
 sudo kubectl get ns --no-headers | grep -v -E "kube-system|kube-public|kube-node-lease|kube-flannel|aipub|coaster|harbor|ingress-nginx|keycloak|linkerd|metallb|project-controller|aipub-promstack|trident|aipub-efk"
 
 # 테스트할 네임스페이스에서 deployment 생성 (네임스페이스 변경해서 사용)
-sudo kubectl -n taehyeong create deployment test-v2 --image=nginx
+sudo kubectl -n <NAMESPACE> create deployment test-v2 --image=nginx
 
 # v2 라벨 확인
-sudo kubectl -n taehyeong get workspace label2 -o jsonpath='{.metadata.labels}' | jq .
+sudo kubectl -n <NAMESPACE> get workspace label2 -o jsonpath='{.metadata.labels}' | jq .
 
 # v2 owner annotation 확인
-sudo kubectl -n taehyeong get workspace label2 -o jsonpath='{.metadata.annotations.aipub\.ten1010\.io/owner-reference-v2}' | jq .
+sudo kubectl -n <NAMESPACE> get workspace label2 -o jsonpath='{.metadata.annotations.aipub\.ten1010\.io/owner-reference-v2}' | jq .
 
 # 실제 ownerReference 확인 (v1 기존 방식)
-sudo kubectl -n taehyeong get workspace label2 -o jsonpath='{.metadata.ownerReferences}' | jq .
+sudo kubectl -n <NAMESPACE> get workspace label2 -o jsonpath='{.metadata.ownerReferences}' | jq .
 
 # 정리
 sudo kubectl -n <NAMESPACE> delete deployment test-v2
@@ -88,19 +88,19 @@ sudo kubectl -n <NAMESPACE> get deployment test-v2 -o jsonpath='{.metadata.annot
 
 ```bash
 # v2 username 라벨로 검색
-sudo kubectl -n taehyeong get all -l aipub.ten1010.io/username-v2=taehyeong
+sudo kubectl -n <NAMESPACE> get all -l aipub.ten1010.io/username-v2=<USERNAME>
 
 # v2 userid 라벨로 검색
-sudo kubectl -n taehyeong get all -l aipub.ten1010.io/userid-v2=test-user-001
+sudo kubectl -n <NAMESPACE> get all -l aipub.ten1010.io/userid-v2=<USER_ID>
 
 # 기존 v1 username 라벨로 검색
-sudo kubectl -n <NAMESPACE> get all -l aipub.ten1010.io/username=testuser
+sudo kubectl -n <NAMESPACE> get all -l aipub.ten1010.io/username=<USERNAME>
 
 # 특정 네임스페이스 전체에서 v2 라벨 가진 리소스 검색
 sudo kubectl -n <NAMESPACE> get deployments,pods,services,configmaps,secrets -l aipub.ten1010.io/username-v2
 
 # 모든 네임스페이스에서 검색
-sudo kubectl get deployments --all-namespaces -l aipub.ten1010.io/username-v2=testuser
+sudo kubectl get deployments --all-namespaces -l aipub.ten1010.io/username-v2=<USERNAME>
 ```
 
 ## 한줄 배포 명령어

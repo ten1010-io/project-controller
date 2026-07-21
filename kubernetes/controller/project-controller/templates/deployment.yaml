@@ -28,7 +28,7 @@ spec:
       automountServiceAccountToken: true
       containers:
         - name: project-controller
-          image: project-controller:1.4.0
+          image: project-controller:1.7.5
           imagePullPolicy: IfNotPresent
           ports:
             - name: webhook

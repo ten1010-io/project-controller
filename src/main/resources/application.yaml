@@ -27,8 +27,8 @@ app:
     server-url: "https://aipub.example.com"
     harbor-external-url: "https://aipub-harbor.example.com"
     verifying-ssl: false
-    username: "testuser"
-    password: "asdasdasd"
+    username: ""
+    password: ""
     reserved-namespace: "aipub, project-controller"
     add-owner-except-gvk-list:
       - "aipub.ten1010.io/v1alpha1/Commit"
