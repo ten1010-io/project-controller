@@ -1,0 +1,64 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: project-controller.project.aipub.ten1010.io
+rules:
+  - apiGroups: [ "*" ]
+    resources: [ "*" ]
+    verbs: [ "*" ]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: project-controller.project.aipub.ten1010.io
+subjects:
+  - kind: ServiceAccount
+    namespace: project-controller
+    name: project-controller
+roleRef:
+  kind: ClusterRole
+  name: project-controller.project.aipub.ten1010.io
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: aipub-admin.project.aipub.ten1010.io
+subjects:
+  - kind: Group
+    name: oidc:aipub-admin
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: aipub-member.project.aipub.ten1010.io
+rules:
+  - apiGroups: [ "project.aipub.ten1010.io" ]
+    resources: [ "imagereviews" ]
+    verbs: [ "create" ]
+  - apiGroups: ["aipub.ten1010.io"]
+    resources: ["userauthorityreviews"]
+    verbs: ["create"]
+  - apiGroups: ["aipub.ten1010.io"]
+    resources: ["hostpathvalidations"]
+    verbs: ["create"]
+  - apiGroups: [ "aipub.ten1010.io" ]
+    resources: [ "tcpportvalidations" ]
+    verbs: [ "create" ]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: aipub-member.project.aipub.ten1010.io
+subjects:
+  - kind: Group
+    name: oidc:aipub-member
+roleRef:
+  kind: ClusterRole
+  name: aipub-member.project.aipub.ten1010.io
+  apiGroup: rbac.authorization.k8s.io
+---

@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: project-controller
+  profiles:
+    active: "production"
+  web:
+    resources:
+      add-mappings: false
+  http:
+    converters:
+      preferred-json-mapper: jackson2
+  jackson:
+    use-jackson2-defaults: true
+
+
+server:
+  forward-headers-strategy: framework
+
+app:
+  k8s:
+    verify-ssl: false
+    kube-config:
+      mode: in_cluster
+      # kube-config-path: /users/user/.kube/config
+  aipub:
+    enabled: false
+    server-url: "https://aipub.example.com"
+    harbor-external-url: "https://aipub-harbor.example.com"
+    verifying-ssl: false
+    username: ""
+    password: ""
+    reserved-namespace: "aipub, project-controller"
+    add-owner-except-gvk-list:
+      - "aipub.ten1010.io/v1alpha1/Commit"
+      - "aipub.ten1010.io/v1/Commit"
+      - "aipub.ten1010.io/v1alpha1/UserAuthorityReview"
+      - "aipub.ten1010.io/v1/UserAuthorityReview"
+    reconcile-excluded-label-selectors:
+      - "app.kubernetes.io/part-of=cilium"
+      - "kubevirt.io"
+
+management:
+  server:
+    # webhook(메인 8080)은 TLS 라 actuator 를 평문 포트로 분리. backend Java 서비스(8082)와 통일.
+    port: 8082
+    ssl:
+      # webhook 의 server.ssl 을 management 커넥터가 상속하지 않도록 평문(http)으로 강제한다.
+      enabled: false
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,prometheus"
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true

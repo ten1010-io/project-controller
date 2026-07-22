@@ -1,27 +1,4 @@
-namespace: resource-group-controller
-configMapGenerator:
-  - name: resource-group-controller-envs
-    literals:
-      - TZ=Asia/Seoul
-      - SPRING_PROFILES_ACTIVE=production
-      - LOGGING_LEVEL_IO_TEN1010_COASTER_GROUPCONTROLLER=info
-      - SERVER_SSL_KEY_STORE=/etc/resource-group-controller/tls/tls.p12
-secretGenerator:
-  - name: resource-group-controller-envs
-    literals:
-      - SERVER_SSL_KEY_STORE_PASSWORD=""
-  - name: resource-group-controller-tls
-    files:
-      - tls.p12
 generatorOptions:
   disableNameSuffixHash: true
 resources:
-  - templates/namespace.yaml
-  - templates/service-account.yaml
-  - templates/cluster-role.yaml
-  - templates/crd.yaml
-  - templates/deployment.yaml
-  - templates/service.yaml
-  - templates/mutating-webhook-configuration.yaml
-patchesStrategicMerge:
-  - patches.yaml
+  - project-controller

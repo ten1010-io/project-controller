@@ -1,0 +1,66 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: userrelationship-v2.project-controller.project.aipub.ten1010.io
+webhooks:
+  - name: userrelationship-v2.project-controller.project.aipub.ten1010.io
+    admissionReviewVersions: [ "v1" ]
+    clientConfig:
+      caBundle: <CA_BUNDLE>
+      service:
+        namespace: project-controller
+        name: project-controller
+        path: /api/v1/userrelationship/mutate
+        port: 8080
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values:
+            - kube-system
+            - kube-public
+            - kube-node-lease
+            - kube-flannel
+            - aipub
+            - coaster
+            - harbor
+            - ingress-nginx
+            - keycloak
+            - linkerd
+            - metallb
+            - project-controller
+            - aipub-promstack
+            - trident
+            - aipub-efk
+    objectSelector: { }
+    reinvocationPolicy: IfNeeded
+    rules:
+      - apiGroups: [ "" ]
+        apiVersions: [ "*" ]
+        operations: [ "CREATE" ]
+        resources: [ "pods", "replicationcontrollers", "services", "configmaps", "secrets", "persistentvolumeclaims" ]
+        scope: "Namespaced"
+      - apiGroups: [ "networking.k8s.io" ]
+        apiVersions: [ "*" ]
+        operations: [ "CREATE" ]
+        resources: [ "ingresses" ]
+        scope: "Namespaced"
+      - apiGroups: [ "batch" ]
+        apiVersions: [ "*" ]
+        operations: [ "CREATE" ]
+        resources: [ "*" ]
+        scope: "Namespaced"
+      - apiGroups: [ "apps" ]
+        apiVersions: [ "*" ]
+        operations: [ "CREATE" ]
+        resources: [ "*" ]
+        scope: "Namespaced"
+      - apiGroups: [ "aipub.ten1010.io" ]
+        apiVersions: [ "*" ]
+        operations: [ "CREATE" ]
+        resources: [ "*" ]
+        scope: "Namespaced"
+    sideEffects: None
+    timeoutSeconds: 10

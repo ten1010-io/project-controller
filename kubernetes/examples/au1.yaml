@@ -1,0 +1,7 @@
+apiVersion: project.aipub.ten1010.io/v1alpha1
+kind: AipubUser
+metadata:
+  name: au1
+spec:
+  id: "1"
+---

@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: project-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: project-controller
+  template:
+    metadata:
+      labels:
+        app: project-controller
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1
+              preference:
+                matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+      serviceAccountName: project-controller
+      automountServiceAccountToken: true
+      containers:
+        - name: project-controller
+          image: project-controller:1.7.5
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: webhook
+              containerPort: 8080
+            - name: management
+              containerPort: 8082
+          envFrom:
+            - configMapRef:
+                name: project-controller-envs
+            - secretRef:
+                name: project-controller-envs
+          volumeMounts:
+            - name: tls
+              readOnly: true
+              mountPath: /etc/project-controller/tls
+      volumes:
+        - name: tls
+          projected:
+            sources:
+              - secret:
+                  name: project-controller-tls
+                  items:
+                    - key: tls.p12
+                      path: "tls.p12"
+---

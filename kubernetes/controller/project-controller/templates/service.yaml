@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: project-controller
+  labels:
+    app: project-controller
+spec:
+  type: ClusterIP
+  selector:
+    app: project-controller
+  ports:
+    - name: webhook
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+    - name: management
+      protocol: TCP
+      port: 8082
+      targetPort: 8082
+---

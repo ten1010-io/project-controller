@@ -1,0 +1,1839 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: tcpportvalidators.aipub.ten1010.io
+spec:
+  conversion:
+    strategy: None
+  group: aipub.ten1010.io
+  names:
+    kind: TCPPortValidator
+    listKind: TCPPortValidatorList
+    plural: tcpportvalidators
+    shortNames:
+      - tpv
+    singular: tcpportvalidator
+  scope: Cluster
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            spec:
+              properties:
+                port:
+                  type: integer
+              required:
+                - port
+              type: object
+            status:
+              properties:
+                available:
+                  type: boolean
+              type: object
+          type: object
+      served: true
+      storage: true
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: gpuconfigs.coaster.ten1010.io
+spec:
+  conversion:
+    strategy: None
+  group: coaster.ten1010.io
+  names:
+    categories:
+      - all
+    kind: GPUConfig
+    listKind: GPUConfigList
+    plural: gpuconfigs
+    shortNames:
+      - gpuconf
+      - gconfig
+      - gconf
+    singular: gpuconfig
+  scope: Cluster
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .metadata.name
+          name: NODE_NAME
+          type: string
+        - jsonPath: .status.completionCondition.status
+          name: COMPLETED
+          type: boolean
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            metadata:
+              type: object
+            spec:
+              properties:
+                gpus:
+                  default: []
+                  items:
+                    properties:
+                      gpuIndex:
+                        type: integer
+                        x-kubernetes-validations:
+                          - message: gpuIndex must be zero or greater
+                            rule: self >= 0
+                      migCount:
+                        type: integer
+                        x-kubernetes-validations:
+                          - message: migCount must be between 2 and 7
+                            rule: self >= 2 && self <= 7
+                      type:
+                        type: string
+                        x-kubernetes-validations:
+                          - message: Invalid type. type must be one of 'Normal' and 'Block'
+                            rule: self in ["Normal", "Block"]
+                    required:
+                      - gpuIndex
+                      - type
+                    type: object
+                    x-kubernetes-validations:
+                      - message: migCount can only be used when type is Normal
+                        rule: '!((self.type == ''Block'') && has(self.migCount))'
+                  maxItems: 32
+                  type: array
+                  x-kubernetes-validations:
+                    - message: gpuIndex must be unique
+                      rule: self.all(x, size(self.filter(y, y.gpuIndex == x.gpuIndex))
+                        == 1)
+              required:
+                - gpus
+              type: object
+            status:
+              default:
+                gpus: []
+              properties:
+                completionCondition:
+                  properties:
+                    message:
+                      type: string
+                    reason:
+                      type: string
+                    status:
+                      type: boolean
+                    timestamp:
+                      type: string
+                  type: object
+                gpus:
+                  items:
+                    properties:
+                      gpuIndex:
+                        type: integer
+                      migCount:
+                        type: integer
+                      type:
+                        type: string
+                    type: object
+                  maxItems: 32
+                  type: array
+              type: object
+          required:
+            - metadata
+            - spec
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: resourcesets.aipub.ten1010.io
+spec:
+  conversion:
+    strategy: None
+  group: aipub.ten1010.io
+  names:
+    categories:
+      - all
+    kind: ResourceSet
+    listKind: ResourceSetList
+    plural: resourcesets
+    shortNames:
+      - rss
+    singular: resourceset
+  scope: Cluster
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .spec.cpu
+          name: CPU
+          type: string
+        - jsonPath: .spec.memory
+          name: MEMORY
+          type: string
+        - jsonPath: .spec.gpu
+          name: GPU
+          type: string
+        - jsonPath: .status.category
+          name: CATEGORY
+          type: string
+        - jsonPath: .status.ready
+          name: READY
+          type: boolean
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            metadata:
+              type: object
+            spec:
+              properties:
+                cpu:
+                  type: string
+                gpu:
+                  type: string
+                memory:
+                  type: string
+                nodes:
+                  items:
+                    properties:
+                      nodeName:
+                        type: string
+                      resourcesetCount:
+                        type: integer
+                    type: object
+                  type: array
+              required:
+                - cpu
+                - memory
+              type: object
+            status:
+              properties:
+                category:
+                  type: string
+                nodes:
+                  items:
+                    properties:
+                      nodeName:
+                        type: string
+                      resourcesetCount:
+                        type: integer
+                    type: object
+                  type: array
+                ready:
+                  type: boolean
+                resourceName:
+                  type: string
+              type: object
+          required:
+            - metadata
+            - spec
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: operations.aipub.ten1010.io
+spec:
+  conversion:
+    strategy: None
+  group: aipub.ten1010.io
+  names:
+    categories:
+      - all
+    kind: Operation
+    listKind: OperationList
+    plural: operations
+    shortNames:
+      - ops
+    singular: operation
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .status.conditions[?(@.type=="Available")].status
+          name: AVAILABLE
+          type: string
+        - jsonPath: .status.replicas
+          name: REPLICAS
+          type: integer
+        - jsonPath: .status.readyReplicas
+          name: READY
+          type: integer
+        - jsonPath: .status.conditions[?(@.type=="Suspended")].status
+          name: SUSPENDED
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: AGE
+          type: date
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            metadata:
+              properties:
+                name:
+                  maxLength: 40
+                  minLength: 1
+                  pattern: ^[a-z]([-a-z0-9]*[a-z0-9])?$
+                  type: string
+              type: object
+            spec:
+              properties:
+                autoScaling:
+                  properties:
+                    maxReplicas:
+                      maximum: 2147483647
+                      minimum: 2
+                      type: integer
+                    minReplicas:
+                      maximum: 2147483646
+                      minimum: 1
+                      type: integer
+                    rps:
+                      maxLength: 19
+                      minLength: 1
+                      type: string
+                      x-kubernetes-validations:
+                        - message: rps must be a positive integer string within int64 range
+                          rule: self.matches("^[1-9]\\d*$") && (size(self) < 19 || self <= "9223372036854775807")
+                    scaleDown:
+                      default:
+                        maxScalingSizeAtOnce: 1
+                        periodSeconds: 15
+                        stabilizationWindowSeconds: 300
+                      properties:
+                        maxScalingSizeAtOnce:
+                          minimum: 1
+                          type: integer
+                        periodSeconds:
+                          maximum: 1800
+                          minimum: 1
+                          type: integer
+                        stabilizationWindowSeconds:
+                          maximum: 3600
+                          minimum: 0
+                          type: integer
+                      type: object
+                    scaleUp:
+                      default:
+                        maxScalingSizeAtOnce: 4
+                        periodSeconds: 15
+                        stabilizationWindowSeconds: 0
+                      properties:
+                        maxScalingSizeAtOnce:
+                          minimum: 1
+                          type: integer
+                        periodSeconds:
+                          maximum: 1800
+                          minimum: 1
+                          type: integer
+                        stabilizationWindowSeconds:
+                          maximum: 3600
+                          minimum: 0
+                          type: integer
+                      type: object
+                  required:
+                    - rps
+                    - maxReplicas
+                    - minReplicas
+                  type: object
+                  x-kubernetes-validations:
+                    - message: maxReplicas must be greater than minReplicas
+                      rule: self.maxReplicas > self.minReplicas
+                ports:
+                  items:
+                    properties:
+                      appProtocol:
+                        maxLength: 317
+                        pattern: ^(([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)/)?[A-Za-z0-9]([-A-Za-z0-9_.]{0,61}[A-Za-z0-9])?$
+                        type: string
+                      external:
+                        default:
+                          enabled: false
+                        properties:
+                          enabled:
+                            default: false
+                            type: boolean
+                          host:
+                            minLength: 1
+                            type: string
+                          path:
+                            default: /
+                            minLength: 1
+                            pattern: ^/.*
+                            type: string
+                        type: object
+                      name:
+                        maxLength: 15
+                        minLength: 1
+                        pattern: ^[a-z]([-a-z0-9]*[a-z0-9])?$
+                        type: string
+                      port:
+                        maximum: 65535
+                        minimum: 1
+                        type: integer
+                    required:
+                      - port
+                      - name
+                    type: object
+                  maxItems: 100
+                  minItems: 1
+                  type: array
+                  x-kubernetes-validations:
+                    - message: port must be unique
+                      rule: self.all(x, size(self.filter(y, y.port == x.port)) == 1)
+                    - message: name must be unique
+                      rule: self.all(x, size(self.filter(y, y.name == x.name)) == 1)
+                replicas:
+                  maximum: 2147483647
+                  minimum: 0
+                  type: integer
+                revisionHistoryLimit:
+                  default: 10
+                  minimum: 0
+                  type: integer
+                suspend:
+                  default: false
+                  type: boolean
+                template:
+                  properties:
+                    metadata:
+                      properties:
+                        annotations:
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
+                        labels:
+                          additionalProperties:
+                            maxLength: 63
+                            pattern: ^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$
+                            type: string
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                    spec:
+                      properties:
+                        containers:
+                          items:
+                            properties:
+                              args:
+                                items:
+                                  type: string
+                                type: array
+                              command:
+                                items:
+                                  type: string
+                                type: array
+                              env:
+                                items:
+                                  properties:
+                                    name:
+                                      minLength: 1
+                                      type: string
+                                    value:
+                                      type: string
+                                    valueFrom:
+                                      properties:
+                                        configMapKeyRef:
+                                          properties:
+                                            key:
+                                              minLength: 1
+                                              type: string
+                                            name:
+                                              minLength: 1
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - name
+                                            - key
+                                          type: object
+                                        fieldRef:
+                                          type: object
+                                          x-kubernetes-preserve-unknown-fields: true
+                                        resourceFieldRef:
+                                          type: object
+                                          x-kubernetes-preserve-unknown-fields: true
+                                        secretKeyRef:
+                                          properties:
+                                            key:
+                                              minLength: 1
+                                              type: string
+                                            name:
+                                              minLength: 1
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - name
+                                            - key
+                                          type: object
+                                      type: object
+                                  required:
+                                    - name
+                                  type: object
+                                type: array
+                              image:
+                                minLength: 1
+                                type: string
+                              name:
+                                minLength: 1
+                                type: string
+                              resources:
+                                properties:
+                                  claims:
+                                    items:
+                                      properties:
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                      type: object
+                                    type: array
+                                  limits:
+                                    type: object
+                                    x-kubernetes-preserve-unknown-fields: true
+                                  requests:
+                                    type: object
+                                    x-kubernetes-preserve-unknown-fields: true
+                                type: object
+                              volumeMounts:
+                                items:
+                                  properties:
+                                    mountPath:
+                                      minLength: 1
+                                      pattern: ^[^:]*$
+                                      type: string
+                                    name:
+                                      minLength: 1
+                                      type: string
+                                    readOnly:
+                                      type: boolean
+                                  required:
+                                    - name
+                                    - mountPath
+                                  type: object
+                                type: array
+                              workingDir:
+                                minLength: 1
+                                type: string
+                            required:
+                              - name
+                              - image
+                            type: object
+                          type: array
+                          x-kubernetes-preserve-unknown-fields: true
+                        hostname:
+                          maxLength: 63
+                          minLength: 1
+                          type: string
+                        volumes:
+                          items:
+                            properties:
+                              name:
+                                minLength: 1
+                                type: string
+                            required:
+                              - name
+                            type: object
+                            x-kubernetes-preserve-unknown-fields: true
+                          type: array
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                    - spec
+                  type: object
+              required:
+                - replicas
+                - ports
+                - template
+              type: object
+            status:
+              properties:
+                conditions:
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                observedGeneration:
+                  format: int64
+                  type: integer
+                ports:
+                  items:
+                    properties:
+                      externalAddress:
+                        type: string
+                      internalAddress:
+                        type: string
+                      name:
+                        type: string
+                      port:
+                        type: integer
+                    required:
+                      - name
+                    type: object
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - name
+                  x-kubernetes-list-type: map
+                readyReplicas:
+                  format: int32
+                  type: integer
+                replicas:
+                  format: int32
+                  type: integer
+                updatedReplicas:
+                  format: int32
+                  type: integer
+              type: object
+          required:
+            - metadata
+            - spec
+          type: object
+          x-kubernetes-validations:
+            - message: Exactly one container must be defined.
+              rule: self.spec.template.spec.containers.size() == 1
+            - message: Container name must match metadata.name of the Operation.
+              rule: self.spec.template.spec.containers[0].name == self.metadata.name
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: workspaces.aipub.ten1010.io
+spec:
+  conversion:
+    strategy: None
+  group: aipub.ten1010.io
+  names:
+    categories:
+      - all
+    kind: Workspace
+    listKind: WorkspaceList
+    plural: workspaces
+    shortNames:
+      - ws
+    singular: workspace
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .status.readyCondition.status
+          name: READY
+          type: boolean
+        - jsonPath: .spec.replicas
+          name: REPLICAS
+          type: string
+        - jsonPath: .status.sshEndpoint.host
+          name: SSH-HOST
+          type: string
+        - jsonPath: .status.sshEndpoint.port
+          name: SSH-PORT
+          type: integer
+      name: v1
+      schema:
+        openAPIV3Schema:
+          properties:
+            metadata:
+              properties:
+                name:
+                  maxLength: 63
+                  minLength: 1
+                  pattern: ^[a-z]([-a-z0-9]*[a-z0-9])?$
+                  type: string
+              type: object
+            spec:
+              properties:
+                ports:
+                  items:
+                    properties:
+                      name:
+                        allOf:
+                          - pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                          - pattern: .*[a-z].*
+                        maxLength: 15
+                        minLength: 1
+                        type: string
+                      port:
+                        maximum: 65535
+                        minimum: 1
+                        type: integer
+                    required:
+                      - port
+                      - name
+                    type: object
+                  maxItems: 500
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - name
+                  x-kubernetes-list-type: map
+                  x-kubernetes-validations:
+                    - message: port must be unique
+                      rule: self.all(x, size(self.filter(y, y.port == x.port)) == 1)
+                replicas:
+                  default: 1
+                  maximum: 2147483647
+                  type: integer
+                  x-kubernetes-validations:
+                    - message: Replicas must be zero or greater
+                      rule: self >= 0
+                ssh:
+                  properties:
+                    port:
+                      type: integer
+                      x-kubernetes-validations:
+                        - message: Port number must be between 1 and 65535
+                          rule: self >= 1 && self <= 65535
+                    publicKey:
+                      type: string
+                  required:
+                    - publicKey
+                    - port
+                  type: object
+                suspend:
+                  default: false
+                  type: boolean
+                template:
+                  properties:
+                    metadata:
+                      properties:
+                        annotations:
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
+                        labels:
+                          additionalProperties:
+                            maxLength: 63
+                            pattern: ^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$
+                            type: string
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                    spec:
+                      properties:
+                        containers:
+                          items:
+                            properties:
+                              args:
+                                items:
+                                  type: string
+                                type: array
+                              command:
+                                items:
+                                  type: string
+                                type: array
+                              env:
+                                items:
+                                  properties:
+                                    name:
+                                      minLength: 1
+                                      type: string
+                                    value:
+                                      type: string
+                                    valueFrom:
+                                      properties:
+                                        configMapKeyRef:
+                                          properties:
+                                            key:
+                                              minLength: 1
+                                              type: string
+                                            name:
+                                              minLength: 1
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - name
+                                            - key
+                                          type: object
+                                        fieldRef:
+                                          type: object
+                                          x-kubernetes-preserve-unknown-fields: true
+                                        resourceFieldRef:
+                                          type: object
+                                          x-kubernetes-preserve-unknown-fields: true
+                                        secretKeyRef:
+                                          properties:
+                                            key:
+                                              minLength: 1
+                                              type: string
+                                            name:
+                                              minLength: 1
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - name
+                                            - key
+                                          type: object
+                                      type: object
+                                  required:
+                                    - name
+                                  type: object
+                                type: array
+                              image:
+                                minLength: 1
+                                type: string
+                              name:
+                                minLength: 1
+                                type: string
+                              resources:
+                                properties:
+                                  claims:
+                                    items:
+                                      properties:
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                      type: object
+                                    type: array
+                                  limits:
+                                    type: object
+                                    x-kubernetes-preserve-unknown-fields: true
+                                  requests:
+                                    type: object
+                                    x-kubernetes-preserve-unknown-fields: true
+                                type: object
+                              volumeMounts:
+                                items:
+                                  properties:
+                                    mountPath:
+                                      minLength: 1
+                                      pattern: ^[^:]*$
+                                      type: string
+                                    name:
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                    - name
+                                    - mountPath
+                                  type: object
+                                type: array
+                              workingDir:
+                                minLength: 1
+                                type: string
+                            required:
+                              - image
+                            type: object
+                          maxItems: 1
+                          minItems: 1
+                          type: array
+                          x-kubernetes-preserve-unknown-fields: true
+                        hostname:
+                          maxLength: 63
+                          minLength: 1
+                          type: string
+                        volumes:
+                          items:
+                            properties:
+                              name:
+                                minLength: 1
+                                type: string
+                            required:
+                              - name
+                            type: object
+                            x-kubernetes-preserve-unknown-fields: true
+                          type: array
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                    - spec
+                  type: object
+              required:
+                - ssh
+                - template
+              type: object
+            status:
+              default:
+                readyCondition:
+                  status: false
+              properties:
+                addresses:
+                  items:
+                    properties:
+                      address:
+                        type: string
+                      port:
+                        type: integer
+                    type: object
+                  type: array
+                pods:
+                  properties:
+                    pending:
+                      items:
+                        properties:
+                          creationTimestamp:
+                            type: string
+                          lastTerminationState:
+                            properties:
+                              exitCode:
+                                type: integer
+                              message:
+                                type: string
+                              reason:
+                                type: string
+                              timestamp:
+                                type: string
+                            type: object
+                          message:
+                            type: string
+                          name:
+                            type: string
+                          nodeName:
+                            type: string
+                          reason:
+                            type: string
+                          restartCount:
+                            type: integer
+                          terminating:
+                            type: boolean
+                          timestamp:
+                            type: string
+                          uid:
+                            type: string
+                        type: object
+                      type: array
+                    progressing:
+                      items:
+                        properties:
+                          creationTimestamp:
+                            type: string
+                          lastTerminationState:
+                            properties:
+                              exitCode:
+                                type: integer
+                              message:
+                                type: string
+                              reason:
+                                type: string
+                              timestamp:
+                                type: string
+                            type: object
+                          message:
+                            type: string
+                          name:
+                            type: string
+                          nodeName:
+                            type: string
+                          reason:
+                            type: string
+                          restartCount:
+                            type: integer
+                          terminating:
+                            type: boolean
+                          timestamp:
+                            type: string
+                          uid:
+                            type: string
+                        type: object
+                      type: array
+                    ready:
+                      items:
+                        properties:
+                          creationTimestamp:
+                            type: string
+                          lastTerminationState:
+                            properties:
+                              exitCode:
+                                type: integer
+                              message:
+                                type: string
+                              reason:
+                                type: string
+                              timestamp:
+                                type: string
+                            type: object
+                          name:
+                            type: string
+                          nodeName:
+                            type: string
+                          restartCount:
+                            type: integer
+                          terminating:
+                            type: boolean
+                          timestamp:
+                            type: string
+                          uid:
+                            type: string
+                        type: object
+                      type: array
+                  type: object
+                readyCondition:
+                  properties:
+                    message:
+                      type: string
+                    reason:
+                      type: string
+                    status:
+                      type: boolean
+                    timestamp:
+                      type: string
+                  type: object
+                sshEndpoint:
+                  properties:
+                    host:
+                      type: string
+                    port:
+                      type: integer
+                    user:
+                      type: string
+                  type: object
+              type: object
+          type: object
+          x-kubernetes-validations:
+            - message: Exactly one container must be defined.
+              rule: self.spec.template.spec.containers.size() == 1
+            - message: Container name must match metadata.name of the Workspace.
+              rule: self.spec.template.spec.containers[0].name == self.metadata.name
+      served: true
+      storage: false
+      subresources:
+        status: {}
+    - additionalPrinterColumns:
+        - jsonPath: .status.conditions[?(@.type=="Ready")].status
+          name: READY
+          type: string
+        - jsonPath: .status.replicas
+          name: REPLICAS
+          type: integer
+        - jsonPath: .status.readyReplicas
+          name: READY-REPLICAS
+          type: integer
+        - jsonPath: .status.ssh.host
+          name: SSH-HOST
+          type: string
+        - jsonPath: .status.ssh.port
+          name: SSH-PORT
+          type: integer
+        - jsonPath: .metadata.creationTimestamp
+          name: AGE
+          type: date
+      name: v1beta1
+      schema:
+        openAPIV3Schema:
+          properties:
+            metadata:
+              properties:
+                name:
+                  maxLength: 40
+                  minLength: 1
+                  pattern: ^[a-z]([-a-z0-9]*[a-z0-9])?$
+                  type: string
+              type: object
+            spec:
+              properties:
+                ports:
+                  items:
+                    properties:
+                      appProtocol:
+                        maxLength: 317
+                        pattern: ^(([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)/)?[A-Za-z0-9]([-A-Za-z0-9_.]{0,61}[A-Za-z0-9])?$
+                        type: string
+                      expose:
+                        description: '외부 노출 설정(옵션). 없으면 ClusterIP 내부 전용.
+
+                          enabled=false 면 설정(host/path/tcp.port)은 유지한 채 노출만 일시정지.
+
+                          type=TCP: tcp.port 지정 시 그 포트, 비우면 컨트롤러 자동 할당.
+
+                          type=HTTP: hostname 기반 L7 라우팅.
+
+                          '
+                        properties:
+                          enabled:
+                            default: true
+                            description: '노출 on/off. expose 를 쓰면 기본 노출(true). false 면 설정 유지한 채
+
+                              노출만 정지(외부 포트/route 미생성). 토글 시 host/path/tcp.port 보존.
+
+                              '
+                            type: boolean
+                          http:
+                            properties:
+                              host:
+                                description: '외부 host 의 leftmost label. root domain 은 컨트롤러가 suffix 로 붙인다.
+
+                                  '
+                                maxLength: 63
+                                minLength: 1
+                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                                type: string
+                              path:
+                                default: /
+                                pattern: ^/
+                                type: string
+                              tls:
+                                default: true
+                                type: boolean
+                            required:
+                              - host
+                            type: object
+                          tcp:
+                            description: 'type=TCP 일 때만 유효. 외부 포트를 명시하면 그 값을 사용,
+
+                              비우면 컨트롤러가 설정 범위에서 자동 할당.
+
+                              '
+                            properties:
+                              port:
+                                maximum: 65535
+                                minimum: 1
+                                type: integer
+                            type: object
+                          type:
+                            enum:
+                              - TCP
+                              - HTTP
+                            type: string
+                        required:
+                          - type
+                        type: object
+                      name:
+                        maxLength: 15
+                        minLength: 1
+                        pattern: ^[a-z]([-a-z0-9]*[a-z0-9])?$
+                        type: string
+                      port:
+                        maximum: 65535
+                        minimum: 1
+                        type: integer
+                    required:
+                      - name
+                      - port
+                    type: object
+                    x-kubernetes-validations:
+                      - message: expose.http must be set when expose.type is HTTP
+                        rule: '!has(self.expose) || self.expose.type != "HTTP" || has(self.expose.http)'
+                      - message: expose.tcp must not be set when expose.type is HTTP
+                        rule: '!has(self.expose) || self.expose.type != "HTTP" || !has(self.expose.tcp)'
+                      - message: expose.http must not be set when expose.type is TCP
+                        rule: '!has(self.expose) || self.expose.type != "TCP" || !has(self.expose.http)'
+                  maxItems: 500
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - name
+                  x-kubernetes-list-type: map
+                  x-kubernetes-validations:
+                    - message: port must be unique
+                      rule: self.all(x, size(self.filter(y, y.port == x.port)) == 1)
+                    - message: port names "ssh", "ttyd", "jupyter", "filebrowser" are reserved for platform tools
+                      rule: self.all(x, !(x.name in ["ssh", "ttyd", "jupyter", "filebrowser"]))
+                    - message: ports 22(ssh), 7681(ttyd), 8888(jupyter), 8080(filebrowser) are reserved for platform tools
+                      rule: self.all(x, !(x.port in [22, 7681, 8888, 8080]))
+                replicas:
+                  default: 1
+                  maximum: 2147483647
+                  type: integer
+                  x-kubernetes-validations:
+                    - message: Replicas must be zero or greater
+                      rule: self >= 0
+                ssh:
+                  description: 'SSH 접속 설정 (항상 실행). 공개키(authorizedKeys 인라인 /
+
+                    authorizedKeysFrom 참조)와 비밀번호(password) 중 하나 이상 필수.
+
+                    둘 다 가능. 외부 SSH 포트(port)는 미지정 시 webhook 이 풀에서 자동 할당.
+
+                    '
+                  properties:
+                    authorizedKeys:
+                      description: 'OpenSSH authorized_keys 내용을 그대로 인라인 (여러 줄 = 여러 키, 복붙 가능).
+
+                        공개키는 비밀이 아니므로 평문 보관 OK. 컨트롤러가 ConfigMap 으로
+
+                        materialize 해 projected volume 로 마운트한다.
+
+                        '
+                      maxLength: 1048576
+                      type: string
+                    authorizedKeysFrom:
+                      description: '외부 ConfigMap/Secret 의 authorized_keys 참조 (중앙/공용 키 관리용).
+
+                        각 source 의 내용이 authorizedKeys(인라인)와 합쳐져 sshd 에 제공된다.
+
+                        '
+                      items:
+                        properties:
+                          configMapKeyRef:
+                            properties:
+                              key:
+                                minLength: 1
+                                type: string
+                              name:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                            required:
+                              - name
+                              - key
+                            type: object
+                          secretKeyRef:
+                            properties:
+                              key:
+                                minLength: 1
+                                type: string
+                              name:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                            required:
+                              - name
+                              - key
+                            type: object
+                        type: object
+                        x-kubernetes-validations:
+                          - message: exactly one of configMapKeyRef or secretKeyRef must be set
+                            rule: has(self.configMapKeyRef) != has(self.secretKeyRef)
+                      maxItems: 100
+                      type: array
+                    password:
+                      description: "비밀번호 인증. 두 방식 중 하나 이상:\n- enabled=true: sshd PasswordAuthentication 만 활성(Secret 불필요).\n  사용자가 key 로 접속 후 `passwd` 로 직접 비밀번호 설정 → 이후 password 접속.\n- secretRef: 비밀번호를 Secret 으로 미리 주입(평문 인라인 불가). 컨트롤러가 주입.\n"
+                      properties:
+                        enabled:
+                          default: false
+                          description: 'true 면 secret 없이도 PasswordAuthentication 을 켠다.
+
+                            비밀번호는 사용자가 접속 후 직접 설정(미설정 시 root 계정은 잠금 상태라 password 접속 불가, key 만 가능).
+
+                            '
+                          type: boolean
+                        secretRef:
+                          properties:
+                            key:
+                              minLength: 1
+                              type: string
+                            name:
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                          required:
+                            - name
+                            - key
+                          type: object
+                      type: object
+                      x-kubernetes-validations:
+                        - message: password requires enabled=true or secretRef
+                          rule: (has(self.enabled) && self.enabled) || has(self.secretRef)
+                    port:
+                      description: '외부 SSH 포트. 미지정 시 mutating webhook 이 TCP 포트 풀에서
+
+                        가용 포트를 자동 할당(생성 후 필수 값). 지정 시 그 포트 사용.
+
+                        '
+                      type: integer
+                  required:
+                    - port
+                  type: object
+                  x-kubernetes-validations:
+                    - message: at least one auth method must be set (authorizedKeys, authorizedKeysFrom, or password)
+                      rule: (has(self.authorizedKeys) && self.authorizedKeys != "") || (has(self.authorizedKeysFrom) && self.authorizedKeysFrom.size() > 0) || has(self.password)
+                suspend:
+                  default: false
+                  description: 'true 면 워크스페이스 Pod 전체를 내려 리소스를 회수한다.
+
+                    (replicas=0 효과). 실질적 리소스 절감 레버.
+
+                    '
+                  type: boolean
+                template:
+                  properties:
+                    metadata:
+                      properties:
+                        annotations:
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
+                        labels:
+                          additionalProperties:
+                            maxLength: 63
+                            pattern: ^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$
+                            type: string
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                    spec:
+                      properties:
+                        containers:
+                          items:
+                            properties:
+                              args:
+                                items:
+                                  type: string
+                                type: array
+                              command:
+                                items:
+                                  type: string
+                                type: array
+                              env:
+                                items:
+                                  properties:
+                                    name:
+                                      minLength: 1
+                                      type: string
+                                    value:
+                                      type: string
+                                    valueFrom:
+                                      properties:
+                                        configMapKeyRef:
+                                          properties:
+                                            key:
+                                              minLength: 1
+                                              type: string
+                                            name:
+                                              minLength: 1
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - name
+                                            - key
+                                          type: object
+                                        fieldRef:
+                                          type: object
+                                          x-kubernetes-preserve-unknown-fields: true
+                                        resourceFieldRef:
+                                          type: object
+                                          x-kubernetes-preserve-unknown-fields: true
+                                        secretKeyRef:
+                                          properties:
+                                            key:
+                                              minLength: 1
+                                              type: string
+                                            name:
+                                              minLength: 1
+                                              type: string
+                                            optional:
+                                              type: boolean
+                                          required:
+                                            - name
+                                            - key
+                                          type: object
+                                      type: object
+                                  required:
+                                    - name
+                                  type: object
+                                type: array
+                              image:
+                                minLength: 1
+                                type: string
+                              name:
+                                minLength: 1
+                                type: string
+                              resources:
+                                properties:
+                                  claims:
+                                    items:
+                                      properties:
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                      type: object
+                                    type: array
+                                  limits:
+                                    type: object
+                                    x-kubernetes-preserve-unknown-fields: true
+                                  requests:
+                                    type: object
+                                    x-kubernetes-preserve-unknown-fields: true
+                                type: object
+                              volumeMounts:
+                                items:
+                                  properties:
+                                    mountPath:
+                                      minLength: 1
+                                      pattern: ^[^:]*$
+                                      type: string
+                                    name:
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                    - name
+                                    - mountPath
+                                  type: object
+                                type: array
+                              workingDir:
+                                minLength: 1
+                                type: string
+                            required:
+                              - image
+                            type: object
+                          maxItems: 1
+                          minItems: 1
+                          type: array
+                          x-kubernetes-preserve-unknown-fields: true
+                        hostname:
+                          maxLength: 63
+                          minLength: 1
+                          type: string
+                        volumes:
+                          items:
+                            properties:
+                              name:
+                                minLength: 1
+                                type: string
+                            required:
+                              - name
+                            type: object
+                            x-kubernetes-preserve-unknown-fields: true
+                          type: array
+                      required:
+                        - containers
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                    - spec
+                  type: object
+                tools:
+                  description: '워크스페이스 인-포드 도구. 엔트리가 있으면 실행(presence=on).
+
+                    jupyter=유저 런타임/GPU/패키지, ttyd=셸, filebrowser=워크스페이스
+
+                    전체 파일시스템 브라우징 — 모두 메인 컨테이너의 전체 경로에 접근해야
+
+                    하므로 Pod 내부에서 실행한다(별도 Pod 불가: 컨테이너 rootfs 비공유).
+
+                    filebrowser 격리가 필요하면 shareProcessNamespace 사이드카로 /proc/1/root
+
+                    서빙(컨트롤러 임플 디테일, CRD 동일). 이미지/버전은 컨트롤러 정책 관리.
+
+                    '
+                  items:
+                    properties:
+                      config:
+                        description: '도구별 설정. 키는 도구마다 다르며 CRD 는 검증하지 않는다(폴리모픽).
+
+                          각 도구 핸들러가 해석. 예) jupyter: {workspace_path: "/..."}.
+
+                          '
+                        nullable: true
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
+                      type:
+                        enum:
+                          - jupyter
+                          - ttyd
+                          - filebrowser
+                        type: string
+                    required:
+                      - type
+                    type: object
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+              required:
+                - ssh
+                - template
+              type: object
+            status:
+              properties:
+                conditions:
+                  description: '워크스페이스 전체 상태. Ready / Suspended 등.
+
+                    metav1.Condition 표준 형식.
+
+                    '
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        enum:
+                          - 'True'
+                          - 'False'
+                          - Unknown
+                        type: string
+                      type:
+                        description: 'Ready / Suspended 외에 tool 별 "<Capitalize(type)>Ready"(예: JupyterReady,
+
+                          TtydReady, FilebrowserReady) 등 확장. enum 미지정으로 신규 추가 자유.
+
+                          '
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - type
+                      - status
+                      - reason
+                      - message
+                      - lastTransitionTime
+                    type: object
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                observedGeneration:
+                  description: 컨트롤러가 처리한 .metadata.generation.
+                  format: int64
+                  minimum: 0
+                  type: integer
+                ports:
+                  description: spec.ports[] 별 접근 정보. name 으로 매핑.
+                  items:
+                    properties:
+                      externalAddress:
+                        type: string
+                      internalAddress:
+                        type: string
+                      name:
+                        type: string
+                      port:
+                        type: integer
+                      type:
+                        enum:
+                          - TCP
+                          - HTTP
+                        type: string
+                    required:
+                      - name
+                    type: object
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - name
+                  x-kubernetes-list-type: map
+                readyReplicas:
+                  description: Ready 상태 replica 수.
+                  type: integer
+                replicas:
+                  description: 현재 StatefulSet replica 수.
+                  type: integer
+                ssh:
+                  description: SSH 접속 정보 (ready 시에만 채워짐).
+                  properties:
+                    host:
+                      type: string
+                    port:
+                      type: integer
+                    user:
+                      type: string
+                  type: object
+                tools:
+                  description: '활성 tool 별 접근 정보. type 으로 spec.tools 와 매핑.
+
+                    address 는 HTTP ServiceExposure rule 에서 매핑. 준비 여부/사유는
+
+                    conditions[] 의 "<Capitalize(type)>Ready"(예: JupyterReady)로 표현.
+
+                    '
+                  items:
+                    properties:
+                      address:
+                        description: 전체 URL (예 https://jupyter-my-ws.example.com/).
+                        type: string
+                      type:
+                        description: spec.tools[].type 와 동일 (jupyter/ttyd/filebrowser/...).
+                        type: string
+                    required:
+                      - type
+                    type: object
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+              type: object
+          required:
+            - spec
+          type: object
+          x-kubernetes-validations:
+            - message: Exactly one container must be defined.
+              rule: self.spec.template.spec.containers.size() == 1
+            - message: Container name must match metadata.name of the Workspace.
+              rule: self.spec.template.spec.containers[0].name == self.metadata.name
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: aipubvolumes.aipub.ten1010.io
+spec:
+  conversion:
+    strategy: None
+  group: aipub.ten1010.io
+  names:
+    kind: AIPubVolume
+    listKind: AIPubVolumeList
+    plural: aipubvolumes
+    shortNames:
+      - av
+    singular: aipubvolume
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .status.readyCondition.status
+          name: READY
+          type: boolean
+        - jsonPath: .status.pvName
+          name: PV-NAME
+          type: string
+        - jsonPath: .status.pvcName
+          name: PVC-NAME
+          type: string
+        - jsonPath: .spec.capacity
+          name: CAPACITY
+          type: string
+        - jsonPath: .status.used
+          name: USED
+          type: string
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            metadata:
+              type: object
+            spec:
+              oneOf:
+                - required:
+                    - nfs
+                - required:
+                    - storageClassName
+              properties:
+                capacity:
+                  pattern: ^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$
+                  type: string
+                nfs:
+                  properties:
+                    path:
+                      type: string
+                    readOnly:
+                      default: false
+                      type: boolean
+                    server:
+                      type: string
+                  required:
+                    - path
+                    - server
+                  type: object
+                storageClassName:
+                  type: string
+              required:
+                - capacity
+              type: object
+            status:
+              default:
+                readyCondition:
+                  status: false
+              properties:
+                event:
+                  properties:
+                    created:
+                      type: string
+                    deleted:
+                      type: string
+                    updated:
+                      type: string
+                  type: object
+                mountWorkloads:
+                  items:
+                    properties:
+                      kind:
+                        type: string
+                      name:
+                        type: string
+                      uid:
+                        type: string
+                    type: object
+                  type: array
+                pvName:
+                  type: string
+                pvcName:
+                  type: string
+                readyCondition:
+                  properties:
+                    message:
+                      type: string
+                    reason:
+                      type: string
+                    status:
+                      type: boolean
+                    timestamp:
+                      type: string
+                  type: object
+                used:
+                  type: string
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+status:
+  acceptedNames:
+    kind: AIPubVolume
+    listKind: AIPubVolumeList
+    plural: aipubvolumes
+    shortNames:
+      - av
+    singular: aipubvolume
+  conditions:
+    - lastTransitionTime: "2025-07-22T07:10:52Z"
+      message: no conflicts found
+      reason: NoConflicts
+      status: "True"
+      type: NamesAccepted
+    - lastTransitionTime: "2025-07-22T07:10:52Z"
+      message: the initial names have been accepted
+      reason: InitialNamesAccepted
+      status: "True"
+      type: Established
+  storedVersions:
+    - v1alpha1
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: sftpservers.aipub.ten1010.io
+spec:
+  scope: Namespaced
+  names:
+    kind: SFTPServer
+    plural: sftpservers
+    singular: sftpserver
+    shortNames:
+      - sftp
+    categories:
+      - all
+  group: aipub.ten1010.io
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      additionalPrinterColumns:
+        - name: AVAILABLE
+          type: boolean
+          jsonPath: .status.availableCondition.status
+        - name: POD-NAME
+          type: string
+          jsonPath: .status.podName
+        - name: SERVICE-NAME
+          type: string
+          jsonPath: .status.serviceName
+        - name: ADDRESS
+          type: string
+          jsonPath: .status.address
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          required:
+            - metadata
+            - spec
+          properties:
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - volumeAndMounts
+                - publicKey
+              properties:
+                volumeAndMounts:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      persistentVolumeClaim:
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
+                      mountPath:
+                        type: string
+                port:
+                  type: integer
+                  nullable: true
+                publicKey:
+                  type: object
+                  oneOf:
+                    - required: ["value"]
+                    - required: ["valueFrom"]
+                  properties:
+                    value:
+                      type: string
+                    valueFrom:
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+            status:
+              type: object
+              default:
+                availableCondition:
+                  status: false
+              properties:
+                availableCondition:
+                  type: object
+                  properties:
+                    status:
+                      type: boolean
+                    reason:
+                      type: string
+                    message:
+                      type: string
+                    timestamp:
+                      type: string
+                podName:
+                  type: string
+                serviceName:
+                  type: string
+                address:
+                  type: string
+                event:
+                  type: object
+                  properties:
+                    created:
+                      type: string
+                    updated:
+                      type: string
+                    deleted:
+                      type: string

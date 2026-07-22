@@ -1,0 +1,188 @@
+package io.ten1010.aipub.projectcontroller.controller.namespaced;
+
+import io.kubernetes.client.extended.controller.reconciler.Request;
+import io.kubernetes.client.extended.controller.reconciler.Result;
+import io.kubernetes.client.informer.SharedInformerFactory;
+import io.kubernetes.client.informer.cache.Indexer;
+import io.kubernetes.client.openapi.ApiException;
+import io.kubernetes.client.openapi.apis.CoreV1Api;
+import io.kubernetes.client.openapi.models.V1Namespace;
+import io.kubernetes.client.openapi.models.V1OwnerReference;
+import io.kubernetes.client.openapi.models.V1Secret;
+import io.kubernetes.client.openapi.models.V1SecretBuilder;
+import io.ten1010.aipub.projectcontroller.controller.AbstractReconciler;
+import io.ten1010.aipub.projectcontroller.controller.RequestHelper;
+import io.ten1010.aipub.projectcontroller.domain.k8s.ImageRegistrySecretNameResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
+import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceNameResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+
+public class ImageRegistrySecretReconciler extends AbstractReconciler {
+
+  private final KeyResolver keyResolver;
+  private final NamespaceNameResolver namespaceNameResolver;
+  private final ImageRegistrySecretNameResolver secretNameResolver;
+  private final ReconciliationService reconciliationService;
+  private final Indexer<V1Namespace> namespaceIndexer;
+  private final Indexer<V1Secret> secretIndexer;
+  private final Indexer<V1alpha1Project> projectIndexer;
+  private final CoreV1Api coreV1Api;
+
+  public ImageRegistrySecretReconciler(
+      SharedInformerFactory sharedInformerFactory,
+      K8sApiProvider k8sApiProvider,
+      ReconciliationService reconciliationService) {
+    this.keyResolver = new KeyResolver();
+    this.namespaceNameResolver = new NamespaceNameResolver();
+    this.secretNameResolver = new ImageRegistrySecretNameResolver();
+    this.reconciliationService = reconciliationService;
+    this.namespaceIndexer = sharedInformerFactory
+        .getExistingSharedIndexInformer(V1Namespace.class)
+        .getIndexer();
+    this.secretIndexer = sharedInformerFactory
+        .getExistingSharedIndexInformer(V1Secret.class)
+        .getIndexer();
+    this.projectIndexer = sharedInformerFactory
+        .getExistingSharedIndexInformer(V1alpha1Project.class)
+        .getIndexer();
+    this.coreV1Api = new CoreV1Api(k8sApiProvider.getApiClient());
+  }
+
+  @Override
+  protected Result reconcileInternal(Request request) throws ApiException {
+    Optional<String> projNameOpt = this.secretNameResolver.resolveProjectName(request.getName());
+    if (projNameOpt.isEmpty()) {
+      return new Result(false);
+    }
+    String projName = projNameOpt.get();
+
+    String secretKey = new RequestHelper(this.keyResolver).resolveKey(request);
+    Optional<V1Secret> secretOpt = Optional.ofNullable(this.secretIndexer.getByKey(secretKey));
+    String projKey = this.keyResolver.resolveKey(projName);
+    Optional<V1alpha1Project> projectOpt = Optional.ofNullable(
+        this.projectIndexer.getByKey(projKey));
+    Optional<V1Namespace> namespaceOpt = Optional.ofNullable(this.namespaceIndexer.getByKey(projKey));
+
+    if (namespaceOpt.isEmpty()) {
+      return new Result(false);
+    }
+
+    if (projectOpt.isEmpty()) {
+      if (secretOpt.isPresent()) {
+        deleteSecret(secretOpt.get());
+        return new Result(false);
+      }
+      return new Result(false);
+    }
+
+    List<V1OwnerReference> reconciledReferences = this.reconciliationService.reconcileOwnerReferences(
+        secretOpt.orElse(null), projectOpt.get());
+    String reconciledType = this.reconciliationService.reconcileImageRegistrySecretType(
+        projectOpt.get());
+
+    if (secretOpt.isPresent()) {
+      String projNameFromSecretName = projNameOpt.get();
+      String secretNamespace = K8sObjectUtils.getNamespace(secretOpt.get());
+      Map<String, String> reconciledLabels = this.reconciliationService.reconcileSecretLabels(
+          namespaceOpt.get(), projectOpt.get());
+      String projNameFromNamespace = this.namespaceNameResolver.resolveProjectName(secretNamespace);
+      if (!projNameFromSecretName.equals(projNameFromNamespace)) {
+        deleteSecret(secretOpt.get());
+        return new Result(false);
+      }
+      Map<String, byte[]> reconciledData = this.reconciliationService.reconcileImageRegistrySecretData(
+          projectOpt.get());
+      return reconcileExistingSecret(secretOpt.get(), reconciledReferences, reconciledType,
+          reconciledData, reconciledLabels);
+    }
+
+    if (!K8sObjectUtils.isTerminating(projectOpt.get())) {
+      Map<String, byte[]> reconciledData = this.reconciliationService.reconcileImageRegistrySecretData(
+          projectOpt.get());
+      Map<String, String> reconciledLabels = this.reconciliationService.reconcileSecretLabels(
+          namespaceOpt.get(), projectOpt.get());
+      return reconcileNoExistingSecret(request.getNamespace(), request.getName(),
+          reconciledReferences, reconciledType, reconciledData, reconciledLabels);
+    }
+
+    return new Result(false);
+  }
+
+  private Result reconcileNoExistingSecret(
+      String namespace,
+      String objName,
+      List<V1OwnerReference> reconciledReferences,
+      String reconciledType,
+      Map<String, byte[]> reconciledData,
+      Map<String, String> reconciledLabels) throws ApiException {
+    V1Secret secret = new V1SecretBuilder()
+        .withNewMetadata()
+        .withNamespace(namespace)
+        .withName(objName)
+        .withOwnerReferences(reconciledReferences)
+        .withLabels(reconciledLabels)
+        .endMetadata()
+        .withType(reconciledType)
+        .withData(reconciledData)
+        .build();
+    createSecret(namespace, secret);
+
+    return new Result(false);
+  }
+
+  private Result reconcileExistingSecret(
+      V1Secret existing,
+      List<V1OwnerReference> reconciledReferences,
+      String reconciledType,
+      Map<String, byte[]> reconciledData,
+      Map<String, String> reconciledLabels) throws ApiException {
+    if (Set.copyOf(K8sObjectUtils.getOwnerReferences(existing))
+        .equals(Set.copyOf(reconciledReferences)) &&
+        Objects.equals(existing.getType(), reconciledType) &&
+        Objects.equals(existing.getData(), reconciledData)) {
+      return new Result(false);
+    }
+    V1Secret edited = new V1SecretBuilder(existing)
+        .editMetadata()
+        .withOwnerReferences(reconciledReferences)
+        .withLabels(reconciledLabels)
+        .endMetadata()
+        .withType(reconciledType)
+        .withData(reconciledData)
+        .build();
+    updateSecret(K8sObjectUtils.getNamespace(existing), K8sObjectUtils.getName(existing), edited);
+
+    return new Result(false);
+  }
+
+  private void createSecret(String namespace, V1Secret secret) throws ApiException {
+    this.coreV1Api
+        .createNamespacedSecret(namespace, secret)
+        .execute();
+  }
+
+  private void updateSecret(String namespace, String objName, V1Secret secret) throws ApiException {
+    this.coreV1Api
+        .replaceNamespacedSecret(objName, namespace, secret)
+        .execute();
+  }
+
+  private void deleteSecret(String namespace, String objName) throws ApiException {
+    this.coreV1Api
+        .deleteNamespacedSecret(objName, namespace)
+        .execute();
+  }
+
+  private void deleteSecret(V1Secret object) throws ApiException {
+    deleteSecret(K8sObjectUtils.getNamespace(object), K8sObjectUtils.getName(object));
+  }
+
+}
