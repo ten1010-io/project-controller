@@ -4,6 +4,7 @@ import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryR
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryRobotListOptions;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryRobotSecret;
 import io.ten1010.aipub.projectcontroller.domain.k8s.DockerConfigJsonResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.ImageHubNotConnectedException;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import java.util.Base64;
@@ -45,7 +46,8 @@ public class AipubDockerConfigJsonResolver implements DockerConfigJsonResolver {
         K8sObjectUtils.getName(project));
     Optional<ImageRegistryRobot> robotOpt = findByUsername(username);
     if (robotOpt.isEmpty()) {
-      throw new IllegalStateException("Could not find image registry robot for " + username);
+      throw new ImageHubNotConnectedException(
+          "Could not find image registry robot for " + username);
     }
     String password = getPassword(robotOpt.get());
 
