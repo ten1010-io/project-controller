@@ -140,7 +140,8 @@ spec:
 
 * case 3 : 프로젝트(Project) 만들기
 +
-아래 예제는 au1(project-manager)과 au2(project-developer)를 구성원으로 두고, node1 노드와 ng1 노드 그룹, img-hub1 이미지 허브를 연결하며, PVC 스토리지 할당량을 500Gi로 지정한 프로젝트입니다.
+아래 예제는 au1(project-manager)과 au2(project-developer)를 구성원으로 두고, node1 노드와 ng1 노드 그룹, img-hub1 이미지 허브를 연결하며, 할당량(quota)을 지정한 프로젝트입니다.
+`quota.hard` 는 네이티브 ResourceQuota 와 동일한 리터럴 키(`requests.cpu`, `limits.memory`, `requests.storage` 등)를 사용하며, GPU 같은 확장 리소스는 `requests.` 접두어를 사용해야 합니다.
 구성원으로 등록한 사용자에게는 각자의 역할(project-manager/project-developer)에 맞는 권한이 이 프로젝트에 자동으로 부여됩니다.
 +
 ----
@@ -155,7 +156,13 @@ spec:
     - aipubUser: au2
       role: project-developer
   quota:
-    pvcStorage: 500Gi
+    hard:
+      requests.cpu: "16"
+      limits.cpu: "32"
+      requests.memory: 64Gi
+      limits.memory: 128Gi
+      requests.storage: 500Gi
+      requests.ten1010.io/gpu-block-63mb-a2000: "8"
   binding:
     nodes:
       - node1
