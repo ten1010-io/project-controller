@@ -12,6 +12,7 @@ import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1SecretBuilder;
 import io.ten1010.aipub.projectcontroller.controller.AbstractReconciler;
 import io.ten1010.aipub.projectcontroller.controller.RequestHelper;
+import io.ten1010.aipub.projectcontroller.domain.k8s.ImageHubNotConnectedException;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ImageRegistrySecretNameResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
@@ -24,8 +25,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ImageRegistrySecretReconciler extends AbstractReconciler {
+
+  private static final Logger log = LoggerFactory.getLogger(ImageRegistrySecretReconciler.class);
 
   private final KeyResolver keyResolver;
   private final NamespaceNameResolver namespaceNameResolver;
@@ -98,15 +103,25 @@ public class ImageRegistrySecretReconciler extends AbstractReconciler {
         deleteSecret(secretOpt.get());
         return new Result(false);
       }
-      Map<String, byte[]> reconciledData = this.reconciliationService.reconcileImageRegistrySecretData(
-          projectOpt.get());
+      Map<String, byte[]> reconciledData;
+      try {
+        reconciledData = this.reconciliationService.reconcileImageRegistrySecretData(
+            projectOpt.get());
+      } catch (ImageHubNotConnectedException e) {
+        return logImageHubNotConnectedAndRequeue(projName);
+      }
       return reconcileExistingSecret(secretOpt.get(), reconciledReferences, reconciledType,
           reconciledData, reconciledLabels);
     }
 
     if (!K8sObjectUtils.isTerminating(projectOpt.get())) {
-      Map<String, byte[]> reconciledData = this.reconciliationService.reconcileImageRegistrySecretData(
-          projectOpt.get());
+      Map<String, byte[]> reconciledData;
+      try {
+        reconciledData = this.reconciliationService.reconcileImageRegistrySecretData(
+            projectOpt.get());
+      } catch (ImageHubNotConnectedException e) {
+        return logImageHubNotConnectedAndRequeue(projName);
+      }
       Map<String, String> reconciledLabels = this.reconciliationService.reconcileSecretLabels(
           namespaceOpt.get(), projectOpt.get());
       return reconcileNoExistingSecret(request.getNamespace(), request.getName(),
@@ -114,6 +129,12 @@ public class ImageRegistrySecretReconciler extends AbstractReconciler {
     }
 
     return new Result(false);
+  }
+
+  private Result logImageHubNotConnectedAndRequeue(String projName) {
+    log.warn("ImageHub is not connected to the project [name={}]. "
+        + "Skipping image registry secret reconciliation until it is connected.", projName);
+    return new Result(true, getGeneralFailRequeueDuration());
   }
 
   private Result reconcileNoExistingSecret(
