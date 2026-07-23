@@ -8,5 +8,7 @@ public class V1alpha1ProjectStatusQuota {
 
   @Nullable
   private V1alpha1ProjectStatusQuotaMetric pvcStorage;
+  @Nullable
+  private V1alpha1ProjectStatusQuotaHard hard;
 
 }

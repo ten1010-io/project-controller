@@ -10,6 +10,13 @@ spec:
       role: project-developer
   quota:
     pvcStorage: 500Gi
+    hard:
+      cpu:
+        requests: "16"
+        limits: "32"
+      memory:
+        requests: 64Gi
+        limits: 128Gi
   binding:
     nodes:
       - node1
