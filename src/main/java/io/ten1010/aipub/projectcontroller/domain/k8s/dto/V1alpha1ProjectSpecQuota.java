@@ -11,5 +11,7 @@ public class V1alpha1ProjectSpecQuota {
   private String pvcStorage;
   @Nullable
   private Map<String, String> extendedResources;
+  @Nullable
+  private V1alpha1ProjectSpecQuotaHard hard;
 
 }

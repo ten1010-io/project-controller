@@ -10,15 +10,20 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectBinding;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectMember;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectSpec;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectSpecQuota;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectSpecQuotaHard;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectSpecQuotaResource;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectStatus;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectStatusQuota;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectStatusQuotaHard;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectStatusQuotaMetric;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectStatusQuotaResource;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 
 public abstract class ProjectUtils {
 
@@ -69,6 +74,34 @@ public abstract class ProjectUtils {
   public static Optional<String> getSpecPvcStorageQuota(V1alpha1Project object) {
     Optional<V1alpha1ProjectSpecQuota> quotaOpt = getSpecQuota(object);
     return quotaOpt.map(V1alpha1ProjectSpecQuota::getPvcStorage);
+  }
+
+  public static Optional<String> getSpecCpuRequestsQuota(V1alpha1Project object) {
+    return getSpecQuota(object)
+        .map(V1alpha1ProjectSpecQuota::getHard)
+        .map(V1alpha1ProjectSpecQuotaHard::getCpu)
+        .map(V1alpha1ProjectSpecQuotaResource::getRequests);
+  }
+
+  public static Optional<String> getSpecCpuLimitsQuota(V1alpha1Project object) {
+    return getSpecQuota(object)
+        .map(V1alpha1ProjectSpecQuota::getHard)
+        .map(V1alpha1ProjectSpecQuotaHard::getCpu)
+        .map(V1alpha1ProjectSpecQuotaResource::getLimits);
+  }
+
+  public static Optional<String> getSpecMemoryRequestsQuota(V1alpha1Project object) {
+    return getSpecQuota(object)
+        .map(V1alpha1ProjectSpecQuota::getHard)
+        .map(V1alpha1ProjectSpecQuotaHard::getMemory)
+        .map(V1alpha1ProjectSpecQuotaResource::getRequests);
+  }
+
+  public static Optional<String> getSpecMemoryLimitsQuota(V1alpha1Project object) {
+    return getSpecQuota(object)
+        .map(V1alpha1ProjectSpecQuota::getHard)
+        .map(V1alpha1ProjectSpecQuotaHard::getMemory)
+        .map(V1alpha1ProjectSpecQuotaResource::getLimits);
   }
 
   public static Map<String, String> getSpecExtendedResourcesQuota(V1alpha1Project object) {
@@ -149,6 +182,10 @@ public abstract class ProjectUtils {
     if (spec.getQuota() != null) {
       V1alpha1ProjectSpecQuota quota = new V1alpha1ProjectSpecQuota();
       quota.setPvcStorage(spec.getQuota().getPvcStorage());
+      if (spec.getQuota().getExtendedResources() != null) {
+        quota.setExtendedResources(new HashMap<>(spec.getQuota().getExtendedResources()));
+      }
+      quota.setHard(cloneSpecQuotaHard(spec.getQuota().getHard()));
       clone.setQuota(quota);
     }
     if (spec.getBinding() != null) {
@@ -174,13 +211,10 @@ public abstract class ProjectUtils {
       clone.setAllBoundAipubUsers(new ArrayList<>(status.getAllBoundAipubUsers()));
     }
     if (status.getQuota() != null) {
+      V1alpha1ProjectStatusQuota source = status.getQuota();
       V1alpha1ProjectStatusQuota quota = new V1alpha1ProjectStatusQuota();
-      if (status.getQuota().getPvcStorage() != null) {
-        V1alpha1ProjectStatusQuotaMetric pvcStorage = new V1alpha1ProjectStatusQuotaMetric();
-        pvcStorage.setLimit(status.getQuota().getPvcStorage().getLimit());
-        pvcStorage.setUsed(status.getQuota().getPvcStorage().getUsed());
-        quota.setPvcStorage(pvcStorage);
-      }
+      quota.setPvcStorage(cloneMetric(source.getPvcStorage()));
+      quota.setHard(cloneStatusQuotaHard(source.getHard()));
       clone.setQuota(quota);
     }
     if (status.getAllBoundNodeGroups() != null) {
@@ -193,6 +227,66 @@ public abstract class ProjectUtils {
       clone.setAllBoundImageHubs(new ArrayList<>(status.getAllBoundImageHubs()));
     }
 
+    return clone;
+  }
+
+  @Nullable
+  private static V1alpha1ProjectStatusQuotaMetric cloneMetric(
+      @Nullable V1alpha1ProjectStatusQuotaMetric metric) {
+    if (metric == null) {
+      return null;
+    }
+    V1alpha1ProjectStatusQuotaMetric clone = new V1alpha1ProjectStatusQuotaMetric();
+    clone.setLimit(metric.getLimit());
+    clone.setUsed(metric.getUsed());
+    return clone;
+  }
+
+  @Nullable
+  private static V1alpha1ProjectSpecQuotaHard cloneSpecQuotaHard(
+      @Nullable V1alpha1ProjectSpecQuotaHard hard) {
+    if (hard == null) {
+      return null;
+    }
+    V1alpha1ProjectSpecQuotaHard clone = new V1alpha1ProjectSpecQuotaHard();
+    clone.setCpu(cloneSpecResource(hard.getCpu()));
+    clone.setMemory(cloneSpecResource(hard.getMemory()));
+    return clone;
+  }
+
+  @Nullable
+  private static V1alpha1ProjectStatusQuotaHard cloneStatusQuotaHard(
+      @Nullable V1alpha1ProjectStatusQuotaHard hard) {
+    if (hard == null) {
+      return null;
+    }
+    V1alpha1ProjectStatusQuotaHard clone = new V1alpha1ProjectStatusQuotaHard();
+    clone.setCpu(cloneStatusResource(hard.getCpu()));
+    clone.setMemory(cloneStatusResource(hard.getMemory()));
+    return clone;
+  }
+
+  @Nullable
+  private static V1alpha1ProjectSpecQuotaResource cloneSpecResource(
+      @Nullable V1alpha1ProjectSpecQuotaResource resource) {
+    if (resource == null) {
+      return null;
+    }
+    V1alpha1ProjectSpecQuotaResource clone = new V1alpha1ProjectSpecQuotaResource();
+    clone.setRequests(resource.getRequests());
+    clone.setLimits(resource.getLimits());
+    return clone;
+  }
+
+  @Nullable
+  private static V1alpha1ProjectStatusQuotaResource cloneStatusResource(
+      @Nullable V1alpha1ProjectStatusQuotaResource resource) {
+    if (resource == null) {
+      return null;
+    }
+    V1alpha1ProjectStatusQuotaResource clone = new V1alpha1ProjectStatusQuotaResource();
+    clone.setRequests(cloneMetric(resource.getRequests()));
+    clone.setLimits(cloneMetric(resource.getLimits()));
     return clone;
   }
 
