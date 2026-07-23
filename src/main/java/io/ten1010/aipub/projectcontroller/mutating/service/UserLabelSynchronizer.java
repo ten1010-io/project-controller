@@ -45,18 +45,18 @@ public class UserLabelSynchronizer {
 
   @EventListener(ApplicationReadyEvent.class)
   public void onApplicationReady() {
-    log.info("{} Application ready, starting UserLabelSynchronizer with interval {}ms",
+    log.debug("{} Application ready, starting UserLabelSynchronizer with interval {}ms",
         LOG_PREFIX, SYNC_INTERVAL_MS);
     this.scheduler.scheduleWithFixedDelay(this::sync, 0, SYNC_INTERVAL_MS, TimeUnit.MILLISECONDS);
   }
 
   void sync() {
     long startNanos = System.nanoTime();
-    log.info("{} Sync cycle started", LOG_PREFIX);
+    log.debug("{} Sync cycle started", LOG_PREFIX);
     try {
       Counters counters = run();
       long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000L;
-      log.info("{} Sync cycle done: pods={}, processed={}, skippedNoWorkloadLabel={}, "
+      log.debug("{} Sync cycle done: pods={}, processed={}, skippedNoWorkloadLabel={}, "
               + "ownerLookupFailed={}, alreadyInSync={}, patched={}, patchFailed={}, elapsedMs={}",
           LOG_PREFIX, counters.totalPods, counters.processed, counters.skippedNoWorkloadLabel,
           counters.ownerLookupFailed, counters.alreadyInSync, counters.patched,
@@ -81,7 +81,7 @@ public class UserLabelSynchronizer {
       return c;
     }
     c.totalPods = items.size();
-    log.info("{} Listed {} pods with workload-kind label", LOG_PREFIX, c.totalPods);
+    log.debug("{} Listed {} pods with workload-kind label", LOG_PREFIX, c.totalPods);
 
     Map<String, String @Nullable []> cache = new HashMap<>();
 
@@ -95,7 +95,7 @@ public class UserLabelSynchronizer {
 
       JsonNode labels = pod.path("metadata").path("labels");
       if (!labels.isObject()) {
-        log.info("{} Skip pod {}/{}: no labels object", LOG_PREFIX, namespace, podName);
+        log.debug("{} Skip pod {}/{}: no labels object", LOG_PREFIX, namespace, podName);
         c.skippedNoWorkloadLabel++;
         continue;
       }
@@ -103,7 +103,7 @@ public class UserLabelSynchronizer {
       JsonNode kindNode = labels.get(LabelConstants.WORKLOAD_KIND_KEY);
       JsonNode nameNode = labels.get(LabelConstants.WORKLOAD_NAME_KEY);
       if (kindNode == null || nameNode == null) {
-        log.info("{} Skip pod {}/{}: missing workload-kind/workload-name label",
+        log.debug("{} Skip pod {}/{}: missing workload-kind/workload-name label",
             LOG_PREFIX, namespace, podName);
         c.skippedNoWorkloadLabel++;
         continue;
@@ -111,20 +111,20 @@ public class UserLabelSynchronizer {
       String kind = kindNode.textValue();
       String name = nameNode.textValue();
       if (kind == null || name == null) {
-        log.info("{} Skip pod {}/{}: workload-kind/workload-name label has null text",
+        log.debug("{} Skip pod {}/{}: workload-kind/workload-name label has null text",
             LOG_PREFIX, namespace, podName);
         c.skippedNoWorkloadLabel++;
         continue;
       }
 
       c.processed++;
-      log.info("{} Processing pod {}/{}: owner={}/{}", LOG_PREFIX, namespace, podName, kind, name);
+      log.debug("{} Processing pod {}/{}: owner={}/{}", LOG_PREFIX, namespace, podName, kind, name);
 
       String cacheKey = namespace + "::" + kind + "/" + name;
       String @Nullable [] ownerLabels;
       if (cache.containsKey(cacheKey)) {
         ownerLabels = cache.get(cacheKey);
-        log.info("{} Owner cache hit for {} → username={}, userid={}",
+        log.debug("{} Owner cache hit for {} → username={}, userid={}",
             LOG_PREFIX, cacheKey,
             ownerLabels == null ? null : ownerLabels[0],
             ownerLabels == null ? null : ownerLabels[1]);
@@ -158,12 +158,12 @@ public class UserLabelSynchronizer {
 
     if (Objects.equals(ownerLabels[0], currentUsername)
         && Objects.equals(ownerLabels[1], currentUserid)) {
-      log.info("{} Pod {}/{} already in sync (username={}, userid={})",
+      log.debug("{} Pod {}/{} already in sync (username={}, userid={})",
           LOG_PREFIX, namespace, podName, currentUsername, currentUserid);
       return SyncResult.ALREADY_IN_SYNC;
     }
 
-    log.info("{} Patching pod {}/{}: username=[{}→{}], userid=[{}→{}]",
+    log.debug("{} Patching pod {}/{}: username=[{}→{}], userid=[{}→{}]",
         LOG_PREFIX, namespace, podName,
         currentUsername, ownerLabels[0], currentUserid, ownerLabels[1]);
     return patchPodLabels(podName, namespace, ownerLabels[0], ownerLabels[1]);
@@ -194,7 +194,7 @@ public class UserLabelSynchronizer {
           LOG_PREFIX, kind);
       return null;
     }
-    log.info("{} Owner lookup {}/{} ns={}: trying {} candidate resource(s)",
+    log.debug("{} Owner lookup {}/{} ns={}: trying {} candidate resource(s)",
         LOG_PREFIX, kind, name, namespace, resources.size());
 
     for (ApiResourceDiscovery.ResourceInfo resourceInfo : resources) {
@@ -207,7 +207,7 @@ public class UserLabelSynchronizer {
       try {
         namespaced = this.apiResourceDiscovery.isNamespaced(groupResource);
       } catch (GroupResourceNotFoundException e) {
-        log.info("{} Owner lookup: groupResource={} not in discovery — skipping candidate",
+        log.debug("{} Owner lookup: groupResource={} not in discovery — skipping candidate",
             LOG_PREFIX, groupResource);
         continue;
       }
@@ -227,10 +227,10 @@ public class UserLabelSynchronizer {
         }
       }
 
-      log.info("{} Owner lookup attempt: GET {}", LOG_PREFIX, path);
+      log.debug("{} Owner lookup attempt: GET {}", LOG_PREFIX, path);
       JsonNode obj = fetchJson(path);
       if (obj == null) {
-        log.info("{} Owner lookup attempt returned null (404 or fetch error): {}",
+        log.debug("{} Owner lookup attempt returned null (404 or fetch error): {}",
             LOG_PREFIX, path);
         continue;
       }
@@ -244,7 +244,7 @@ public class UserLabelSynchronizer {
 
       String username = getTextValue(labels, LabelConstants.OBJECT_OWN_USERNAME_KEY);
       String userid = getTextValue(labels, LabelConstants.OBJECT_OWN_USERID_KEY);
-      log.info("{} Owner labels resolved {}/{} ns={}: username={}, userid={}",
+      log.debug("{} Owner labels resolved {}/{} ns={}: username={}, userid={}",
           LOG_PREFIX, kind, name, namespace, username, userid);
       return new String[]{username, userid};
     }
@@ -281,12 +281,12 @@ public class UserLabelSynchronizer {
 
       try (Response response = call.execute()) {
         if (response.isSuccessful()) {
-          log.info("{} Patched pod {}/{} (status={})",
+          log.debug("{} Patched pod {}/{} (status={})",
               LOG_PREFIX, namespace, name, response.code());
           return SyncResult.PATCHED;
         }
         if (response.code() == 404) {
-          log.info("{} Pod {}/{} not found for patch (already deleted?)",
+          log.debug("{} Pod {}/{} not found for patch (already deleted?)",
               LOG_PREFIX, namespace, name);
           return SyncResult.PATCH_FAILED;
         }
