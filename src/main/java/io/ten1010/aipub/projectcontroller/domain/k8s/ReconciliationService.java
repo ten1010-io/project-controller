@@ -38,7 +38,6 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeGroupStatus
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectStatus;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectStatusQuota;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectStatusQuotaMetric;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ResourceSet;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.NodeUtils;
@@ -61,8 +60,6 @@ import org.jspecify.annotations.Nullable;
 @Slf4j
 public class ReconciliationService {
 
-  private static final String REQUESTS_STORAGE_QUOTA_RESOURCE_NAME = "requests.storage";
-  private static final String EXTENDED_RESOURCE_HARD_PREFIX = "requests.";
   private static final List<String> BASIC_VERBS = List.of("create", "get", "watch", "list");
   private static final List<String> UPDATABLE_VERBS = List.of("update", "patch", "delete");
   private final SubjectResolver subjectResolver;
@@ -299,25 +296,25 @@ public class ReconciliationService {
     }
 
     Map<String, Quantity> statusHard = ResourceQuotaUtils.getStatusHard(boundQuota);
-    Quantity hardQuantity = statusHard.get(REQUESTS_STORAGE_QUOTA_RESOURCE_NAME);
-    String metricLimit = Optional.ofNullable(hardQuantity)
-        .map(Quantity::toSuffixedString)
-        .orElse(null);
-
     Map<String, Quantity> statusUsed = ResourceQuotaUtils.getStatusUsed(boundQuota);
-    Quantity usedQuantity = statusUsed.get(REQUESTS_STORAGE_QUOTA_RESOURCE_NAME);
-    String metricUsed = Optional.ofNullable(usedQuantity)
-        .map(Quantity::toSuffixedString)
-        .orElse(null);
-
-    V1alpha1ProjectStatusQuotaMetric storageMetric = new V1alpha1ProjectStatusQuotaMetric();
-    storageMetric.setLimit(metricLimit);
-    storageMetric.setUsed(metricUsed);
 
     V1alpha1ProjectStatusQuota statusQuota = new V1alpha1ProjectStatusQuota();
-    statusQuota.setPvcStorage(storageMetric);
+    statusQuota.setHard(toStringQuantityMap(statusHard));
+    statusQuota.setUsed(toStringQuantityMap(statusUsed));
 
     return statusQuota;
+  }
+
+  @Nullable
+  private static Map<String, String> toStringQuantityMap(Map<String, Quantity> quantities) {
+    if (quantities.isEmpty()) {
+      return null;
+    }
+    Map<String, String> result = new HashMap<>();
+    for (Map.Entry<String, Quantity> e : quantities.entrySet()) {
+      result.put(e.getKey(), e.getValue().toSuffixedString());
+    }
+    return result;
   }
 
   public List<V1OwnerReference> reconcileOwnerReferences(@Nullable KubernetesObject existing,
@@ -892,14 +889,12 @@ public class ReconciliationService {
 
   public V1ResourceQuotaSpec reconcileQuotaSpec(V1alpha1Project project) {
     V1ResourceQuotaSpecBuilder builder = new V1ResourceQuotaSpecBuilder();
-    Optional<String> pvcStorageQuotaOpt = ProjectUtils.getSpecPvcStorageQuota(project);
-    pvcStorageQuotaOpt.ifPresent(quota -> builder.addToHard(REQUESTS_STORAGE_QUOTA_RESOURCE_NAME,
-        Quantity.fromString(quota)));
-    Map<String, String> extendedResourcesQuota = ProjectUtils.getSpecExtendedResourcesQuota(
-        project);
-    for (Map.Entry<String, String> e : extendedResourcesQuota.entrySet()) {
-      builder.addToHard(EXTENDED_RESOURCE_HARD_PREFIX + e.getKey(),
-          Quantity.fromString(e.getValue()));
+
+    // quota.hard uses literal ResourceQuota resource names (requests.cpu, limits.memory,
+    // requests.storage, limits.ten1010.io/gpu-...) and is passed through verbatim.
+    Map<String, String> hardQuota = ProjectUtils.getSpecHardQuota(project);
+    for (Map.Entry<String, String> e : hardQuota.entrySet()) {
+      builder.addToHard(e.getKey(), Quantity.fromString(e.getValue()));
     }
 
     return builder.build();

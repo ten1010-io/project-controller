@@ -53,10 +53,7 @@ spec:
                 quota:
                   type: object
                   properties:
-                    pvcStorage:
-                      type: string
-                      pattern: '^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$'
-                    extendedResources:
+                    hard:
                       type: object
                       additionalProperties:
                         type: string
@@ -89,13 +86,14 @@ spec:
                 quota:
                   type: object
                   properties:
-                    pvcStorage:
+                    hard:
                       type: object
-                      properties:
-                        limit:
-                          type: string
-                        used:
-                          type: string
+                      additionalProperties:
+                        type: string
+                    used:
+                      type: object
+                      additionalProperties:
+                        type: string
                 allBoundNodeGroups:
                   type: array
                   default: [ ]

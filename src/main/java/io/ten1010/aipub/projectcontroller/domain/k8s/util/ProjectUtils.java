@@ -12,7 +12,6 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectSpec;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectSpecQuota;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectStatus;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectStatusQuota;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectStatusQuotaMetric;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -66,17 +65,12 @@ public abstract class ProjectUtils {
     return Optional.ofNullable(object.getSpec().getQuota());
   }
 
-  public static Optional<String> getSpecPvcStorageQuota(V1alpha1Project object) {
+  public static Map<String, String> getSpecHardQuota(V1alpha1Project object) {
     Optional<V1alpha1ProjectSpecQuota> quotaOpt = getSpecQuota(object);
-    return quotaOpt.map(V1alpha1ProjectSpecQuota::getPvcStorage);
-  }
-
-  public static Map<String, String> getSpecExtendedResourcesQuota(V1alpha1Project object) {
-    Optional<V1alpha1ProjectSpecQuota> quotaOpt = getSpecQuota(object);
-    if (quotaOpt.isEmpty() || quotaOpt.get().getExtendedResources() == null) {
+    if (quotaOpt.isEmpty() || quotaOpt.get().getHard() == null) {
       return new HashMap<>();
     }
-    return quotaOpt.get().getExtendedResources();
+    return quotaOpt.get().getHard();
   }
 
   public static Optional<V1alpha1ProjectBinding> getSpecBinding(V1alpha1Project object) {
@@ -148,7 +142,9 @@ public abstract class ProjectUtils {
     }
     if (spec.getQuota() != null) {
       V1alpha1ProjectSpecQuota quota = new V1alpha1ProjectSpecQuota();
-      quota.setPvcStorage(spec.getQuota().getPvcStorage());
+      if (spec.getQuota().getHard() != null) {
+        quota.setHard(new HashMap<>(spec.getQuota().getHard()));
+      }
       clone.setQuota(quota);
     }
     if (spec.getBinding() != null) {
@@ -174,12 +170,13 @@ public abstract class ProjectUtils {
       clone.setAllBoundAipubUsers(new ArrayList<>(status.getAllBoundAipubUsers()));
     }
     if (status.getQuota() != null) {
+      V1alpha1ProjectStatusQuota source = status.getQuota();
       V1alpha1ProjectStatusQuota quota = new V1alpha1ProjectStatusQuota();
-      if (status.getQuota().getPvcStorage() != null) {
-        V1alpha1ProjectStatusQuotaMetric pvcStorage = new V1alpha1ProjectStatusQuotaMetric();
-        pvcStorage.setLimit(status.getQuota().getPvcStorage().getLimit());
-        pvcStorage.setUsed(status.getQuota().getPvcStorage().getUsed());
-        quota.setPvcStorage(pvcStorage);
+      if (source.getHard() != null) {
+        quota.setHard(new HashMap<>(source.getHard()));
+      }
+      if (source.getUsed() != null) {
+        quota.setUsed(new HashMap<>(source.getUsed()));
       }
       clone.setQuota(quota);
     }
