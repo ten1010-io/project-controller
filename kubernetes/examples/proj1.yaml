@@ -9,14 +9,13 @@ spec:
     - aipubUser: au2
       role: project-developer
   quota:
-    pvcStorage: 500Gi
     hard:
-      cpu:
-        requests: "16"
-        limits: "32"
-      memory:
-        requests: 64Gi
-        limits: 128Gi
+      requests.cpu: "16"
+      limits.cpu: "32"
+      requests.memory: 64Gi
+      limits.memory: 128Gi
+      requests.storage: 500Gi
+      limits.ten1010.io/gpu-block-63mb-a2000: "8"
   binding:
     nodes:
       - node1
