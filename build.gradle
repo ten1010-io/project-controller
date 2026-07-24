@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '4.0.1'
+    id 'org.springframework.boot' version '4.0.6'
 }
 
 group = 'io.ten1010.aipub'
@@ -8,7 +8,7 @@ version = '0.1.0-SNAPSHOT'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(25)
     }
 }
 
@@ -19,8 +19,8 @@ allprojects {
 }
 
 dependencies {
-    implementation platform('org.springframework.boot:spring-boot-dependencies:4.0.1')
-    annotationProcessor platform('org.springframework.boot:spring-boot-dependencies:4.0.1')
+    implementation platform('org.springframework.boot:spring-boot-dependencies:4.0.6')
+    annotationProcessor platform('org.springframework.boot:spring-boot-dependencies:4.0.6')
 
     // Web dependencies
     implementation('org.springframework.boot:spring-boot-starter-web') {
@@ -33,8 +33,8 @@ dependencies {
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
     // Kubernetes client dependencies
-    implementation 'io.kubernetes:client-java:25.0.0'
-    implementation 'io.kubernetes:client-java-extended:25.0.0'
+    implementation 'io.kubernetes:client-java:26.0.0'
+    implementation 'io.kubernetes:client-java-extended:26.0.0'
 
     // Observability dependencies
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
@@ -46,8 +46,8 @@ dependencies {
 
     // Etc dependencies
     implementation 'org.jspecify:jspecify:1.0.0'
-    compileOnly 'org.projectlombok:lombok:1.18.32'
-    annotationProcessor 'org.projectlombok:lombok:1.18.32'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
 
     implementation 'com.google.code.gson:gson'
 

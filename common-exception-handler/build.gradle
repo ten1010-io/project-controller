@@ -21,7 +21,7 @@ sourceSets {
 
 ext {
     jspecifyVersion = '1.0.0'
-    lombokVersion = '1.18.32'
+    lombokVersion = '1.18.46'
     junitJupiterVersion = '5.10.2'
     mockitoVersion = '5.12.0'
     slf4jVersion = '2.0.13'
