@@ -1,0 +1,5 @@
+rootProject.name = 'project-controller'
+
+include 'common-apiclient'
+include 'common-exception-handler'
+include 'common-jsonpatch'

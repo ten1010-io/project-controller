@@ -1,0 +1,58 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'io.ten1010.common'
+version = '0.1.0-SNAPSHOT'
+description = 'Ten Common Exception Handler package.'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs += 'src/main/lombok'
+        }
+    }
+}
+
+ext {
+    jspecifyVersion = '1.0.0'
+    lombokVersion = '1.18.46'
+    junitJupiterVersion = '5.10.2'
+    mockitoVersion = '5.12.0'
+    slf4jVersion = '2.0.13'
+    servletVersion = '6.0.0'
+    springFrameworkVersion = '6.1.10'
+    springSecurityVersion = '6.3.1'
+}
+
+dependencies {
+    api "org.jspecify:jspecify:${jspecifyVersion}"
+
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+
+    compileOnly "org.slf4j:slf4j-api:${slf4jVersion}"
+    compileOnly "jakarta.servlet:jakarta.servlet-api:${servletVersion}"
+    compileOnly "org.springframework:spring-webmvc:${springFrameworkVersion}"
+    compileOnly "org.springframework.security:spring-security-web:${springSecurityVersion}"
+    compileOnly "org.springframework.security:spring-security-oauth2-core:${springSecurityVersion}"
+
+    testImplementation "org.junit.jupiter:junit-jupiter:${junitJupiterVersion}"
+    testImplementation "org.mockito:mockito-junit-jupiter:${mockitoVersion}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:1.10.2"
+
+    testImplementation "org.slf4j:slf4j-api:${slf4jVersion}"
+    testImplementation "jakarta.servlet:jakarta.servlet-api:${servletVersion}"
+    testImplementation "org.springframework:spring-webmvc:${springFrameworkVersion}"
+    testImplementation "org.springframework.security:spring-security-web:${springSecurityVersion}"
+    testImplementation "org.springframework.security:spring-security-oauth2-core:${springSecurityVersion}"
+}
+
+test {
+    useJUnitPlatform()
+}

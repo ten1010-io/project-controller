@@ -1,0 +1,68 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.0.6'
+}
+
+group = 'io.ten1010.aipub'
+version = '0.1.0-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+allprojects {
+    repositories {
+        mavenCentral()
+    }
+}
+
+dependencies {
+    implementation platform('org.springframework.boot:spring-boot-dependencies:4.0.6')
+    annotationProcessor platform('org.springframework.boot:spring-boot-dependencies:4.0.6')
+
+    // Web dependencies
+    implementation('org.springframework.boot:spring-boot-starter-web') {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-jackson'
+    }
+
+    // Spring Boot dependencies
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-jackson2'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+    // Kubernetes client dependencies
+    implementation 'io.kubernetes:client-java:26.0.0'
+    implementation 'io.kubernetes:client-java-extended:26.0.0'
+
+    // Observability dependencies
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+    // kubernetes-client-extended 의 DefaultController 가 workqueue 메트릭에 사용(런타임 필수).
+    // 소스에서 직접 import 하지 않지만 제거하면 io.prometheus.client.Gauge NoClassDefFoundError 로
+    // 기동에 실패한다. micrometer-registry-prometheus(io.prometheus.metrics 1.x)로는 대체 불가.
+    implementation 'io.prometheus:simpleclient:0.16.0'
+
+    // Etc dependencies
+    implementation 'org.jspecify:jspecify:1.0.0'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    implementation 'com.google.code.gson:gson'
+
+    implementation project(':common-apiclient')
+    implementation project(':common-jsonpatch')
+    implementation project(':common-exception-handler')
+
+    // Test dependencies
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+tasks.named('jar') {
+    enabled = false
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

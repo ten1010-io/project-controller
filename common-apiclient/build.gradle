@@ -1,0 +1,53 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'io.ten1010.common'
+version = '0.1.0-SNAPSHOT'
+description = 'Ten Common Apiclient package contains web api client library.'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs += 'src/main/lombok'
+        }
+    }
+}
+
+ext {
+    jspecifyVersion = '1.0.0'
+    lombokVersion = '1.18.46'
+    junitJupiterVersion = '5.10.2'
+    mockitoVersion = '5.12.0'
+    okhttp3Version = '4.12.0'
+    gsonVersion = '2.11.0'
+    gsonfireVersion = '1.9.0'
+}
+
+dependencies {
+    api "org.jspecify:jspecify:${jspecifyVersion}"
+
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+    testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
+    testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+
+    api "com.squareup.okhttp3:okhttp:${okhttp3Version}"
+    implementation "com.squareup.okhttp3:logging-interceptor:${okhttp3Version}"
+
+    api "com.google.code.gson:gson:${gsonVersion}"
+    implementation "io.gsonfire:gson-fire:${gsonfireVersion}"
+
+    testImplementation "org.junit.jupiter:junit-jupiter:${junitJupiterVersion}"
+    testImplementation "org.mockito:mockito-junit-jupiter:${mockitoVersion}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:1.10.2"
+}
+
+test {
+    useJUnitPlatform()
+}
