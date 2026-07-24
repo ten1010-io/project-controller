@@ -33,8 +33,8 @@ dependencies {
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
     // Kubernetes client dependencies
-    implementation 'io.kubernetes:client-java:26.0.0'
-    implementation 'io.kubernetes:client-java-extended:26.0.0'
+    implementation 'io.kubernetes:client-java:27.0.0'
+    implementation 'io.kubernetes:client-java-extended:27.0.0'
 
     // Observability dependencies
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
