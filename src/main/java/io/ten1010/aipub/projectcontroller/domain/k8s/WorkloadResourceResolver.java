@@ -5,7 +5,7 @@ import io.kubernetes.client.openapi.models.V1CronJob;
 import io.kubernetes.client.openapi.models.V1Job;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageBuild;
 import java.util.Optional;
-import javax.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 public class WorkloadResourceResolver {
 
