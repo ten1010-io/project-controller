@@ -51,7 +51,7 @@ dependencies {
 
     implementation 'com.google.code.gson:gson'
 
-    implementation project(':common-apiclient')
+    implementation project(':commons:common-apiclient')
     implementation project(':common-jsonpatch')
     implementation project(':common-exception-handler')
 

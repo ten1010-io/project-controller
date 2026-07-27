@@ -1,0 +1,3 @@
+[submodule "commons"]
+	path = commons
+	url = https://github.com/ten1010-io/aipub-commons.git
