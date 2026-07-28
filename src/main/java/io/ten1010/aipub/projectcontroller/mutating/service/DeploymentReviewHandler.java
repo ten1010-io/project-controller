@@ -52,6 +52,20 @@ public class DeploymentReviewHandler extends AbstractReviewHandler<V1Deployment>
       return;
     }
 
+    if (this.reconciliationService.isNamespaceAllowlisted(review.getRequest().getNamespace())) {
+      List<V1Toleration> reconciledTolerations =
+          this.reconciliationService.reconcileTolerationsForAllowlistedNamespace(
+              WorkloadUtils.getPodTemplateSpec(deployment));
+      JsonPatchBuilder allowlistPatchBuilder = new JsonPatchBuilder();
+      allowlistPatchBuilder.addToOperations(new JsonPatchOperationBuilder()
+          .replace()
+          .setPath("/spec/template/spec/tolerations")
+          .setValue(createJsonNode(reconciledTolerations))
+          .build());
+      V1AdmissionReviewUtils.allow(review, allowlistPatchBuilder.build());
+      return;
+    }
+
     V1alpha1Project project = this.projectIndexer.getByKey(K8sObjectUtils.getNamespace(deployment));
 
     V1PodTemplateSpec podTemplateSpec = WorkloadUtils.getPodTemplateSpec(deployment);

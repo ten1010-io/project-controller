@@ -28,8 +28,12 @@ public class AipubProperties {
   /**
    * project controller가 reconcile/mutating 대상에서 제외할 워크로드의 라벨 셀렉터 목록.
    * {@code "key=value"}(값 일치) 또는 {@code "key"}(존재만 확인) 형태를 지원하며, 하나라도
-   * 매칭되면 제외한다. virt-operator처럼 자체 워크로드를 직접 소유하는 인프라 오퍼레이터와의
-   * 소유권 충돌을 막기 위한 용도다.
+   * 매칭되면 제외한다. 자체 워크로드를 직접 소유하는 인프라 오퍼레이터와의 소유권 충돌을 막기
+   * 위한 용도다.
+   *
+   * <p>네임스페이스 전체를 제외하면서 그 파드를 project-managed 노드에도 올리려면, 이 셀렉터 대신
+   * 네임스페이스 라벨 기반 allowlist를 쓴다.
+   * {@link io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver} 참고.
    */
   private List<String> reconcileExcludedLabelSelectors = new ArrayList<>();
 

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kubernetes.client.openapi.ApiClient;
 import io.ten1010.aipub.projectcontroller.domain.k8s.LabelConstants;
+import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ObjectMapperFactory;
 import io.ten1010.aipub.projectcontroller.mutating.V1AdmissionReviewUtils;
 import io.ten1010.aipub.projectcontroller.mutating.dto.V1AdmissionReview;
@@ -36,13 +37,15 @@ public class WorkloadLabelReviewHandler implements ReviewHandler {
 
   private final ApiResourceDiscovery apiResourceDiscovery;
   private final ApiClient k8sApiClient;
+  private final NamespaceAllowlistResolver namespaceAllowlistResolver;
   private final ObjectMapper mapper;
 
   // Port of Python: __init__(self, owner_service)
   public WorkloadLabelReviewHandler(ApiResourceDiscovery apiResourceDiscovery,
-      ApiClient k8sApiClient) {
+      ApiClient k8sApiClient, NamespaceAllowlistResolver namespaceAllowlistResolver) {
     this.apiResourceDiscovery = apiResourceDiscovery;
     this.k8sApiClient = k8sApiClient;
+    this.namespaceAllowlistResolver = namespaceAllowlistResolver;
     this.mapper = new ObjectMapperFactory().createObjectMapper();
   }
 
@@ -66,6 +69,11 @@ public class WorkloadLabelReviewHandler implements ReviewHandler {
     V1AdmissionReviewRequest request = review.getRequest();
     Objects.requireNonNull(request.getObject());
     Objects.requireNonNull(request.getNamespace());
+
+    if (this.namespaceAllowlistResolver.isAllowlisted(request.getNamespace())) {
+      V1AdmissionReviewUtils.allowMerging(review);
+      return;
+    }
 
     log.debug("WorkloadLabel handle: namespace={}, operation={}",
         request.getNamespace(), request.getOperation());

@@ -7,22 +7,29 @@ import io.ten1010.aipub.projectcontroller.configuration.AipubProperties;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sGroupConstants;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sObjectTypeConstants;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.SubjectResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.mutating.V1AdmissionReviewUtils;
 import io.ten1010.aipub.projectcontroller.mutating.dto.V1AdmissionReview;
 import io.ten1010.aipub.projectcontroller.mutating.dto.V1UserInfo;
 import java.util.Objects;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 
 @Slf4j
 public class NamespaceReviewHandler extends AbstractReviewHandler<V1Namespace> {
 
+  private static final String OPERATION_CREATE = "CREATE";
+  private static final String OPERATION_UPDATE = "UPDATE";
+
   private final AipubProperties aipubProperties;
   private final KeyResolver keyResolver;
   private final SubjectResolver subjectResolver;
   private final Indexer<V1Namespace> namespaceIndexer;
+  private final Indexer<V1alpha1Project> projectIndexer;
 
   public NamespaceReviewHandler(AipubProperties aipubProperties, SubjectResolver subjectResolver,
       SharedInformerFactory sharedInformerFactory) {
@@ -33,6 +40,9 @@ public class NamespaceReviewHandler extends AbstractReviewHandler<V1Namespace> {
     this.namespaceIndexer = sharedInformerFactory
         .getExistingSharedIndexInformer(V1Namespace.class)
         .getIndexer();
+    this.projectIndexer = sharedInformerFactory
+        .getExistingSharedIndexInformer(V1alpha1Project.class)
+        .getIndexer();
   }
 
   @Override
@@ -40,6 +50,49 @@ public class NamespaceReviewHandler extends AbstractReviewHandler<V1Namespace> {
     Objects.requireNonNull(review.getRequest());
     Objects.requireNonNull(review.getRequest().getUserInfo());
 
+    String operation = review.getRequest().getOperation();
+    if (OPERATION_CREATE.equals(operation) || OPERATION_UPDATE.equals(operation)) {
+      handleAllowlistLabeling(review);
+      return;
+    }
+
+    handleReservedDeletion(review);
+  }
+
+  /**
+   * 동명의 project가 아직 있는(종료 중인 경우 포함) 네임스페이스에 allowlist 라벨을 붙이는 것을
+   * 거부한다. project 격리가 먼저 부여된 의미라 우선하며, allowlist 네임스페이스 이름으로 project를
+   * 만드는 것을 거부하는 {@code ProjectReviewHandler}와 대칭이다. system-admin 예외 없는 hard
+   * block이다. 종료 중인 project도 거부하는데, 그 네임스페이스는 project 소유(ownerReference)라
+   * project와 함께 garbage collection으로 지워지므로, allowlist를 붙여봐야 곧 사라질 네임스페이스에
+   * 라벨만 남기기 때문이다.
+   *
+   * <p>원하는 상태는 informer 캐시가 아니라 요청 객체에서 읽는다. UPDATE 시 캐시에는 patch 이전
+   * 네임스페이스가 남아 있어 새로 붙는 라벨을 놓치기 때문이다.
+   */
+  private void handleAllowlistLabeling(V1AdmissionReview review) {
+    V1Namespace desired = getRequestObject(review);
+    if (!NamespaceAllowlistResolver.isAllowlisted(desired)) {
+      V1AdmissionReviewUtils.allow(review);
+      return;
+    }
+
+    String namespaceName = K8sObjectUtils.getName(desired);
+    Optional<V1alpha1Project> projectOpt = Optional.ofNullable(
+        this.projectIndexer.getByKey(this.keyResolver.resolveKey(namespaceName)));
+    if (projectOpt.isPresent()) {
+      log.debug("Namespace {} cannot be allowlisted while a project with the same name exists",
+          namespaceName);
+      V1AdmissionReviewUtils.reject(review, HttpStatus.CONFLICT.value(),
+          String.format("%s still has a project of the same name; allowlisting is allowed only"
+              + " after that project is deleted and the namespace is released", namespaceName));
+      return;
+    }
+
+    V1AdmissionReviewUtils.allow(review);
+  }
+
+  private void handleReservedDeletion(V1AdmissionReview review) {
     V1Namespace namespace = this.namespaceIndexer.getByKey(
         this.keyResolver.resolveKey(getNamespaceName(review)));
     String namespaceName = K8sObjectUtils.getName(namespace);

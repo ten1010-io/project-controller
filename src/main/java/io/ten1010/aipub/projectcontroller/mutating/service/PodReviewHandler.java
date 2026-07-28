@@ -47,6 +47,22 @@ public class PodReviewHandler extends AbstractReviewHandler<V1Pod> {
 
     V1Pod pod = getRequestObject(review);
 
+    // allowlist 네임스페이스는 라벨 제외 검사보다 먼저 처리한다. 파드의 toleration은 생성 후 바꿀 수
+    // 없으므로, 제외 라벨이 붙은 파드라도 project-managed 노드에 스케줄되려면 여기서 toleration을
+    // 주입해야 한다.
+    if (this.reconciliationService.isNamespaceAllowlisted(review.getRequest().getNamespace())) {
+      List<V1Toleration> reconciledTolerations =
+          this.reconciliationService.reconcileTolerationsForAllowlistedNamespace(pod);
+      JsonPatchBuilder allowlistPatchBuilder = new JsonPatchBuilder();
+      allowlistPatchBuilder.addToOperations(new JsonPatchOperationBuilder()
+          .replace()
+          .setPath("/spec/tolerations")
+          .setValue(createJsonNode(reconciledTolerations))
+          .build());
+      V1AdmissionReviewUtils.allow(review, allowlistPatchBuilder.build());
+      return;
+    }
+
     if (this.reconciliationService.isExcludedFromReconciliation(pod)) {
       V1AdmissionReviewUtils.allow(review);
       return;

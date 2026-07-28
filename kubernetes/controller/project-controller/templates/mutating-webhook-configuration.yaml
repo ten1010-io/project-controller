@@ -64,7 +64,7 @@ webhooks:
     rules:
       - apiGroups: [ "" ]
         apiVersions: [ "v1" ]
-        operations: [ "DELETE" ]
+        operations: [ "CREATE", "UPDATE", "DELETE" ]
         resources: [ "namespaces" ]
         scope: "*"
     sideEffects: None

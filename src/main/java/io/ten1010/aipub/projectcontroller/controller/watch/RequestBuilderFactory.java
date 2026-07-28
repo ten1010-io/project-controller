@@ -177,6 +177,20 @@ public class RequestBuilderFactory {
     };
   }
 
+  public Function<V1Namespace, List<Request>> namespaceToNamespacedObjects(
+      Class<? extends KubernetesObject> objectClass) {
+    Indexer<? extends KubernetesObject> objectIndexer = this.sharedInformerFactory.getExistingSharedIndexInformer(
+        objectClass).getIndexer();
+    return namespace -> {
+      List<? extends KubernetesObject> objects = objectIndexer.byIndex(
+          IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
+          K8sObjectUtils.getName(namespace));
+      return objects.stream()
+          .map(e -> new Request(K8sObjectUtils.getNamespace(e), K8sObjectUtils.getName(e)))
+          .toList();
+    };
+  }
+
   public Function<V1alpha1AipubUser, List<Request>> aipubUserToClusterRoles() {
     return user -> {
       String userName = K8sObjectUtils.getName(user);
