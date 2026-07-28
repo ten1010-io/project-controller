@@ -17,6 +17,7 @@ import io.ten1010.aipub.projectcontroller.controller.BoundObjectResolver;
 import io.ten1010.aipub.projectcontroller.controller.RequestHelper;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceNameResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ProjectNameAndRole;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ProjectRoleEnum;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
@@ -70,6 +71,12 @@ public class ClusterRoleReconciler extends AbstractReconciler {
     }
     String projName = projNameOpt.get().projectName();
     ProjectRoleEnum projRoleEnum = projNameOpt.get().projectRoleEnum();
+
+    // allowlist 네임스페이스와 이름이 같은 project는 관리하지 않는다(allowlist 우선).
+    if (this.reconciliationService.isNamespaceAllowlisted(
+        new NamespaceNameResolver().resolveNamespaceName(projName))) {
+      return new Result(false);
+    }
 
     String roleKey = new RequestHelper(this.keyResolver).resolveKey(request);
     Optional<V1ClusterRole> roleOpt = Optional.ofNullable(

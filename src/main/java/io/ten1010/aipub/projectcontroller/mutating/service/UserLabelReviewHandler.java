@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kubernetes.client.openapi.ApiClient;
 import io.ten1010.aipub.projectcontroller.domain.k8s.LabelConstants;
+import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ObjectMapperFactory;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
@@ -35,13 +36,16 @@ public class UserLabelReviewHandler implements ReviewHandler {
   private final UserInfoAnalyzer userInfoAnalyzer;
   private final ApiResourceDiscovery apiResourceDiscovery;
   private final ApiClient k8sApiClient;
+  private final NamespaceAllowlistResolver namespaceAllowlistResolver;
   private final ObjectMapper mapper;
 
   public UserLabelReviewHandler(UserInfoAnalyzer userInfoAnalyzer,
-      ApiResourceDiscovery apiResourceDiscovery, ApiClient k8sApiClient) {
+      ApiResourceDiscovery apiResourceDiscovery, ApiClient k8sApiClient,
+      NamespaceAllowlistResolver namespaceAllowlistResolver) {
     this.userInfoAnalyzer = userInfoAnalyzer;
     this.apiResourceDiscovery = apiResourceDiscovery;
     this.k8sApiClient = k8sApiClient;
+    this.namespaceAllowlistResolver = namespaceAllowlistResolver;
     this.mapper = new ObjectMapperFactory().createObjectMapper();
   }
 
@@ -65,6 +69,11 @@ public class UserLabelReviewHandler implements ReviewHandler {
     Objects.requireNonNull(request.getUserInfo());
     Objects.requireNonNull(request.getObject());
     Objects.requireNonNull(request.getNamespace());
+
+    if (this.namespaceAllowlistResolver.isAllowlisted(request.getNamespace())) {
+      V1AdmissionReviewUtils.allowMerging(review);
+      return;
+    }
 
     log.debug("UserLabel handle: user={}, namespace={}, operation={}",
         request.getUserInfo().getUsername(), request.getNamespace(), request.getOperation());

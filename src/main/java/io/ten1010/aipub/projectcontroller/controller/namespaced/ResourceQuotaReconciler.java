@@ -53,6 +53,9 @@ public class ResourceQuotaReconciler extends AbstractReconciler {
 
   @Override
   protected Result reconcileInternal(Request request) throws ApiException {
+    if (this.reconciliationService.isNamespaceAllowlisted(request.getNamespace())) {
+      return new Result(false);
+    }
     Optional<String> projNameOpt = this.quotaNameResolver.resolveProjectName(request.getName());
     if (projNameOpt.isEmpty()) {
       return new Result(false);

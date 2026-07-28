@@ -1,10 +1,13 @@
 package io.ten1010.aipub.projectcontroller.configuration;
 
+import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.openapi.ApiClient;
+import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.util.ClientBuilder;
 import io.kubernetes.client.util.KubeConfig;
 import io.ten1010.aipub.projectcontroller.domain.k8s.DockerConfigJsonResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
+import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.WorkloadExclusionResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.SubjectResolver;
@@ -47,11 +50,21 @@ public class DomainConfiguration {
   }
 
   @Bean
+  public NamespaceAllowlistResolver namespaceAllowlistResolver(
+      SharedInformerFactory sharedInformerFactory) {
+    return new NamespaceAllowlistResolver(sharedInformerFactory
+        .getExistingSharedIndexInformer(V1Namespace.class)
+        .getIndexer());
+  }
+
+  @Bean
   public ReconciliationService reconciliationService(SubjectResolver subjectResolver,
-      DockerConfigJsonResolver dockerConfigJsonResolver, AipubProperties aipubProperties) {
+      DockerConfigJsonResolver dockerConfigJsonResolver, AipubProperties aipubProperties,
+      NamespaceAllowlistResolver namespaceAllowlistResolver) {
     return new ReconciliationService(subjectResolver, dockerConfigJsonResolver,
         aipubProperties.getReservedNamespace(),
-        new WorkloadExclusionResolver(aipubProperties.getReconcileExcludedLabelSelectors()));
+        new WorkloadExclusionResolver(aipubProperties.getReconcileExcludedLabelSelectors()),
+        namespaceAllowlistResolver);
   }
 
 }
