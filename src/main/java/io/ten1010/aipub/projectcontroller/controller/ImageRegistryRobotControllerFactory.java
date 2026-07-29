@@ -9,6 +9,7 @@ import io.kubernetes.client.informer.SharedInformerFactory;
 import io.ten1010.aipub.projectcontroller.controller.watch.DefaultControllerWatch;
 import io.ten1010.aipub.projectcontroller.controller.watch.OnUpdateFilterFactory;
 import io.ten1010.aipub.projectcontroller.controller.watch.RequestBuilderFactory;
+import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotSecretStore;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotUsernameResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageHub;
@@ -18,6 +19,7 @@ public class ImageRegistryRobotControllerFactory implements ControllerFactory {
 
   private final ImageRegistryRobotService robotService;
   private final ImageRegistryRobotUsernameResolver usernameResolver;
+  private final ImageRegistryRobotSecretStore secretStore;
   private final SharedInformerFactory sharedInformerFactory;
   private final OnUpdateFilterFactory onUpdateFilterFactory;
   private final RequestBuilderFactory requestBuilderFactory;
@@ -25,9 +27,11 @@ public class ImageRegistryRobotControllerFactory implements ControllerFactory {
   public ImageRegistryRobotControllerFactory(
       ImageRegistryRobotService robotService,
       ImageRegistryRobotUsernameResolver usernameResolver,
+      ImageRegistryRobotSecretStore secretStore,
       SharedInformerFactory sharedInformerFactory) {
     this.robotService = robotService;
     this.usernameResolver = usernameResolver;
+    this.secretStore = secretStore;
     this.sharedInformerFactory = sharedInformerFactory;
     this.onUpdateFilterFactory = new OnUpdateFilterFactory();
     this.requestBuilderFactory = new RequestBuilderFactory(sharedInformerFactory);
@@ -45,7 +49,7 @@ public class ImageRegistryRobotControllerFactory implements ControllerFactory {
         .watch(this::createProjectWatch)
         .watch(this::createImageHubWatch)
         .withReconciler(new ImageRegistryRobotReconciler(this.robotService, this.usernameResolver,
-            this.sharedInformerFactory))
+            this.secretStore, this.sharedInformerFactory))
         .build();
   }
 

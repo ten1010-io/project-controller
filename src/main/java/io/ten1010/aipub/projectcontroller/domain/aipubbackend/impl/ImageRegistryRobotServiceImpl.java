@@ -3,12 +3,14 @@ package io.ten1010.aipub.projectcontroller.domain.aipubbackend.impl;
 import com.google.gson.reflect.TypeToken;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryRobot;
+import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryRobotCreated;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryRobotListOptions;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryRobotSecret;
 import io.ten1010.common.apiclient.ApiClient;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import okhttp3.Call;
 
 public class ImageRegistryRobotServiceImpl implements ImageRegistryRobotService {
@@ -22,6 +24,9 @@ public class ImageRegistryRobotServiceImpl implements ImageRegistryRobotService 
   private static final TypeToken<ImageRegistryRobotSecret> IMAGE_REGISTRY_ROBOT_SECRET_TYPE_TOKEN = new TypeToken<>() {
   };
 
+  private static final TypeToken<ImageRegistryRobotCreated> IMAGE_REGISTRY_ROBOT_CREATED_TYPE_TOKEN = new TypeToken<>() {
+  };
+
   private final ApiClient aipubBackendClient;
   private final CallHelper callHelper;
 
@@ -31,13 +36,14 @@ public class ImageRegistryRobotServiceImpl implements ImageRegistryRobotService 
   }
 
   @Override
-  public void createImageRegistryRobot(ImageRegistryRobot imageRegistryRobot) {
+  public Optional<ImageRegistryRobotCreated> createImageRegistryRobot(
+      ImageRegistryRobot imageRegistryRobot) {
     Call call = this.aipubBackendClient.buildCall(
         "/imageregistryrobots",
         "POST",
         "application/json",
         imageRegistryRobot);
-    this.callHelper.executeCall(call);
+    return this.callHelper.executeCall(call, IMAGE_REGISTRY_ROBOT_CREATED_TYPE_TOKEN);
   }
 
   @Override
