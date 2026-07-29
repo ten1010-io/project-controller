@@ -5,10 +5,12 @@ import io.kubernetes.client.extended.controller.reconciler.Result;
 import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.ApiException;
+import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotSecretStore;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotUsernameResolver;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryAccess;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryRobot;
+import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryRobotCreated;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryRobotListOptions;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryRobotPermission;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.impl.AipubBackendResponseException;
@@ -42,15 +44,18 @@ public class ImageRegistryRobotReconciler extends AbstractReconciler {
 
   private final ImageRegistryRobotService robotService;
   private final ImageRegistryRobotUsernameResolver usernameResolver;
+  private final ImageRegistryRobotSecretStore secretStore;
   private final Indexer<V1alpha1Project> projectIndexer;
   private final Indexer<V1alpha1ImageHub> imageHubIndexer;
   private final KeyResolver keyResolver;
 
   public ImageRegistryRobotReconciler(
       ImageRegistryRobotService robotService, ImageRegistryRobotUsernameResolver usernameResolver,
+      ImageRegistryRobotSecretStore secretStore,
       SharedInformerFactory sharedInformerFactory) {
     this.robotService = robotService;
     this.usernameResolver = usernameResolver;
+    this.secretStore = secretStore;
     this.projectIndexer = sharedInformerFactory
         .getExistingSharedIndexInformer(V1alpha1Project.class)
         .getIndexer();
@@ -129,7 +134,8 @@ public class ImageRegistryRobotReconciler extends AbstractReconciler {
       newRobot.setUsername(username);
       newRobot.setPermissions(reconciledPermissions);
       try {
-        this.robotService.createImageRegistryRobot(newRobot);
+        this.robotService.createImageRegistryRobot(newRobot)
+            .ifPresent(created -> storeCreatedSecret(username, created));
       } catch (AipubBackendResponseException e) {
         if (isImageHubNotFound(e)) {
           return logImageHubNotFoundAndRequeue(e, request.getName(), boundImageHubs);
@@ -140,6 +146,22 @@ public class ImageRegistryRobotReconciler extends AbstractReconciler {
     }
 
     return new Result(false);
+  }
+
+  /**
+   * 생성 응답의 평문 secret 을 {@link ImageRegistryRobotSecretStore} 에 넘긴다. 곧 이어 도는
+   * {@code ImageRegistrySecretReconciler} 가 이 값을 꺼내 쓰면 refreshsecret 왕복을 한 번 아낄 수 있다.
+   *
+   * <p>백엔드가 secret 이나 robotId 를 주지 않으면(예: Harbor 응답 파싱 실패) 그냥 넘긴다. 넘기지 못해도
+   * 동작에는 문제가 없고, 예전처럼 refreshsecret 으로 발급받게 된다.
+   */
+  private void storeCreatedSecret(String username, ImageRegistryRobotCreated created) {
+    if (created.getRobotId() == null || created.getSecret() == null) {
+      log.debug("robot 생성 응답에 robotId·secret 이 없어 create 시점 secret 전달을 건너뜀 "
+          + "[username={}]. image registry secret 은 refreshsecret 으로 발급된다.", username);
+      return;
+    }
+    this.secretStore.put(created.getRobotId(), created.getSecret());
   }
 
   private Optional<ImageRegistryRobot> findByUsername(String username) {
