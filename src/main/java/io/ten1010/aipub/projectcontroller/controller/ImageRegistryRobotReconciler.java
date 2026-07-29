@@ -119,6 +119,9 @@ public class ImageRegistryRobotReconciler extends AbstractReconciler {
         }
         throw e;
       }
+      // robot 은 username 당 하나다. 이미 있는 robot 을 갱신했으면 이번 reconcile 은 여기서 끝난다.
+      // 아래 생성 분기로 흘러가면 같은 username 으로 robot 을 또 만들려 해서 Harbor 가 거부한다.
+      return new Result(false);
     }
 
     if (!reconciledPermissions.isEmpty()) {
