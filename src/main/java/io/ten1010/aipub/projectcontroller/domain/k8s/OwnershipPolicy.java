@@ -25,11 +25,13 @@ public final class OwnershipPolicy {
   /**
    * 소유권 추적 대상 네이티브 네임스페이스 리소스 16종 (고정 목록).
    * 소유자 레이블(aipub.ten1010.io/username)이 있는 오브젝트만 추적되며,
-   * 레이블은 낙인 웹훅(mutating-webhook-user-v2.yaml 의 rules)이 16종 전부의 CREATE 를
-   * 인터셉트해 찍는다 — 멤버가 만든 오브젝트가 레이블 없이 남으면 본인도 수정/삭제할 수
-   * 없게 되기 때문이다. 목록을 바꿀 때는 웹훅 rules 도 함께 갱신할 것.
-   * 시스템 컴포넌트가 만드는 오브젝트(events/endpoints 대부분)는 비멤버 생성이라
-   * 레이블 없이 통과되며 소유권 추적 대상이 아니다.
+   * 레이블은 낙인 웹훅(mutating-webhook-user-v2.yaml 의 rules)이 CREATE 를 인터셉트해
+   * 찍는다 — 멤버가 만든 오브젝트가 레이블 없이 남으면 본인도 수정/삭제할 수 없게
+   * 되기 때문이다. 목록을 바꿀 때는 웹훅 rules(이 저장소 + aipub-installer helm 차트)도
+   * 함께 갱신할 것.
+   * 예외: events 는 시스템 컴포넌트가 고빈도로 생성하므로 웹훅이 인터셉트하지 않는다
+   * — 수동으로 레이블이 부여된 경우에만 소유로 취급된다. 시스템 컴포넌트가 만드는
+   * 오브젝트는 비멤버 생성이라 레이블 없이 통과되며 소유권 추적 대상이 아니다.
    */
   public static final List<ResourceTarget> OWNED_TARGETS = List.of(
       new ResourceTarget("", "v1", "pods"),
