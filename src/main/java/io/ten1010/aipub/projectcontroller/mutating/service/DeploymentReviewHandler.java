@@ -47,11 +47,9 @@ public class DeploymentReviewHandler extends AbstractReviewHandler<V1Deployment>
 
     V1Deployment deployment = getRequestObject(review);
 
-    if (this.reconciliationService.isExcludedFromReconciliation(deployment)) {
-      V1AdmissionReviewUtils.allow(review);
-      return;
-    }
-
+    // allowlist 네임스페이스는 라벨 제외 검사보다 먼저 처리한다. 제외 라벨이 붙은 워크로드라도
+    // project-managed 노드에 스케줄되려면 toleration 주입이 필요하기 때문이다(PodReviewHandler와
+    // 동일한 순서).
     if (this.reconciliationService.isNamespaceAllowlisted(review.getRequest().getNamespace())) {
       List<V1Toleration> reconciledTolerations =
           this.reconciliationService.reconcileTolerationsForAllowlistedNamespace(
@@ -63,6 +61,11 @@ public class DeploymentReviewHandler extends AbstractReviewHandler<V1Deployment>
           .setValue(createJsonNode(reconciledTolerations))
           .build());
       V1AdmissionReviewUtils.allow(review, allowlistPatchBuilder.build());
+      return;
+    }
+
+    if (this.reconciliationService.isExcludedFromReconciliation(deployment)) {
+      V1AdmissionReviewUtils.allow(review);
       return;
     }
 
