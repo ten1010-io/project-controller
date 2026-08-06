@@ -28,7 +28,6 @@ public class NamespaceReviewHandler extends AbstractReviewHandler<V1Namespace> {
   private final AipubProperties aipubProperties;
   private final KeyResolver keyResolver;
   private final SubjectResolver subjectResolver;
-  private final Indexer<V1Namespace> namespaceIndexer;
   private final Indexer<V1alpha1Project> projectIndexer;
 
   public NamespaceReviewHandler(AipubProperties aipubProperties, SubjectResolver subjectResolver,
@@ -37,9 +36,6 @@ public class NamespaceReviewHandler extends AbstractReviewHandler<V1Namespace> {
     this.aipubProperties = aipubProperties;
     this.keyResolver = new KeyResolver();
     this.subjectResolver = subjectResolver;
-    this.namespaceIndexer = sharedInformerFactory
-        .getExistingSharedIndexInformer(V1Namespace.class)
-        .getIndexer();
     this.projectIndexer = sharedInformerFactory
         .getExistingSharedIndexInformer(V1alpha1Project.class)
         .getIndexer();
@@ -92,10 +88,13 @@ public class NamespaceReviewHandler extends AbstractReviewHandler<V1Namespace> {
     V1AdmissionReviewUtils.allow(review);
   }
 
+  /**
+   * reserved 네임스페이스 판정에는 이름만 필요하므로 요청에서 직접 읽는다. informer 캐시를 거치면
+   * 캐시에 아직 없는 네임스페이스의 DELETE 요청에서 NPE가 나고, failurePolicy가 Ignore라 가드가
+   * 조용히 무력화된다.
+   */
   private void handleReservedDeletion(V1AdmissionReview review) {
-    V1Namespace namespace = this.namespaceIndexer.getByKey(
-        this.keyResolver.resolveKey(getNamespaceName(review)));
-    String namespaceName = K8sObjectUtils.getName(namespace);
+    String namespaceName = getNamespaceName(review);
     if (isReservedName(namespaceName)) {
       V1UserInfo userInfo = review.getRequest().getUserInfo();
       if (userInfo.getGroups() != null &&
