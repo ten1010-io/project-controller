@@ -928,6 +928,15 @@ public class ReconciliationService {
     }
   }
 
+  /**
+   * project 에 연결된 image registry robot 의 id 를 조회한다(secret 재발급 없이). 이미 반영된
+   * Secret 의 {@link LabelConstants#IMAGE_REGISTRY_ROBOT_ID_KEY} annotation 과 비교해서, robot
+   * 이 그대로인지(=비밀번호도 그대로 유효한지) 판단하는 용도로 쓰인다.
+   */
+  public Optional<String> resolveImageRegistryRobotId(V1alpha1Project project) {
+    return this.dockerConfigJsonResolver.resolveImageRegistryRobotId(project);
+  }
+
   public Map<String, String> reconcileNodeLabels(V1Node existing) {
     Map<String, String> existingLabels = K8sObjectUtils.getLabels(existing);
     Map<String, String> reconciled = new HashMap<>(existingLabels);
