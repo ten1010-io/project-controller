@@ -1,0 +1,58 @@
+name: Enforce Merge Source Branch
+
+# main/develop로 향하는 PR의 소스(head) 브랜치가 브랜치 전략에 맞는 패턴인지 검사한다.
+# 참고: 이 조직(ten1010-io)은 현재 GitHub Free 플랜이라 private 저장소에서
+# branch protection/rulesets(Required status check)을 설정할 수 없다. 그래서
+# 지금은 이 체크가 머지 버튼을 강제로 막지는 못하고, PR 화면에 초록/빨강으로
+# 표시되어 리뷰어가 육안으로 판단하는 시각적 신호로만 동작한다. GitHub Team
+# 이상으로 업그레이드되면 이 워크플로우의 job을 main/develop의 Required status
+# check로 등록해 실제 강제가 가능해진다.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    branches:
+      - main
+      - develop
+
+jobs:
+  check-source-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate source branch against target branch policy
+        env:
+          BASE: ${{ github.event.pull_request.base.ref }}
+          HEAD: ${{ github.event.pull_request.head.ref }}
+        run: |
+          echo "target(base): ${BASE}"
+          echo "source(head): ${HEAD}"
+
+          case "$BASE" in
+            main)
+              case "$HEAD" in
+                develop|hotfix/*)
+                  echo "OK: '${HEAD}' -> main 은 허용된 패턴입니다."
+                  exit 0
+                  ;;
+                *)
+                  echo "::error::main 은 develop 또는 hotfix/* 브랜치에서만 머지할 수 있습니다 (현재 소스: ${HEAD})"
+                  exit 1
+                  ;;
+              esac
+              ;;
+            develop)
+              case "$HEAD" in
+                hotfix/*|feature/*|feat/*|fix/*|chore/*)
+                  echo "OK: '${HEAD}' -> develop 은 허용된 패턴입니다."
+                  exit 0
+                  ;;
+                *)
+                  echo "::error::develop 은 hotfix/*, feature/*, feat/*, fix/*, chore/* 브랜치에서만 머지할 수 있습니다 (현재 소스: ${HEAD})"
+                  exit 1
+                  ;;
+              esac
+              ;;
+            *)
+              echo "정책 대상 브랜치가 아닙니다 (target=${BASE}), 통과합니다."
+              exit 0
+              ;;
+          esac
