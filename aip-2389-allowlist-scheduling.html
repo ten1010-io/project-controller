@@ -1,0 +1,1170 @@
+<title>AIP-2389 · allowlist 네임스페이스 파드 스케줄 실패 원인 분석</title>
+
+<style>
+  :root {
+    --ground: #f4f6f8;
+    --surface: #ffffff;
+    --surface-2: #edf0f4;
+    --ink: #151a21;
+    --ink-2: #4a5563;
+    --ink-3: #77828f;
+    --rule: #d8dee6;
+    --rule-strong: #b9c3ce;
+
+    --ours: #2f5d8f;
+    --ours-soft: #e4edf7;
+    --theirs: #8a5e18;
+    --theirs-soft: #f6eddb;
+
+    --crit: #a83c33;
+    --crit-soft: #fae7e4;
+    --ok: #2f6b47;
+    --ok-soft: #e2f0e7;
+
+    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+      "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", "JetBrains Mono",
+      Menlo, Consolas, "Liberation Mono", monospace;
+
+    --step-0: 0.75rem;
+    --step-1: 0.8125rem;
+    --step-2: 0.9375rem;
+    --step-3: 1.0625rem;
+    --step-4: 1.375rem;
+    --step-5: 1.75rem;
+    --step-6: 2.375rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #11141a;
+      --surface: #181c24;
+      --surface-2: #1f242e;
+      --ink: #e6e9ee;
+      --ink-2: #a2acba;
+      --ink-3: #737e8d;
+      --rule: #2c333f;
+      --rule-strong: #3d4653;
+
+      --ours: #7fb0e4;
+      --ours-soft: #1b2836;
+      --theirs: #d9a752;
+      --theirs-soft: #2c2416;
+
+      --crit: #e58379;
+      --crit-soft: #32201d;
+      --ok: #6fbf8f;
+      --ok-soft: #16281d;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #11141a;
+    --surface: #181c24;
+    --surface-2: #1f242e;
+    --ink: #e6e9ee;
+    --ink-2: #a2acba;
+    --ink-3: #737e8d;
+    --rule: #2c333f;
+    --rule-strong: #3d4653;
+
+    --ours: #7fb0e4;
+    --ours-soft: #1b2836;
+    --theirs: #d9a752;
+    --theirs-soft: #2c2416;
+
+    --crit: #e58379;
+    --crit-soft: #32201d;
+    --ok: #6fbf8f;
+    --ok-soft: #16281d;
+  }
+
+  :root[data-theme="light"] {
+    --ground: #f4f6f8;
+    --surface: #ffffff;
+    --surface-2: #edf0f4;
+    --ink: #151a21;
+    --ink-2: #4a5563;
+    --ink-3: #77828f;
+    --rule: #d8dee6;
+    --rule-strong: #b9c3ce;
+
+    --ours: #2f5d8f;
+    --ours-soft: #e4edf7;
+    --theirs: #8a5e18;
+    --theirs-soft: #f6eddb;
+
+    --crit: #a83c33;
+    --crit-soft: #fae7e4;
+    --ok: #2f6b47;
+    --ok-soft: #e2f0e7;
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: var(--step-3);
+    line-height: 1.72;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .wrap {
+    max-width: 62rem;
+    margin-inline: auto;
+    padding-inline: clamp(1.1rem, 4vw, 2.75rem);
+    padding-block: clamp(2.5rem, 6vw, 4.5rem) 5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3.25rem;
+  }
+
+  p, .prose-width { max-width: 66ch; }
+
+  /* ---------- type roles ---------- */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: var(--step-0);
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0;
+  }
+
+  h1 {
+    font-size: clamp(var(--step-5), 5.2vw, var(--step-6));
+    line-height: 1.16;
+    letter-spacing: -0.022em;
+    font-weight: 680;
+    text-wrap: balance;
+    margin: 0;
+    max-width: 20ch;
+  }
+
+  h2 {
+    font-size: var(--step-4);
+    line-height: 1.3;
+    letter-spacing: -0.014em;
+    font-weight: 660;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  h3 {
+    font-size: var(--step-3);
+    line-height: 1.4;
+    font-weight: 650;
+    letter-spacing: -0.008em;
+    margin: 0;
+  }
+
+  .deck {
+    font-size: var(--step-4);
+    line-height: 1.5;
+    color: var(--ink-2);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    margin: 0;
+    max-width: 44ch;
+  }
+
+  code, .m {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    font-variant-ligatures: none;
+  }
+
+  :not(pre) > code {
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 0.08em 0.34em;
+    white-space: nowrap;
+  }
+
+  a { color: var(--ours); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--ours);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  /* ---------- header ---------- */
+  .masthead {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding-bottom: 2rem;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: var(--font-mono);
+    font-size: var(--step-0);
+    letter-spacing: 0.03em;
+    padding: 0.28rem 0.6rem;
+    border-radius: 2px;
+    border: 1px solid var(--rule-strong);
+    background: var(--surface);
+    color: var(--ink-2);
+  }
+
+  .chip::before {
+    content: "";
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none;
+  }
+
+  .chip-ok { color: var(--ok); background: var(--ok-soft); border-color: color-mix(in srgb, var(--ok) 34%, transparent); }
+  .chip-open { color: var(--theirs); background: var(--theirs-soft); border-color: color-mix(in srgb, var(--theirs) 40%, transparent); }
+  .chip-crit { color: var(--crit); background: var(--crit-soft); border-color: color-mix(in srgb, var(--crit) 34%, transparent); }
+
+  .runmeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.6rem;
+    font-family: var(--font-mono);
+    font-size: var(--step-1);
+    color: var(--ink-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .runmeta b { color: var(--ink-2); font-weight: 500; }
+
+  /* ---------- sections ---------- */
+  section { display: flex; flex-direction: column; gap: 1.25rem; scroll-margin-top: 1.5rem; }
+  .sec-head { display: flex; flex-direction: column; gap: 0.4rem; }
+
+  /* ---------- verdict pair ---------- */
+  .verdict {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+    gap: 1rem;
+  }
+
+  .vcard {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top-width: 3px;
+    border-radius: 4px;
+    padding: 1.15rem 1.25rem 1.3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+  .vcard.is-ok { border-top-color: var(--ok); }
+  .vcard.is-bad { border-top-color: var(--crit); }
+
+  .vcard .owner {
+    font-family: var(--font-mono);
+    font-size: var(--step-0);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .vcard.is-ok .owner { color: var(--ours); }
+  .vcard.is-bad .owner { color: var(--theirs); }
+
+  .vcard p { margin: 0; font-size: var(--step-2); color: var(--ink-2); max-width: none; }
+  .vcard .headline { font-size: var(--step-3); color: var(--ink); font-weight: 600; }
+
+  /* ---------- causal chain (real sequence → numbered) ---------- */
+  .chain { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+
+  .chain li {
+    position: relative;
+    padding-left: 3.25rem;
+    padding-bottom: 1.6rem;
+  }
+  .chain li:last-child { padding-bottom: 0; }
+
+  .chain li::before {
+    content: counter(chain-c);
+    counter-increment: chain-c;
+    position: absolute;
+    left: 0; top: 0.1rem;
+    width: 1.9rem; height: 1.9rem;
+    display: grid; place-items: center;
+    font-family: var(--font-mono);
+    font-size: var(--step-1);
+    font-weight: 600;
+    color: var(--surface);
+    background: var(--ink);
+    border-radius: 50%;
+  }
+
+  .chain li::after {
+    content: "";
+    position: absolute;
+    left: 0.95rem; top: 2.2rem; bottom: 0.3rem;
+    width: 1px;
+    background: var(--rule-strong);
+  }
+  .chain li:last-child::after { display: none; }
+
+  .chain { counter-reset: chain-c; }
+  .chain h3 { margin-bottom: 0.35rem; }
+  .chain p { margin: 0 0 0.6rem; color: var(--ink-2); font-size: var(--step-2); }
+  .chain p:last-child { margin-bottom: 0; }
+
+  .chain li[data-owner="coaster"]::before { background: var(--theirs); }
+  .chain li[data-owner="pc"]::before { background: var(--ours); }
+
+  /* ---------- code / terminal ---------- */
+  .code {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .code-label {
+    font-family: var(--font-mono);
+    font-size: var(--step-0);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding: 0.5rem 0.9rem;
+    border-bottom: 1px solid var(--rule);
+    background: var(--surface-2);
+  }
+
+  pre {
+    margin: 0;
+    padding: 0.95rem 1.1rem;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: var(--step-1);
+    line-height: 1.62;
+    color: var(--ink);
+    tab-size: 2;
+  }
+
+  pre .dim { color: var(--ink-3); }
+  pre .hit { color: var(--crit); font-weight: 600; }
+  pre .good { color: var(--ok); font-weight: 600; }
+  pre .add { color: var(--ours); font-weight: 600; }
+
+  /* ---------- tables ---------- */
+  .tscroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 4px; background: var(--surface); }
+
+  table { border-collapse: collapse; width: 100%; font-size: var(--step-2); }
+
+  caption {
+    caption-side: top;
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: var(--step-0);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding: 0.5rem 0.9rem;
+    border-bottom: 1px solid var(--rule);
+    background: var(--surface-2);
+  }
+
+  th, td {
+    text-align: left;
+    padding: 0.62rem 0.9rem;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  thead th {
+    font-size: var(--step-1);
+    font-weight: 620;
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num, th.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.mono { font-family: var(--font-mono); font-size: var(--step-1); }
+
+  .yes { color: var(--ok); font-weight: 600; }
+  .no  { color: var(--crit); font-weight: 600; }
+
+  /* ---------- callout ---------- */
+  .note {
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--theirs);
+    background: var(--surface);
+    border-radius: 0 4px 4px 0;
+    padding: 1rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .note.is-crit { border-left-color: var(--crit); }
+  .note.is-pc { border-left-color: var(--ours); }
+  .note p { margin: 0; font-size: var(--step-2); color: var(--ink-2); max-width: none; }
+  .note .note-h {
+    font-family: var(--font-mono);
+    font-size: var(--step-0);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+
+  /* ---------- position pair for the policy question ---------- */
+  .positions { display: grid; grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr)); gap: 1rem; }
+
+  .pos {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 1.15rem 1.25rem 1.3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+  .pos .pos-tag {
+    font-family: var(--font-mono);
+    font-size: var(--step-0);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .pos h3 { margin: 0; }
+  .pos ul { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.4rem; }
+  .pos li { font-size: var(--step-2); color: var(--ink-2); }
+  .pos .impl { font-size: var(--step-1); color: var(--ink-3); font-style: normal; }
+
+  ul.body-list { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.5rem; max-width: 66ch; }
+  ul.body-list li { padding-left: 0.15rem; }
+
+  /* ---------- open questions ---------- */
+  .qlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.75rem; counter-reset: q; }
+  .qlist li {
+    display: grid;
+    grid-template-columns: 2.2rem 1fr;
+    gap: 0.75rem;
+    align-items: start;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 0.85rem 1rem;
+  }
+  .qlist li::before {
+    content: "Q" counter(q);
+    counter-increment: q;
+    font-family: var(--font-mono);
+    font-size: var(--step-1);
+    font-weight: 600;
+    color: var(--theirs);
+    padding-top: 0.08rem;
+  }
+  .qlist p { margin: 0; font-size: var(--step-2); max-width: none; }
+  .qlist .qwhy { color: var(--ink-3); font-size: var(--step-1); margin-top: 0.25rem; }
+
+  details {
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    background: var(--surface);
+    padding: 0.85rem 1.1rem;
+  }
+  summary { cursor: pointer; font-weight: 600; font-size: var(--step-2); }
+  details[open] summary { margin-bottom: 0.85rem; }
+  details .code { margin-top: 0.6rem; }
+
+  hr.rule { border: none; border-top: 1px solid var(--rule); margin: 0; }
+
+  footer {
+    border-top: 1px solid var(--rule);
+    padding-top: 1.5rem;
+    font-size: var(--step-1);
+    color: var(--ink-3);
+    font-family: var(--font-mono);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.5rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">AIP-2389 · 원인 분석 · 논의 요청</p>
+    <h1>allowlist 네임스페이스 파드가 스케줄되지 않는 원인</h1>
+    <p class="deck">
+      project-controller의 toleration 주입은 정상 동작했다. 파드를 붙잡고 있는 것은
+      coaster 스케줄러의 admission webhook이며, 이는 우리 팀 소관 밖이다.
+    </p>
+    <ul class="chips">
+      <li class="chip chip-ok">project-controller 정상</li>
+      <li class="chip chip-crit">e2e 차단됨</li>
+      <li class="chip chip-open">coaster 팀 논의 필요</li>
+      <li class="chip chip-open">리소스 회계 정책 미정</li>
+    </ul>
+    <ul class="runmeta">
+      <li><b>클러스터</b> cluster10 / c10-m1</li>
+      <li><b>브랜치</b> feat/AIP-2389 @ 2a4b3bd</li>
+      <li><b>확인일</b> 2026-08-06</li>
+    </ul>
+  </header>
+
+  <!-- ============ 요약 ============ -->
+  <section id="summary">
+    <div class="sec-head">
+      <p class="eyebrow">요약</p>
+      <h2>세 줄 요약</h2>
+    </div>
+    <ul class="body-list">
+      <li>
+        allowlist 라벨을 붙인 뒤 DaemonSet 파드 7개가 <strong>전부 <code>Pending</code></strong> 상태로 남았다.
+        노드 배정이 없고 스케줄러 이벤트조차 없다.
+      </li>
+      <li>
+        원인은 project-controller가 아니다. toleration 주입·affinity 보존 모두 의도대로 동작했고,
+        오히려 <strong>주입이 성공했기 때문에</strong> 파드가 7개 전 노드에 대해 생성되었다.
+      </li>
+      <li>
+        <strong>coaster 스케줄러의 mutating webhook</strong>이 <code>schedulerName: coaster</code>를 주입했으나,
+        해당 파드는 coaster의 스케줄링 큐에 등록되지 않아 어느 스케줄러도 처리하지 않는 고아 상태가 되었다.
+      </li>
+    </ul>
+    <div class="note is-crit">
+      <span class="note-h">실사용 영향</span>
+      <p>
+        이 문제는 테스트 환경 특수사항이 아니다. KubeVirt를 설치하면 생성되는 <code>kube-virt</code> 네임스페이스도
+        똑같이 걸린다. coaster webhook의 제외 목록이 하드코딩이라, <strong>앞으로 추가되는 모든 addon 네임스페이스가
+        동일하게 실패</strong>한다. AIP-2389 기능은 coaster 쪽 대응 없이는 실제로 동작하지 않는다.
+      </p>
+    </div>
+  </section>
+
+  <hr class="rule" />
+
+  <!-- ============ 현상 ============ -->
+  <section id="symptom">
+    <div class="sec-head">
+      <p class="eyebrow">현상</p>
+      <h2>관측된 상태</h2>
+    </div>
+    <p>
+      네임스페이스 <code>allowlist-test</code>에 <code>project.aipub.ten1010.io/allowlisted=true</code> 라벨을 부착하고
+      테스트용 DaemonSet <code>allowlist-probe</code>를 배포한 상태다.
+    </p>
+
+    <div class="code">
+      <div class="code-label">kubectl -n allowlist-test get ds,pods</div>
+<pre>NAME              DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE
+allowlist-probe   7         7         <span class="hit">0</span>       7            <span class="hit">0</span>
+
+NAME                    READY   STATUS    RESTARTS   AGE   NODE
+allowlist-probe-2q5cs   0/1     <span class="hit">Pending</span>   0          2m19s <span class="hit">&lt;none&gt;</span>
+allowlist-probe-dcxjv   0/1     <span class="hit">Pending</span>   0          2m19s <span class="hit">&lt;none&gt;</span>
+allowlist-probe-f6vhj   0/1     <span class="hit">Pending</span>   0          2m20s <span class="hit">&lt;none&gt;</span>
+<span class="dim">... 7개 전부 동일</span></pre>
+    </div>
+
+    <p>
+      결정적 단서는 파드의 <code>status</code>다. <code>PodScheduled</code> condition이 <em>존재하지 않고</em>,
+      <code>Events</code>도 비어 있다.
+    </p>
+
+    <div class="code">
+      <div class="code-label">pod status · events</div>
+<pre>$ kubectl -n allowlist-test get pod allowlist-probe-2q5cs -o jsonpath='{.status}'
+{"phase":"Pending","qosClass":"Burstable"}   <span class="dim">← conditions 자체가 없음</span>
+
+$ kubectl -n allowlist-test describe pod allowlist-probe-2q5cs | tail -1
+Events:  <span class="hit">&lt;none&gt;</span></pre>
+    </div>
+
+    <p>
+      스케줄 <em>실패</em>라면 <code>PodScheduled=False</code>와 <code>FailedScheduling</code> 이벤트가 남는다.
+      둘 다 없다는 것은 <strong>어떤 스케줄러도 이 파드를 집어가지 않았다</strong>는 뜻이다.
+    </p>
+  </section>
+
+  <hr class="rule" />
+
+  <!-- ============ 책임 분리 ============ -->
+  <section id="verdict">
+    <div class="sec-head">
+      <p class="eyebrow">책임 구분</p>
+      <h2>어느 쪽이 무엇을 했는가</h2>
+    </div>
+
+    <div class="verdict">
+      <div class="vcard is-ok">
+        <span class="owner">project-controller · 우리 소관</span>
+        <p class="headline">의도대로 동작했다</p>
+        <p>
+          DaemonSet 템플릿과 파드 양쪽에 <code>project-managed</code> taint에 대한
+          <code>Exists</code> toleration 쌍이 주입되었고, DaemonSet의
+          nodeAffinity(<code>matchFields</code>)와 직접 지정한 control-plane toleration도 보존되었다.
+        </p>
+      </div>
+      <div class="vcard is-bad">
+        <span class="owner">coaster-scheduler · 타 팀 소관</span>
+        <p class="headline">파드를 고아로 만들었다</p>
+        <p>
+          webhook이 <code>schedulerName</code>을 <code>coaster</code>로 바꿨지만,
+          coaster가 파드를 처리하는 데 필요한 큐 라벨은 아무도 붙여주지 않았다.
+          default-scheduler는 손댈 수 없고 coaster는 무시한다.
+        </p>
+      </div>
+    </div>
+
+    <h3>project-controller 정상 동작 근거</h3>
+
+    <div class="code">
+      <div class="code-label">DaemonSet 템플릿 tolerations — 컨트롤러가 주입한 2개 포함</div>
+<pre>[
+  {"key":"node-role.kubernetes.io/control-plane","operator":"Exists","effect":"NoSchedule"},  <span class="dim">← 직접 지정, 보존됨</span>
+  {"key":"node-role.kubernetes.io/master","operator":"Exists","effect":"NoSchedule"},         <span class="dim">← 직접 지정, 보존됨</span>
+  <span class="good">{"key":"project.aipub.ten1010.io/project-managed","operator":"Exists","effect":"NoSchedule"}</span>,  <span class="dim">← 주입</span>
+  <span class="good">{"key":"project.aipub.ten1010.io/project-managed","operator":"Exists","effect":"NoExecute"}</span>    <span class="dim">← 주입</span>
+]</pre>
+    </div>
+
+    <p>
+      <code>DESIRED=7</code>이라는 숫자 자체가 증거다. 클러스터에는 project-managed 노드 4개와
+      control-plane 3개가 있다. 라벨 부착 전이라면 DaemonSet 컨트롤러가 taint를 견디지 못하는
+      managed 노드 4개를 건너뛰어 <code>DESIRED=3</code>이어야 한다.
+      <strong>7로 늘어났다는 것은 toleration 주입이 실제로 반영되었다는 뜻이다.</strong>
+    </p>
+
+    <div class="tscroll">
+      <table>
+        <caption>클러스터 노드 구성</caption>
+        <thead>
+          <tr>
+            <th>노드</th>
+            <th>역할</th>
+            <th>project-managed</th>
+            <th>isolation-mode</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">vnode1.pnode12</td><td>worker</td><td class="yes">true</td><td class="mono">lenient</td></tr>
+          <tr><td class="mono">vnode1.pnode2</td><td>worker</td><td class="yes">true</td><td class="mono">lenient</td></tr>
+          <tr><td class="mono">vnode4.pnode10</td><td>worker</td><td class="yes">true</td><td class="mono">lenient</td></tr>
+          <tr><td class="mono">vnode4.pnode7</td><td>worker</td><td class="yes">true</td><td class="mono">lenient</td></tr>
+          <tr><td class="mono">vnode2.pnode3</td><td>control-plane</td><td>false</td><td class="mono">—</td></tr>
+          <tr><td class="mono">vnode4.pnode12</td><td>control-plane</td><td>false</td><td class="mono">—</td></tr>
+          <tr><td class="mono">vnode6.pnode10</td><td>control-plane</td><td>false</td><td class="mono">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <hr class="rule" />
+
+  <!-- ============ 인과 사슬 ============ -->
+  <section id="chain">
+    <div class="sec-head">
+      <p class="eyebrow">근본 원인</p>
+      <h2>실패에 이르는 네 단계</h2>
+    </div>
+    <p class="prose-width">
+      각 단계는 개별적으로는 정상 동작이다. 문제는 두 시스템이 서로의 존재를 모른 채
+      맞물린 지점에서 발생한다.
+    </p>
+
+    <ol class="chain">
+      <li data-owner="coaster">
+        <h3>coaster webhook이 하드코딩된 네임스페이스 목록으로 대상을 가린다</h3>
+        <p>
+          <code>MutatingWebhookConfiguration/coaster-scheduler</code>의 <code>namespaceSelector</code>는
+          인프라 네임스페이스 16개를 이름으로 나열해 제외한다. 라벨 기반이 아니라 이름 기반이다.
+        </p>
+        <div class="code">
+          <div class="code-label">scheduler chart · values.yaml:75-94</div>
+<pre>webhook:
+  namespaceSelector:
+    matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: NotIn
+        values:
+          - kube-system
+          - kube-public
+          - kube-node-lease
+          - kube-flannel
+          - aipub
+          - coaster
+          - ingress-nginx
+          - metallb
+          - aipub-efk
+          - aipub-linkerd
+          - aipub-monitoring
+          - aipub-promstack
+          - network-operator
+          - project-controller
+          - trident</pre>
+        </div>
+      </li>
+
+      <li data-owner="coaster">
+        <h3><code>allowlist-test</code>는 목록에 없으므로 webhook이 걸린다</h3>
+        <p>
+          결과적으로 파드에 <code>schedulerName: coaster</code>가 주입된다.
+          동시에 GPU 회피용 <code>preferredDuringScheduling</code> affinity도 함께 주입된다.
+        </p>
+        <div class="code">
+          <div class="code-label">주입된 파드 spec (발췌)</div>
+<pre>schedulerName: <span class="hit">coaster</span>
+affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:      <span class="dim">← coaster 주입</span>
+      - preference:
+          matchExpressions:
+            - key: node-type.coaster.ten1010.io/gpu
+              operator: DoesNotExist
+        weight: 1
+    requiredDuringSchedulingIgnoredDuringExecution:       <span class="dim">← DaemonSet 컨트롤러의 노드 핀, 보존됨</span>
+      nodeSelectorTerms:
+        - matchFields:
+            - key: metadata.name
+              operator: In
+              values: ["vnode4.pnode10.idc1.ten1010.io"]</pre>
+        </div>
+      </li>
+
+      <li data-owner="coaster">
+        <h3>coaster는 스케줄링 큐에 등록된 파드만 처리한다</h3>
+        <p>
+          큐 등록에 필요한 <code>scheduler.coaster.ten1010.io/queue</code> 라벨은
+          <code>aipub-queue-controller</code>가 붙인다. 이 컨트롤러는 AIPub 워크로드
+          (Operation / Workspace 등)만 대상으로 하므로, 일반 DaemonSet에는 라벨을 붙이지 않는다.
+        </p>
+      </li>
+
+      <li data-owner="coaster">
+        <h3>큐 라벨이 없는 파드는 영구 방치된다</h3>
+        <p>
+          <code>SchedulingQueue/cluster-495ff7d</code>의 <code>status.pods</code>에는
+          프로젝트 네임스페이스(<code>abc</code>)의 파드만 등재되어 있고 우리 파드는 없다.
+          default-scheduler는 <code>schedulerName</code>이 자기 것이 아니므로 무시하고,
+          coaster는 큐에 없으므로 무시한다. <strong>이벤트조차 남지 않는 이유가 이것이다.</strong>
+        </p>
+      </li>
+    </ol>
+  </section>
+
+  <hr class="rule" />
+
+  <!-- ============ 비교 증거 ============ -->
+  <section id="evidence">
+    <div class="sec-head">
+      <p class="eyebrow">증거</p>
+      <h2>정상 파드와의 차이</h2>
+    </div>
+    <p>
+      동일하게 <code>schedulerName: coaster</code>를 부여받았지만 정상 스케줄되는 파드
+      (<code>abc</code> 네임스페이스, AIPub Operation 워크로드)와 비교하면 차이가 명확하다.
+    </p>
+
+    <div class="tscroll">
+      <table>
+        <caption>파드 메타데이터 비교</caption>
+        <thead>
+          <tr>
+            <th>키</th>
+            <th>정상 파드 <span class="m">(abc)</span></th>
+            <th>우리 파드 <span class="m">(allowlist-test)</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">scheduler.coaster.ten1010.io/queue</td>
+            <td class="mono">cluster-495ff7d</td>
+            <td class="no">없음</td>
+          </tr>
+          <tr>
+            <td class="mono">scheduler.coaster.ten1010.io/priority</td>
+            <td class="mono">0</td>
+            <td class="no">없음</td>
+          </tr>
+          <tr>
+            <td class="mono">aipub-queue-controller.aipub.ten1010.io/queue</td>
+            <td class="mono">cluster</td>
+            <td class="no">없음</td>
+          </tr>
+          <tr>
+            <td class="mono">spec.schedulerName</td>
+            <td class="mono">coaster</td>
+            <td class="mono">coaster</td>
+          </tr>
+          <tr>
+            <td class="mono">SchedulingQueue.status.pods 등재</td>
+            <td class="yes">등재됨</td>
+            <td class="no">미등재</td>
+          </tr>
+          <tr>
+            <td class="mono">네임스페이스 성격</td>
+            <td>프로젝트 <span class="m">(project.aipub.ten1010.io/project=abc)</span></td>
+            <td>allowlist <span class="m">(프로젝트 아님)</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note is-pc">
+      <span class="note-h">구조적 함의</span>
+      <p>
+        coaster의 스케줄링 모델은 <strong>"모든 파드는 어떤 프로젝트/큐에 속한다"</strong>를 전제한다.
+        allowlist 네임스페이스는 정의상 <em>프로젝트가 아닌</em> 네임스페이스이므로 이 전제를 위반한다.
+        즉 단순한 설정 누락이 아니라 두 모델 간의 개념 충돌이다.
+      </p>
+    </div>
+  </section>
+
+  <hr class="rule" />
+
+  <!-- ============ 해결 방안 ============ -->
+  <section id="options">
+    <div class="sec-head">
+      <p class="eyebrow">해결 방안</p>
+      <h2>선택지와 소관</h2>
+    </div>
+
+    <div class="tscroll">
+      <table>
+        <caption>대응 옵션 비교</caption>
+        <thead>
+          <tr>
+            <th>방안</th>
+            <th>내용</th>
+            <th>소관</th>
+            <th>평가</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>A. coaster webhook에 라벨 기반 제외 추가</strong></td>
+            <td>
+              <code>namespaceSelector</code>에
+              <code>allowlisted DoesNotExist</code> 조건을 추가.
+              하드코딩 목록을 건드리지 않고 allowlist 네임스페이스가 자동으로 default-scheduler를 쓰게 된다.
+            </td>
+            <td>coaster</td>
+            <td class="yes">권장</td>
+          </tr>
+          <tr>
+            <td>B. 제외 목록에 이름 추가</td>
+            <td>
+              addon 네임스페이스를 <code>values.yaml</code> 목록에 하나씩 추가.
+            </td>
+            <td>coaster</td>
+            <td>확장성 없음. 새 addon마다 차트 수정·재배포 필요</td>
+          </tr>
+          <tr>
+            <td>C. project-controller가 schedulerName 강제</td>
+            <td>
+              allowlist 파드에 <code>schedulerName: default-scheduler</code>를 주입.
+            </td>
+            <td>project-controller</td>
+            <td class="no">비권장. coaster webhook이 <code>reinvocationPolicy: IfNeeded</code>라 순서 경쟁 발생, 신뢰 불가</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>방안 A 구체안</h3>
+    <p>
+      <code>namespaceSelector</code>는 이미 차트의 values 파라미터로 노출되어 있다.
+      차트 템플릿 수정 없이 <strong>values 오버라이드만으로 적용 가능</strong>하다.
+    </p>
+
+    <div class="code">
+      <div class="code-label">values 오버라이드 제안</div>
+<pre>webhook:
+  namespaceSelector:
+    matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: NotIn
+        values: [ <span class="dim">... 기존 16개 그대로 ...</span> ]
+      <span class="add">- key: project.aipub.ten1010.io/allowlisted</span>
+        <span class="add">operator: DoesNotExist</span></pre>
+    </div>
+
+    <div class="note">
+      <span class="note-h">확인 필요 · 버전 불일치</span>
+      <p>
+        클러스터에 배포된 차트는 <code>scheduler-0.1.1</code>인데,
+        <code>aipub-installer</code>의 로컬 패키지는 <code>scheduler-0.1.0</code>이다.
+        위 <code>values.yaml</code> 내용은 0.1.0 기준이므로, 0.1.1에서
+        <code>webhook.namespaceSelector</code> 파라미터가 동일하게 유지되는지 coaster 측 확인이 필요하다.
+      </p>
+    </div>
+
+    <details>
+      <summary>참조 위치 — coaster webhook 설정은 어디에 있는가</summary>
+      <div class="code">
+        <div class="code-label">세 곳에서 확인 가능</div>
+<pre><span class="dim"># 1. 클러스터 (실제 배포값)</span>
+kubectl get mutatingwebhookconfiguration coaster-scheduler -o yaml
+helm get values coaster-scheduler -n coaster
+   <span class="dim">→ namespaceSelector 없음 = 차트 기본값 그대로 사용 중</span>
+
+<span class="dim"># 2. 차트 패키지 (근본 소스)</span>
+aipub-installer/scripts/ki-cp-node/services/python/5_0_x/
+  stages/01-coaster/packages/scheduler-0.1.0.tgz
+    scheduler/values.yaml:75-94                        <span class="dim">← 하드코딩 목록의 실체</span>
+    scheduler/templates/mutating-webhook-config.yaml   <span class="dim">← 값만 참조</span>
+
+<span class="dim"># 3. 아카이브된 원본 YAML (참고)</span>
+aipub-installer/scripts/ki-cp-node/services/python/5_0_x/
+  controllers-archive/coaster-scheduler/yamls/scheduler/mutating-webhook-config.yaml</pre>
+      </div>
+    </details>
+  </section>
+
+  <hr class="rule" />
+
+  <!-- ============ 리소스 회계 논의 ============ -->
+  <section id="accounting">
+    <div class="sec-head">
+      <p class="eyebrow">별도 논의 · 정책 결정 필요</p>
+      <h2>helm으로 배포되는 워크로드의 리소스는 누구 몫인가</h2>
+    </div>
+
+    <p class="prose-width">
+      스케줄링 문제와 별개로, 더 근본적인 정책 질문이 남는다.
+      AIPub은 현재 워크로드의 리소스 사용량을 프로젝트 단위로 관리한다.
+      allowlist 네임스페이스의 워크로드는 <strong>실제 노드 자원을 소비하면서도
+      두 개의 회계 레이어를 모두 빠져나간다.</strong>
+    </p>
+
+    <h3>현재 구현 상태</h3>
+
+    <div class="tscroll">
+      <table>
+        <caption>allowlist 네임스페이스가 빠져나가는 회계 레이어</caption>
+        <thead>
+          <tr>
+            <th>레이어</th>
+            <th>정상 프로젝트</th>
+            <th>allowlist 네임스페이스</th>
+            <th>근거</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>AIPub 프로젝트 쿼터<br /><span class="m">(ResourceQuota)</span></td>
+            <td class="yes">적용됨</td>
+            <td class="no">미적용</td>
+            <td class="mono">ResourceQuotaReconciler<br />allowlist면 즉시 return</td>
+          </tr>
+          <tr>
+            <td>프로젝트 상태 리포팅<br /><span class="m">(Project.status.quota)</span></td>
+            <td class="yes">집계됨</td>
+            <td class="no">집계 대상 없음</td>
+            <td>프로젝트 자체가 존재하지 않음</td>
+          </tr>
+          <tr>
+            <td>coaster 노드 자원 할당<br /><span class="m">(NodeResource / TPC)</span></td>
+            <td class="yes">할당기 경유</td>
+            <td class="no">우회 <span class="m">(방안 A 적용 시)</span></td>
+            <td>default-scheduler로 직행</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="prose-width">
+      즉 allowlist 워크로드는 project-managed 노드의 CPU·메모리를 실제로 점유하지만,
+      어느 프로젝트의 쿼터에도 잡히지 않고 coaster의 노드 자원 장부에도 남지 않을 수 있다.
+    </p>
+
+    <h3>두 가지 입장</h3>
+
+    <div class="positions">
+      <div class="pos">
+        <span class="pos-tag">관점 A</span>
+        <h3>시스템 리소스로 본다</h3>
+        <p class="impl">
+          KubeVirt·모니터링 에이전트 같은 addon은 클러스터 운영 기반이므로,
+          사용자에게 청구하지 않는 인프라 오버헤드로 취급한다.
+        </p>
+        <ul>
+          <li>쿼터 부과 없음 — 현재 구현과 일치</li>
+          <li><strong>단, 할당 가능 용량에서 선차감해야 한다.</strong>
+            그러지 않으면 프로젝트 쿼터 총합이 실제 가용 자원을 초과해
+            과다 약정(oversubscription)이 발생한다</li>
+          <li>addon이 늘어날수록 사용자에게 보이지 않는 잠식이 커진다 —
+            가시성 확보 수단이 별도로 필요</li>
+        </ul>
+      </div>
+
+      <div class="pos">
+        <span class="pos-tag">관점 B</span>
+        <h3>사용자 워크로드로 본다</h3>
+        <p class="impl">
+          누군가 helm으로 배포한 것이므로 소유 주체가 있고, 그 주체의 쿼터에서 차감한다.
+        </p>
+        <ul>
+          <li>쿼터·큐·우선순위가 그대로 적용되어 회계 일관성이 유지된다</li>
+          <li><strong>단, 그렇다면 allowlist 기능 자체가 불필요하다.</strong>
+            일반 프로젝트로 만들면 되기 때문 — 기능의 존재 이유와 충돌한다</li>
+          <li>addon이 쿼터 부족으로 스케줄 실패하면 클러스터 기능 자체가 마비될 수 있다</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="note is-crit">
+      <span class="note-h">우선 확인이 필요한 리스크 · GPU</span>
+      <p>
+        allowlist 워크로드가 GPU를 요청하는 경우가 특히 위험하다.
+        coaster를 우회하면 GPU 파티셔닝·라이선스 할당기를 거치지 않으므로
+        <strong>이중 할당 가능성</strong>이 있다. 현재 테스트한 DaemonSet은 CPU/메모리만 요청했기에
+        확인되지 않았다. GPU를 요구하는 addon을 allowlist에 넣을 것인지부터 정해야 한다.
+      </p>
+    </div>
+
+    <h3>결정이 필요한 항목</h3>
+
+    <ol class="qlist">
+      <li>
+        <div>
+          <p>allowlist 네임스페이스의 자원 소비를 프로젝트 쿼터 산정 시 <strong>클러스터 가용 용량에서 차감</strong>할 것인가?</p>
+          <p class="qwhy">차감하지 않으면 프로젝트에 약속한 쿼터가 실제로는 보장되지 않는다.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <p>차감한다면 그 값은 <strong>어디서 산출</strong>하는가 — 실측 사용량인가, addon 설치 시 선언한 예약량인가?</p>
+          <p class="qwhy">실측은 변동성이 크고, 선언값은 관리 주체와 갱신 절차가 필요하다.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <p>allowlist 네임스페이스에 <strong>GPU 요청을 허용</strong>할 것인가?</p>
+          <p class="qwhy">허용한다면 coaster 할당기 우회 문제를 반드시 먼저 해결해야 한다.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <p>allowlist 라벨을 붙일 수 있는 <strong>권한 주체</strong>를 어디까지로 제한하는가?</p>
+          <p class="qwhy">네임스페이스 <code>update</code> 권한만 있으면 라벨 하나로 노드 격리를 우회할 수 있다. 사실상 클러스터 수준 권한이다.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <p>allowlist 워크로드의 자원 사용량을 <strong>관리자에게 노출</strong>할 필요가 있는가?</p>
+          <p class="qwhy">어느 쪽 관점을 택하든, 보이지 않는 소비가 쌓이면 용량 계획이 불가능해진다.</p>
+        </div>
+      </li>
+    </ol>
+
+    <div class="note">
+      <span class="note-h">확인 필요</span>
+      <p>
+        coaster의 <code>NodeResource</code>가 자신이 스케줄하지 않은 파드
+        (default-scheduler가 배치한 파드)의 점유량을 장부에 반영하는지는 이번 조사에서 확인하지 못했다.
+        반영한다면 관점 A의 "선차감"이 자동으로 해결될 수 있으므로, coaster 팀에 함께 문의할 항목이다.
+      </p>
+    </div>
+  </section>
+
+  <hr class="rule" />
+
+  <!-- ============ 부록 ============ -->
+  <section id="appendix">
+    <div class="sec-head">
+      <p class="eyebrow">부록</p>
+      <h2>재현 및 확인</h2>
+    </div>
+
+    <div class="note is-pc">
+      <span class="note-h">문서 오류 · 라벨 키</span>
+      <p>
+        <code>README.adoc</code>과 커밋 메시지에 라벨 키가
+        <code>project.ten1010.io/allowlisted</code>로 적혀 있으나,
+        실제 코드값은 <code>project.<strong>aipub.</strong>ten1010.io/allowlisted</code>다
+        (<code>LabelConstants.ALLOWLISTED_KEY</code>).
+        README를 그대로 따라하면 재현되지 않는다. 별도 수정 필요.
+      </p>
+    </div>
+
+    <details>
+      <summary>테스트 DaemonSet</summary>
+      <div class="code">
+        <div class="code-label">allowlist-probe.yaml</div>
+<pre>apiVersion: v1
+kind: Namespace
+metadata:
+  name: allowlist-test
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: allowlist-probe
+  namespace: allowlist-test
+spec:
+  selector:
+    matchLabels:
+      app: allowlist-probe
+  template:
+    metadata:
+      labels:
+        app: allowlist-probe
+    spec:
+      terminationGracePeriodSeconds: 0
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: probe
+          image: busybox:1.36
+          command: ["sh", "-c", "sleep infinity"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi</pre>
+      </div>
+    </details>
+
+    <details>
+      <summary>진단 명령어</summary>
+      <div class="code">
+        <div class="code-label">c10-m1 · kubeconfig는 /etc/kubernetes/admin.conf</div>
+<pre><span class="dim"># 비대화형 ssh에서는 kubeconfig가 잡히지 않으므로 명시 필요</span>
+K="sudo kubectl --kubeconfig=/etc/kubernetes/admin.conf"
+
+<span class="dim"># allowlist 라벨 부착 (키 주의)</span>
+$K label namespace allowlist-test project.aipub.ten1010.io/allowlisted=true
+
+<span class="dim"># 컨트롤러가 toleration을 주입했는지</span>
+$K -n allowlist-test get ds allowlist-probe \
+  -o jsonpath='{.spec.template.spec.tolerations}' | jq
+
+<span class="dim"># 파드를 어느 스케줄러가 맡았는지 — 이번 문제의 핵심 지표</span>
+$K -n allowlist-test get pods \
+  -o custom-columns=NAME:.metadata.name,SCHED:.spec.schedulerName,NODE:.spec.nodeName
+
+<span class="dim"># coaster 큐 등재 여부</span>
+$K get schedulingqueue cluster-495ff7d -o jsonpath='{.status.pods}' | jq
+
+<span class="dim"># coaster webhook 대상 범위</span>
+$K get mutatingwebhookconfiguration coaster-scheduler \
+  -o jsonpath='{.webhooks[0].namespaceSelector}' | jq</pre>
+      </div>
+    </details>
+  </section>
+
+  <footer>
+    <span>AIP-2389</span>
+    <span>project-controller · feat/AIP-2389 @ 2a4b3bd</span>
+    <span>cluster10</span>
+    <span>2026-08-06</span>
+  </footer>
+
+</div>

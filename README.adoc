@@ -219,6 +219,33 @@ kubectl logs -n project-controller deploy/project-controller -f --tail=200 \
 
 참고: 컨트롤러가 재기동하면 초기 동기화 과정에서 기존 소유 오브젝트 전체가 `Owned object created` 로 한 번씩 다시 출력됩니다(재기동 시점의 인벤토리이며, 오브젝트가 실제로 새로 생성된 것은 아닙니다).
 
+=== 네임스페이스 allowlist
+
+클러스터 애드온이나 인프라 오퍼레이터처럼 프로젝트 밖에서 동작하면서도 모든 노드(project managed 노드 포함)에 파드를 실행해야 하는 시스템 컴포넌트를 위해, 네임스페이스 단위 allowlist를 제공합니다.
+네임스페이스에 라벨을 붙이는 것만으로 동작하며, 컨트롤러 재시작 없이 즉시 반영됩니다.
+
+----
+# allowlist 지정
+kubectl label namespace <namespace> project.ten1010.io/allowlisted=true
+
+# allowlist 해제
+kubectl label namespace <namespace> project.ten1010.io/allowlisted-
+----
+
+allowlist 네임스페이스는 다음과 같이 처리됩니다.
+
+* *reconcile 제외* — 네임스페이스 라벨/ownerReference 정리, ResourceQuota, 이미지 레지스트리 Secret, RBAC 등 프로젝트 관리 동작을 수행하지 않습니다.
+* *eviction 제외* — strict isolation 노드 위에 있어도 해당 네임스페이스의 파드를 삭제하지 않습니다.
+* *toleration 주입* — 파드와 워크로드(Deployment 등)에 project managed taint를 허용하는 `Exists` toleration 쌍이 자동 주입되어, 어느 project managed 노드에나 스케줄링될 수 있습니다.
+* *webhook 제외* — 워크로드 라벨/사용자 소유권 주입 webhook이 해당 네임스페이스를 건드리지 않습니다.
+
+주의 사항:
+
+* 워크로드가 이미 배포된 네임스페이스를 allowlist하면 toleration 주입으로 인해 해당 워크로드들이 일괄 롤아웃됩니다. 가급적 컴포넌트 설치 전에 라벨을 먼저 붙이세요.
+* 파드의 toleration은 생성 후 변경할 수 없으므로, allowlist 이전에 생성된 파드는 재생성되어야 toleration을 받습니다.
+* allowlist를 해제하면 해당 네임스페이스는 즉시 일반 정책으로 돌아가며, strict isolation 노드 위의 파드는 eviction 대상이 됩니다.
+* 오브젝트 라벨 기반 제외(`app.aipub.reconcile-excluded-label-selectors`)는 "컨트롤러가 건드리지 않는" 용도이고, 네임스페이스 allowlist는 여기에 더해 "project managed 노드 접근을 허용하는" 용도입니다. 둘은 함께 사용할 수 있습니다.
+
 === 버그 리포팅 및 개선 사항, 질의
 
 버그를 발견하시거나 개선 사항, 질의가 있다면 link:https://github.com/ten1010-io/project-controller/issues[Github Issue]를 열어주세요.

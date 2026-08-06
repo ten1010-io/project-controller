@@ -7,8 +7,10 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.kubernetes.client.informer.cache.Cache;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
+import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ObjectMapperFactory;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUserSpec;
@@ -31,7 +33,8 @@ class UserLabelReviewHandlerTest {
     this.mockAnalyzer = mock(UserInfoAnalyzer.class);
     ApiResourceDiscovery mockDiscovery = mock(ApiResourceDiscovery.class);
     ApiClient mockApiClient = mock(ApiClient.class);
-    this.handler = new UserLabelReviewHandler(this.mockAnalyzer, mockDiscovery, mockApiClient);
+    this.handler = new UserLabelReviewHandler(this.mockAnalyzer, mockDiscovery, mockApiClient,
+        new NamespaceAllowlistResolver(new Cache<>()));
     this.mapper = new ObjectMapperFactory().createObjectMapper();
   }
 

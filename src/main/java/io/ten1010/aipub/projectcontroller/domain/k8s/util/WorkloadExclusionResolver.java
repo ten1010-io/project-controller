@@ -14,10 +14,10 @@ import java.util.Map;
  *   <li>{@code "key"} : 라벨 {@code key} 가 존재하면(값 무관) 매칭</li>
  * </ul>
  *
- * <p>여러 셀렉터 중 하나라도 매칭되면 제외 대상으로 본다(OR). KubeVirt(virt-operator)처럼
- * 자체 컴포넌트를 직접 소유하는 인프라 오퍼레이터의 워크로드를 project controller가 건드리지
- * 않도록 하기 위한 용도다. 제외 대상 목록은 {@code app.aipub.reconcile-excluded-label-selectors}
- * 설정으로 주입되며, 책임과 관리 주체를 project controller로 일원화한다.
+ * <p>여러 셀렉터 중 하나라도 매칭되면 제외 대상으로 본다(OR). 자체 컴포넌트를 직접 소유하는
+ * 인프라 오퍼레이터의 워크로드를 project controller가 건드리지 않도록 하기 위한 용도다. 제외 대상
+ * 목록은 {@code app.aipub.reconcile-excluded-label-selectors} 설정으로 주입되며, 책임과 관리 주체를
+ * project controller로 일원화한다.
  */
 public class WorkloadExclusionResolver {
 

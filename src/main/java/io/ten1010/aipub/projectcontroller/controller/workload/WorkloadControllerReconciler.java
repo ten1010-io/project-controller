@@ -66,16 +66,30 @@ public class WorkloadControllerReconciler extends AbstractReconciler {
       return new Result(false);
     }
     KubernetesObject controller = controllerOpt.get();
-    if (this.reconciliationService.isExcludedFromReconciliation(controller)) {
-      return new Result(false);
-    }
     if (K8sObjectUtils.findControllerOwnerReference(controller).isPresent()) {
       return new Result(false);
     }
+
+    V1PodTemplateSpec templateSpec = this.podTemplateSpecResolver.apply(controller);
+
+    // allowlist 네임스페이스는 라벨 제외 검사보다 먼저 처리한다. 제외 라벨이 붙은 워크로드라도
+    // project-managed 노드에 스케줄되려면 toleration 주입이 필요하기 때문이다(PodReviewHandler와
+    // 동일한 순서). project 소속과 무관하게 Exists toleration 쌍을 주입한다(project=null 경로는
+    // affinity를 걷어내고 imagePullSecrets는 그대로 둔다).
+    if (this.reconciliationService.isNamespaceAllowlisted(request.getNamespace())) {
+      return this.controllerObjectReconciler.reconcileController(controller,
+          this.reconciliationService.reconcileTolerationsForAllowlistedNamespace(templateSpec),
+          this.reconciliationService.reconcileNodeSelectorTerms(templateSpec, null),
+          this.reconciliationService.reconcileImageRegistrySecrets(templateSpec, null));
+    }
+
+    if (this.reconciliationService.isExcludedFromReconciliation(controller)) {
+      return new Result(false);
+    }
+
     String projKey = this.keyResolver.resolveKey(request.getNamespace());
     V1alpha1Project project = this.projectIndexer.getByKey(projKey);
 
-    V1PodTemplateSpec templateSpec = this.podTemplateSpecResolver.apply(controller);
     List<V1Node> nodeObjects = this.workloadControllerNodesResolver.getNodes(controller);
     List<V1Toleration> reconciledTolerations = this.reconciliationService.reconcileTolerations(
         templateSpec, nodeObjects);

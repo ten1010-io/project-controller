@@ -39,7 +39,8 @@ class ReconciliationServiceOwnedRulesTest {
         subjectResolver,
         project -> java.util.Map.of(),
         List.of(),
-        new WorkloadExclusionResolver(List.of()));
+        new WorkloadExclusionResolver(List.of()),
+        new NamespaceAllowlistResolver(new io.kubernetes.client.informer.cache.Cache<>()));
 
     this.user = new V1alpha1AipubUser();
     V1ObjectMeta userMeta = new V1ObjectMeta();

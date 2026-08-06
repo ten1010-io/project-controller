@@ -2,12 +2,19 @@ package io.ten1010.aipub.projectcontroller.controller.workload;
 
 import io.kubernetes.client.common.KubernetesObject;
 import io.kubernetes.client.extended.controller.Controller;
+import io.kubernetes.client.extended.controller.ControllerWatch;
 import io.kubernetes.client.extended.controller.builder.ControllerBuilder;
 import io.kubernetes.client.extended.controller.builder.DefaultControllerBuilder;
 import io.kubernetes.client.extended.controller.reconciler.Reconciler;
+import io.kubernetes.client.extended.controller.reconciler.Request;
+import io.kubernetes.client.extended.workqueue.WorkQueue;
 import io.kubernetes.client.informer.SharedInformerFactory;
+import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
 import io.ten1010.aipub.projectcontroller.controller.ControllerFactory;
+import io.ten1010.aipub.projectcontroller.controller.watch.DefaultControllerWatch;
+import io.ten1010.aipub.projectcontroller.controller.watch.OnUpdateFilterFactory;
+import io.ten1010.aipub.projectcontroller.controller.watch.RequestBuilderFactory;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sObjectType;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
 import java.util.function.Function;
@@ -32,8 +39,8 @@ public abstract class WorkloadControllerFactory<T extends KubernetesObject> impl
     configureControllerName();
     configureReadyFunc();
     configureWatch();
+    configureNamespaceAllowlistWatch();
     this.builder.withWorkerCount(1);
-    this.builder.withReconciler(createReconciler());
     this.builder.withReconciler(createReconciler());
 
     return this.builder.build();
@@ -52,6 +59,25 @@ public abstract class WorkloadControllerFactory<T extends KubernetesObject> impl
   protected abstract Function<KubernetesObject, V1PodTemplateSpec> getPodTemplateSpecResolver();
 
   protected abstract ControllerObjectReconciler getObjectReconciler();
+
+  /**
+   * 네임스페이스의 allowlist 라벨이 바뀌면 해당 네임스페이스의 워크로드를 다시 reconcile해, 재시작
+   * 없이 런타임에 toleration 주입/제거가 반영되게 한다.
+   */
+  private void configureNamespaceAllowlistWatch() {
+    this.builder.withReadyFunc(this.sharedInformerFactory
+        .getExistingSharedIndexInformer(V1Namespace.class)::hasSynced);
+    this.builder.watch(this::createNamespaceWatch);
+  }
+
+  private ControllerWatch<V1Namespace> createNamespaceWatch(WorkQueue<Request> workQueue) {
+    DefaultControllerWatch<V1Namespace> watch = new DefaultControllerWatch<>(workQueue,
+        V1Namespace.class);
+    watch.setOnUpdateFilter(new OnUpdateFilterFactory().namespaceAllowlistLabelFilter());
+    watch.setRequestBuilder(new RequestBuilderFactory(this.sharedInformerFactory)
+        .namespaceToNamespacedObjects(getObjectType().objClass()));
+    return watch;
+  }
 
   private Reconciler createReconciler() {
     return new WorkloadControllerReconciler(

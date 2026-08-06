@@ -115,6 +115,9 @@ public class AipubUserRoleReconciler extends AbstractReconciler {
 
   @Override
   protected Result reconcileInternal(Request request) throws ApiException {
+    if (this.reconciliationService.isNamespaceAllowlisted(request.getNamespace())) {
+      return new Result(false);
+    }
     String roleKey = new RequestHelper(this.keyResolver).resolveKey(request);
     Optional<V1Role> roleOpt = Optional.ofNullable(this.roleIndexer.getByKey(roleKey));
     String projKey = this.keyResolver.resolveKey(
