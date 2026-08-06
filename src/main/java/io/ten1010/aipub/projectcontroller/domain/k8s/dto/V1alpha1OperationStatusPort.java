@@ -11,6 +11,8 @@ public class V1alpha1OperationStatusPort {
   @Nullable
   Integer port;
   @Nullable
+  String type;
+  @Nullable
   String internalAddress;
   @Nullable
   String externalAddress;

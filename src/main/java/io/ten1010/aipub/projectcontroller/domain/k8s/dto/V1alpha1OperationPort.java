@@ -9,7 +9,7 @@ public class V1alpha1OperationPort {
   @Nullable
   String appProtocol;
   @Nullable
-  V1alpha1OperationPortExternal external;
+  V1alpha1OperationPortExpose expose;
   @Nullable
   String name;
   @Nullable
