@@ -36,16 +36,33 @@ webhooks:
             - aipub-efk
     objectSelector: { }
     reinvocationPolicy: IfNeeded
+    # 소유권 대상 타입(OwnershipPolicy.OWNED_TARGETS)의 CREATE 를 인터셉트해 소유자 레이블을 찍는다.
+    # 멤버가 직접 만든 오브젝트가 레이블 없이 남으면 본인도 수정/삭제할 수 없게 되므로
+    # 멤버 Role 이 create 를 허용하는 타입은 인터셉트한다. 단 events 는 시스템 컴포넌트가
+    # 고빈도로 생성하므로 제외한다(모든 이벤트 생성이 웹훅을 경유하는 부하·fail-closed 리스크 회피).
+    # 시스템 컴포넌트가 만드는 오브젝트는 비멤버라 무변경 통과된다.
+    # OwnershipPolicy 목록을 바꿀 때는 이 rules 와 aipub-installer 의 helm 차트
+    # (mutating-webhook.yaml)도 함께 갱신할 것.
     rules:
       - apiGroups: [ "" ]
         apiVersions: [ "*" ]
         operations: [ "CREATE" ]
-        resources: [ "pods", "replicationcontrollers", "services", "configmaps", "secrets", "persistentvolumeclaims" ]
+        resources: [ "pods", "replicationcontrollers", "services", "configmaps", "secrets", "persistentvolumeclaims", "serviceaccounts", "limitranges", "endpoints" ]
         scope: "Namespaced"
       - apiGroups: [ "networking.k8s.io" ]
         apiVersions: [ "*" ]
         operations: [ "CREATE" ]
         resources: [ "ingresses" ]
+        scope: "Namespaced"
+      - apiGroups: [ "autoscaling" ]
+        apiVersions: [ "*" ]
+        operations: [ "CREATE" ]
+        resources: [ "horizontalpodautoscalers" ]
+        scope: "Namespaced"
+      - apiGroups: [ "policy" ]
+        apiVersions: [ "*" ]
+        operations: [ "CREATE" ]
+        resources: [ "poddisruptionbudgets" ]
         scope: "Namespaced"
       - apiGroups: [ "batch" ]
         apiVersions: [ "*" ]

@@ -90,6 +90,7 @@ class UserLabelReviewHandlerTest {
     assertThat(this.handler.canHandle(review)).isFalse();
   }
 
+  // 소유권 대상은 전부 네임스페이스 리소스이므로 네임스페이스 없는 요청은 처리하지 않는다
   @Test
   void canHandle_noNamespace_returnsFalse() {
     V1AdmissionReview review = createReview("CREATE", null);

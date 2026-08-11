@@ -46,6 +46,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sObjectType;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
+import io.ten1010.aipub.projectcontroller.informer.owned.OwnedObjectInformerManager;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,12 +61,17 @@ public class ControllerConfiguration {
   @Bean
   public ControllerManager controllerManager(
       SharedInformerFactory sharedInformerFactory, List<Controller> controllers,
-      List<WorkloadControllerFactory<?>> workloadControllerFactories) {
+      List<WorkloadControllerFactory<?>> workloadControllerFactories,
+      OwnedObjectInformerManager ownedObjectInformerManager) {
     ControllerManagerBuilder builder = ControllerBuilder.controllerManagerBuilder(
         sharedInformerFactory);
     controllers.forEach(builder::addController);
     workloadControllerFactories.forEach(f -> builder.addController(f.createController()));
     ControllerManager controllerManager = builder.build();
+
+    // 모든 컨트롤러 빌드가 끝나 개인 Role 워크큐가 매니저에 등록된 뒤에
+    // 소유권 인포머를 시작해야 초기 onAdd 이벤트가 유실되지 않는다
+    ownedObjectInformerManager.start();
 
     ExecutorService executor = Executors.newSingleThreadExecutor();
     executor.execute(controllerManager);
@@ -125,9 +131,10 @@ public class ControllerConfiguration {
   @Bean
   public Controller aipubUserRoleController(SharedInformerFactory sharedInformerFactory,
       K8sApiProvider k8sApiProvider,
-      ReconciliationService reconciliationService) {
+      ReconciliationService reconciliationService,
+      OwnedObjectInformerManager ownedObjectInformerManager) {
     return new AipubUserRoleControllerFactory(sharedInformerFactory, k8sApiProvider,
-        reconciliationService)
+        reconciliationService, ownedObjectInformerManager)
         .createController();
   }
 

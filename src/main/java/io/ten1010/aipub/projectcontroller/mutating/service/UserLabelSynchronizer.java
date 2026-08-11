@@ -7,10 +7,13 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.LabelConstants;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ObjectMapperFactory;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -24,8 +27,26 @@ import org.springframework.context.event.EventListener;
 @Slf4j
 public class UserLabelSynchronizer {
 
-  private static final long SYNC_INTERVAL_MS = 300_000; // 5 minutes
+  private static final long SYNC_INTERVAL_MS = 60_000; // 1 minute
   private static final String LOG_PREFIX = "[USER-LABEL-SYNC]";
+  private static final int PAGE_LIMIT = 500;
+  private static final int MAX_PAGES = 1_000;
+
+  /**
+   * Sync targets — must stay 1:1 with the workload-label webhook rules
+   * (kubernetes/controller/project-controller/templates/java-webhook-configuration.yaml).
+   * Intermediate workload objects come first and pods last: pods born mid-cycle copy
+   * their parent's labels via the mutating webhook, so parents must be corrected first.
+   */
+  private static final List<SyncTarget> SYNC_TARGETS = List.of(
+      new SyncTarget("", "v1", "replicationcontrollers"),
+      new SyncTarget("apps", "v1", "statefulsets"),
+      new SyncTarget("apps", "v1", "deployments"),
+      new SyncTarget("apps", "v1", "replicasets"),
+      new SyncTarget("apps", "v1", "daemonsets"),
+      new SyncTarget("batch", "v1", "jobs"),
+      new SyncTarget("batch", "v1", "cronjobs"),
+      new SyncTarget("", "v1", "pods"));
 
   private final ApiResourceDiscovery apiResourceDiscovery;
   private final ApiClient apiClient;
@@ -54,48 +75,75 @@ public class UserLabelSynchronizer {
     long startNanos = System.nanoTime();
     log.debug("{} Sync cycle started", LOG_PREFIX);
     try {
-      Counters counters = run();
+      CycleResult result = run();
+      Counters counters = result.total();
       long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000L;
-      log.debug("{} Sync cycle done: pods={}, processed={}, skippedNoWorkloadLabel={}, "
-              + "ownerLookupFailed={}, alreadyInSync={}, patched={}, patchFailed={}, elapsedMs={}",
-          LOG_PREFIX, counters.totalPods, counters.processed, counters.skippedNoWorkloadLabel,
+      log.debug("{} Sync cycle done: objects={}, processed={}, skippedNoWorkloadLabel={}, "
+              + "ownerLookupFailed={}, alreadyInSync={}, patched={}, patchFailed={}, "
+              + "listFailed={}, targetFailed={}, elapsedMs={}, breakdown=[{}]",
+          LOG_PREFIX, counters.totalObjects, counters.processed, counters.skippedNoWorkloadLabel,
           counters.ownerLookupFailed, counters.alreadyInSync, counters.patched,
-          counters.patchFailed, elapsedMs);
+          counters.patchFailed, counters.listFailed, counters.targetFailed, elapsedMs,
+          result.breakdown());
     } catch (Exception e) {
       long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000L;
       log.warn("{} Sync cycle failed after {}ms", LOG_PREFIX, elapsedMs, e);
     }
   }
 
-  private Counters run() {
+  private CycleResult run() {
+    Counters total = new Counters();
+    // Owner maps shared across all sync targets within a single cycle: one paginated
+    // LIST per owner kind instead of one GET per owner object.
+    OwnerCache ownerCache = new OwnerCache();
+    StringBuilder breakdown = new StringBuilder();
+
+    for (SyncTarget target : SYNC_TARGETS) {
+      Counters counters;
+      try {
+        counters = processTarget(target, ownerCache);
+      } catch (Exception e) {
+        log.warn("{} {} target processing failed unexpectedly — target skipped",
+            LOG_PREFIX, target.gvr(), e);
+        counters = new Counters();
+        counters.targetFailed++;
+      }
+      total.add(counters);
+      if (breakdown.length() > 0) {
+        breakdown.append(", ");
+      }
+      breakdown.append(target.gvr()).append(counters.toBreakdownEntry());
+    }
+
+    log.debug("{} Owner kinds this cycle: loaded={}, loadFailed={}",
+        LOG_PREFIX, ownerCache.mapsByKind.size(), ownerCache.failedKinds.size());
+    return new CycleResult(total, breakdown.toString());
+  }
+
+  private Counters processTarget(SyncTarget target, OwnerCache ownerCache) {
     Counters c = new Counters();
 
-    JsonNode podList = listPodsWithWorkloadLabel();
-    if (podList == null) {
-      log.warn("{} Pod list fetch returned null — sync cycle aborted", LOG_PREFIX);
+    List<JsonNode> items = listObjectsWithWorkloadLabel(target);
+    if (items == null) {
+      log.warn("{} {} list fetch returned null — target skipped", LOG_PREFIX, target.gvr());
+      c.listFailed++;
       return c;
     }
-    JsonNode items = podList.path("items");
-    if (!items.isArray()) {
-      log.warn("{} Pod list items not array — sync cycle aborted", LOG_PREFIX);
-      return c;
-    }
-    c.totalPods = items.size();
-    log.debug("{} Listed {} pods with workload-kind label", LOG_PREFIX, c.totalPods);
+    c.totalObjects = items.size();
+    log.debug("{} Listed {} {} with workload-kind label", LOG_PREFIX, c.totalObjects, target.gvr());
 
-    Map<String, String @Nullable []> cache = new HashMap<>();
-
-    for (JsonNode pod : items) {
-      String namespace = pod.path("metadata").path("namespace").textValue();
-      String podName = pod.path("metadata").path("name").textValue();
-      if (namespace == null || podName == null) {
+    for (JsonNode object : items) {
+      String namespace = object.path("metadata").path("namespace").textValue();
+      String objectName = object.path("metadata").path("name").textValue();
+      if (namespace == null || objectName == null) {
         c.skippedNoWorkloadLabel++;
         continue;
       }
 
-      JsonNode labels = pod.path("metadata").path("labels");
+      JsonNode labels = object.path("metadata").path("labels");
       if (!labels.isObject()) {
-        log.debug("{} Skip pod {}/{}: no labels object", LOG_PREFIX, namespace, podName);
+        log.debug("{} Skip {} {}/{}: no labels object",
+            LOG_PREFIX, target.gvr(), namespace, objectName);
         c.skippedNoWorkloadLabel++;
         continue;
       }
@@ -103,44 +151,40 @@ public class UserLabelSynchronizer {
       JsonNode kindNode = labels.get(LabelConstants.WORKLOAD_KIND_KEY);
       JsonNode nameNode = labels.get(LabelConstants.WORKLOAD_NAME_KEY);
       if (kindNode == null || nameNode == null) {
-        log.debug("{} Skip pod {}/{}: missing workload-kind/workload-name label",
-            LOG_PREFIX, namespace, podName);
+        log.debug("{} Skip {} {}/{}: missing workload-kind/workload-name label",
+            LOG_PREFIX, target.gvr(), namespace, objectName);
         c.skippedNoWorkloadLabel++;
         continue;
       }
       String kind = kindNode.textValue();
       String name = nameNode.textValue();
       if (kind == null || name == null) {
-        log.debug("{} Skip pod {}/{}: workload-kind/workload-name label has null text",
-            LOG_PREFIX, namespace, podName);
+        log.debug("{} Skip {} {}/{}: workload-kind/workload-name label has null text",
+            LOG_PREFIX, target.gvr(), namespace, objectName);
         c.skippedNoWorkloadLabel++;
         continue;
       }
 
       c.processed++;
-      log.debug("{} Processing pod {}/{}: owner={}/{}", LOG_PREFIX, namespace, podName, kind, name);
+      log.debug("{} Processing {} {}/{}: owner={}/{}",
+          LOG_PREFIX, target.gvr(), namespace, objectName, kind, name);
 
-      String cacheKey = namespace + "::" + kind + "/" + name;
-      String @Nullable [] ownerLabels;
-      if (cache.containsKey(cacheKey)) {
-        ownerLabels = cache.get(cacheKey);
-        log.debug("{} Owner cache hit for {} → username={}, userid={}",
-            LOG_PREFIX, cacheKey,
-            ownerLabels == null ? null : ownerLabels[0],
-            ownerLabels == null ? null : ownerLabels[1]);
-      } else {
-        ownerLabels = getOwnerUserLabels(kind, name, namespace);
-        cache.put(cacheKey, ownerLabels);
-      }
-
+      loadOwnerKindIfNeeded(kind, ownerCache);
+      String @Nullable [] ownerLabels = ownerCache.lookup(kind, namespace, name);
       if (ownerLabels == null) {
         c.ownerLookupFailed++;
-        log.warn("{} Owner lookup failed for pod {}/{}: owner={}/{} returned null — patch skipped",
-            LOG_PREFIX, namespace, podName, kind, name);
+        if (ownerCache.isFailed(kind)) {
+          log.debug("{} Owner lookup skipped for {} {}/{}: owner kind={} load failed — "
+                  + "patch skipped",
+              LOG_PREFIX, target.gvr(), namespace, objectName, kind);
+        } else {
+          log.warn("{} Owner lookup failed for {} {}/{}: owner={}/{} not found — patch skipped",
+              LOG_PREFIX, target.gvr(), namespace, objectName, kind, name);
+        }
         continue;
       }
 
-      SyncResult result = syncPodIfNeeded(labels, podName, namespace, ownerLabels);
+      SyncResult result = syncObjectIfNeeded(target, labels, objectName, namespace, ownerLabels);
       switch (result) {
         case ALREADY_IN_SYNC -> c.alreadyInSync++;
         case PATCHED -> c.patched++;
@@ -151,22 +195,22 @@ public class UserLabelSynchronizer {
     return c;
   }
 
-  private SyncResult syncPodIfNeeded(JsonNode labels, String podName, String namespace,
-      String[] ownerLabels) {
+  private SyncResult syncObjectIfNeeded(SyncTarget target, JsonNode labels, String objectName,
+      String namespace, String[] ownerLabels) {
     String currentUsername = getTextValue(labels, LabelConstants.OBJECT_OWN_USERNAME_KEY);
     String currentUserid = getTextValue(labels, LabelConstants.OBJECT_OWN_USERID_KEY);
 
     if (Objects.equals(ownerLabels[0], currentUsername)
         && Objects.equals(ownerLabels[1], currentUserid)) {
-      log.debug("{} Pod {}/{} already in sync (username={}, userid={})",
-          LOG_PREFIX, namespace, podName, currentUsername, currentUserid);
+      log.debug("{} {} {}/{} already in sync (username={}, userid={})",
+          LOG_PREFIX, target.gvr(), namespace, objectName, currentUsername, currentUserid);
       return SyncResult.ALREADY_IN_SYNC;
     }
 
-    log.debug("{} Patching pod {}/{}: username=[{}→{}], userid=[{}→{}]",
-        LOG_PREFIX, namespace, podName,
+    log.debug("{} Patching {} {}/{}: username=[{}→{}], userid=[{}→{}]",
+        LOG_PREFIX, target.gvr(), namespace, objectName,
         currentUsername, ownerLabels[0], currentUserid, ownerLabels[1]);
-    return patchPodLabels(podName, namespace, ownerLabels[0], ownerLabels[1]);
+    return patchObjectLabels(target, objectName, namespace, ownerLabels[0], ownerLabels[1]);
   }
 
   @Nullable
@@ -179,95 +223,170 @@ public class UserLabelSynchronizer {
   }
 
   /**
-   * Fetches the username/userid labels from the owner object identified by kind/name.
-   * Uses ApiResourceDiscovery.getResourcesByKind to resolve kind to API paths,
-   * matching the Python _get_object behavior.
+   * Loads the owner map for the given kind once per cycle via cluster-scoped LISTs.
    *
-   * @return String[]{username, userid} or null if not found/no labels
+   * <p>Referenced owners are always root objects WITHOUT the workload-kind label: the
+   * stamping webhook copies a parent's workload-kind/name labels verbatim when the parent
+   * carries them, so a workload-kind/name reference can only ever point at an object that
+   * has no workload-kind label itself. This lets us fetch all possible owners of a kind
+   * with a single label-absence LIST (labelSelector=!workload-kind) instead of one GET
+   * per owner object.
+   *
+   * <p>Any failure (all candidate LISTs failing, or an unexpected exception) marks the
+   * kind as failed in the cache so later targets hitting the same kind neither retry nor
+   * re-throw — objects referencing a failed kind are counted as ownerLookupFailed.
+   */
+  private void loadOwnerKindIfNeeded(String kind, OwnerCache ownerCache) {
+    if (ownerCache.isLoaded(kind)) {
+      return;
+    }
+    try {
+      List<ApiResourceDiscovery.ResourceInfo> resources =
+          this.apiResourceDiscovery.getResourcesByKind(kind);
+      if (resources.isEmpty()) {
+        log.warn("{} Owner load: no API resources found for kind={} (discovery snapshot miss)",
+            LOG_PREFIX, kind);
+        ownerCache.mapsByKind.put(kind, Map.of());
+        return;
+      }
+      log.debug("{} Owner load for kind={}: trying {} candidate resource(s)",
+          LOG_PREFIX, kind, resources.size());
+
+      Map<String, String @Nullable []> ownerMap = new HashMap<>();
+      boolean anyListed = false;
+      for (ApiResourceDiscovery.ResourceInfo resourceInfo : resources) {
+        String apiVersion = resourceInfo.apiVersion();
+        String plural = resourceInfo.plural();
+        String group = apiVersion.contains("/") ? apiVersion.split("/")[0] : "";
+        String groupResource = group + "/" + plural;
+
+        boolean namespaced;
+        try {
+          namespaced = this.apiResourceDiscovery.isNamespaced(groupResource);
+        } catch (GroupResourceNotFoundException e) {
+          log.debug("{} Owner load: groupResource={} not in discovery — skipping candidate",
+              LOG_PREFIX, groupResource);
+          continue;
+        }
+        if (!namespaced) {
+          // Root workloads are always namespaced; owner references are namespace-scoped,
+          // so a non-namespaced candidate can never be a referenced owner.
+          log.debug("{} Owner load: groupResource={} is not namespaced — skipping candidate",
+              LOG_PREFIX, groupResource);
+          continue;
+        }
+
+        String prefix = group.isEmpty() ? "/api/" + apiVersion : "/apis/" + apiVersion;
+        String basePath = prefix + "/" + plural + "?labelSelector="
+            + URLEncoder.encode("!" + LabelConstants.WORKLOAD_KIND_KEY, StandardCharsets.UTF_8);
+        log.debug("{} Owner load attempt: LIST {}", LOG_PREFIX, basePath);
+        List<JsonNode> items = listAllPages(basePath);
+        if (items == null) {
+          log.debug("{} Owner load LIST failed: {}", LOG_PREFIX, basePath);
+          continue;
+        }
+        anyListed = true;
+        for (JsonNode item : items) {
+          String namespace = item.path("metadata").path("namespace").textValue();
+          String name = item.path("metadata").path("name").textValue();
+          if (namespace == null || name == null) {
+            continue;
+          }
+          JsonNode labels = item.path("metadata").path("labels");
+          if (!labels.isObject()) {
+            // Not stored → lookup returns null → same skip semantics as the previous
+            // per-object GET path ("owner has no labels object").
+            continue;
+          }
+          String username = getTextValue(labels, LabelConstants.OBJECT_OWN_USERNAME_KEY);
+          String userid = getTextValue(labels, LabelConstants.OBJECT_OWN_USERID_KEY);
+          // putIfAbsent: earlier candidates win, preserving the previous GET try-order.
+          ownerMap.putIfAbsent(namespace + "::" + name, new String[]{username, userid});
+        }
+      }
+
+      if (!anyListed) {
+        log.warn("{} Owner load failed for kind={}: no candidate LIST succeeded — "
+                + "objects referencing this kind are skipped this cycle",
+            LOG_PREFIX, kind);
+        ownerCache.failedKinds.add(kind);
+        return;
+      }
+      log.debug("{} Owner map loaded for kind={}: {} entries", LOG_PREFIX, kind, ownerMap.size());
+      ownerCache.mapsByKind.put(kind, ownerMap);
+    } catch (Exception e) {
+      log.warn("{} Owner load for kind={} threw unexpectedly — kind marked failed for this cycle",
+          LOG_PREFIX, kind, e);
+      ownerCache.failedKinds.add(kind);
+    }
+  }
+
+  @Nullable
+  private List<JsonNode> listObjectsWithWorkloadLabel(SyncTarget target) {
+    String labelSelector = URLEncoder.encode(LabelConstants.WORKLOAD_KIND_KEY, StandardCharsets.UTF_8);
+    String path = target.apiPrefix() + "/" + target.plural() + "?labelSelector=" + labelSelector;
+    return listAllPages(path);
+  }
+
+  /**
+   * Paginated LIST: repeatedly GETs the given path with limit={@value #PAGE_LIMIT}
+   * (and continue=&lt;token&gt;, URL-encoded, from the second page on), accumulating
+   * items until metadata.continue is empty.
+   *
+   * @param basePath list path including its query string (e.g. ?labelSelector=...)
+   * @return all items across pages, or null if ANY page fails — a partial result must
+   *     never be treated as a complete one
    */
   @Nullable
-  private String[] getOwnerUserLabels(String kind, String name, String namespace) {
-    List<ApiResourceDiscovery.ResourceInfo> resources =
-        this.apiResourceDiscovery.getResourcesByKind(kind);
-    if (resources.isEmpty()) {
-      log.warn("{} Owner lookup: no API resources found for kind={} (discovery snapshot miss)",
-          LOG_PREFIX, kind);
-      return null;
-    }
-    log.debug("{} Owner lookup {}/{} ns={}: trying {} candidate resource(s)",
-        LOG_PREFIX, kind, name, namespace, resources.size());
-
-    for (ApiResourceDiscovery.ResourceInfo resourceInfo : resources) {
-      String apiVersion = resourceInfo.apiVersion();
-      String plural = resourceInfo.plural();
-      String group = apiVersion.contains("/") ? apiVersion.split("/")[0] : "";
-      String groupResource = group + "/" + plural;
-
-      boolean namespaced;
-      try {
-        namespaced = this.apiResourceDiscovery.isNamespaced(groupResource);
-      } catch (GroupResourceNotFoundException e) {
-        log.debug("{} Owner lookup: groupResource={} not in discovery — skipping candidate",
-            LOG_PREFIX, groupResource);
-        continue;
+  private List<JsonNode> listAllPages(String basePath) {
+    List<JsonNode> items = new ArrayList<>();
+    String continueToken = null;
+    // A misbehaving API server (e.g. an aggregated server backing an arbitrary owner
+    // CRD) could return continue tokens forever; without a guard the single-threaded
+    // synchronizer would wedge permanently and accumulate items unboundedly.
+    for (int page = 1; page <= MAX_PAGES; page++) {
+      String path = basePath + (basePath.contains("?") ? "&" : "?") + "limit=" + PAGE_LIMIT;
+      if (continueToken != null) {
+        path = path + "&continue=" + URLEncoder.encode(continueToken, StandardCharsets.UTF_8);
       }
-
-      String path;
-      if (namespaced) {
-        if (group.isEmpty()) {
-          path = "/api/v1/namespaces/" + namespace + "/" + plural + "/" + name;
-        } else {
-          path = "/apis/" + apiVersion + "/namespaces/" + namespace + "/" + plural + "/" + name;
-        }
-      } else {
-        if (group.isEmpty()) {
-          path = "/api/v1/" + plural + "/" + name;
-        } else {
-          path = "/apis/" + apiVersion + "/" + plural + "/" + name;
-        }
-      }
-
-      log.debug("{} Owner lookup attempt: GET {}", LOG_PREFIX, path);
-      JsonNode obj = fetchJson(path);
-      if (obj == null) {
-        log.debug("{} Owner lookup attempt returned null (404 or fetch error): {}",
-            LOG_PREFIX, path);
-        continue;
-      }
-
-      JsonNode labels = obj.path("metadata").path("labels");
-      if (!labels.isObject()) {
-        log.warn("{} Owner object {}/{} has no labels object — returning null",
-            LOG_PREFIX, kind, name);
+      JsonNode pageNode = fetchJson(path);
+      if (pageNode == null) {
         return null;
       }
-
-      String username = getTextValue(labels, LabelConstants.OBJECT_OWN_USERNAME_KEY);
-      String userid = getTextValue(labels, LabelConstants.OBJECT_OWN_USERID_KEY);
-      log.debug("{} Owner labels resolved {}/{} ns={}: username={}, userid={}",
-          LOG_PREFIX, kind, name, namespace, username, userid);
-      return new String[]{username, userid};
+      JsonNode pageItems = pageNode.path("items");
+      if (!pageItems.isArray()) {
+        log.warn("{} listAllPages: items not array — path={}", LOG_PREFIX, path);
+        return null;
+      }
+      for (JsonNode item : pageItems) {
+        items.add(item);
+      }
+      String nextToken = pageNode.path("metadata").path("continue").textValue();
+      if (nextToken == null || nextToken.isEmpty()) {
+        return items;
+      }
+      if (nextToken.equals(continueToken)) {
+        log.warn("{} listAllPages: continue token repeated — aborting to avoid a loop, path={}",
+            LOG_PREFIX, basePath);
+        return null;
+      }
+      continueToken = nextToken;
     }
-
-    log.warn("{} Owner lookup exhausted all candidates for {}/{} ns={} — returning null",
-        LOG_PREFIX, kind, name, namespace);
+    log.warn("{} listAllPages: exceeded {} pages — aborting, path={}",
+        LOG_PREFIX, MAX_PAGES, basePath);
     return null;
   }
 
-  @Nullable
-  private JsonNode listPodsWithWorkloadLabel() {
-    String labelSelector = URLEncoder.encode(LabelConstants.WORKLOAD_KIND_KEY, StandardCharsets.UTF_8);
-    String path = "/api/v1/pods?labelSelector=" + labelSelector;
-    return fetchJson(path);
-  }
-
-  private SyncResult patchPodLabels(String name, String namespace,
+  private SyncResult patchObjectLabels(SyncTarget target, String name, String namespace,
       @Nullable String username, @Nullable String userid) {
-    String path = "/api/v1/namespaces/" + namespace + "/pods/" + name;
+    String path = target.apiPrefix() + "/namespaces/" + namespace + "/" + target.plural()
+        + "/" + name;
     try {
       Map<String, Object> labels = new HashMap<>();
       labels.put(LabelConstants.OBJECT_OWN_USERNAME_KEY, username);
       labels.put(LabelConstants.OBJECT_OWN_USERID_KEY, userid);
+      // Merge-patch of metadata.labels only — spec/spec.template must never be included
+      // (patching spec.template would trigger rolling restarts of workloads).
       byte[] bodyBytes = this.mapper.writeValueAsBytes(
           Map.of("metadata", Map.of("labels", labels)));
 
@@ -281,22 +400,22 @@ public class UserLabelSynchronizer {
 
       try (Response response = call.execute()) {
         if (response.isSuccessful()) {
-          log.debug("{} Patched pod {}/{} (status={})",
-              LOG_PREFIX, namespace, name, response.code());
+          log.debug("{} Patched {} {}/{} (status={})",
+              LOG_PREFIX, target.gvr(), namespace, name, response.code());
           return SyncResult.PATCHED;
         }
         if (response.code() == 404) {
-          log.debug("{} Pod {}/{} not found for patch (already deleted?)",
-              LOG_PREFIX, namespace, name);
+          log.debug("{} {} {}/{} not found for patch (already deleted?)",
+              LOG_PREFIX, target.gvr(), namespace, name);
           return SyncResult.PATCH_FAILED;
         }
         String errorBody = response.body() != null ? response.body().string() : "";
-        log.warn("{} Failed to patch pod {}/{}: status={}, body={}",
-            LOG_PREFIX, namespace, name, response.code(), errorBody);
+        log.warn("{} Failed to patch {} {}/{}: status={}, body={}",
+            LOG_PREFIX, target.gvr(), namespace, name, response.code(), errorBody);
         return SyncResult.PATCH_FAILED;
       }
     } catch (Exception e) {
-      log.warn("{} Failed to patch pod {}/{}", LOG_PREFIX, namespace, name, e);
+      log.warn("{} Failed to patch {} {}/{}", LOG_PREFIX, target.gvr(), namespace, name, e);
       return SyncResult.PATCH_FAILED;
     }
   }
@@ -331,6 +450,57 @@ public class UserLabelSynchronizer {
     }
   }
 
+  private record SyncTarget(String group, String version, String plural) {
+
+    String apiPrefix() {
+      if (this.group.isEmpty()) {
+        return "/api/" + this.version;
+      }
+      return "/apis/" + this.group + "/" + this.version;
+    }
+
+    String gvr() {
+      if (this.group.isEmpty()) {
+        return this.version + "/" + this.plural;
+      }
+      return this.group + "/" + this.version + "/" + this.plural;
+    }
+  }
+
+  private record CycleResult(Counters total, String breakdown) {
+  }
+
+  /**
+   * Per-cycle owner state: user labels of root workload objects, loaded once per kind.
+   * A kind is in exactly one of three states — not loaded (absent from both fields),
+   * loaded ({@link #mapsByKind} entry, possibly empty), or load-failed
+   * ({@link #failedKinds} entry).
+   */
+  private static final class OwnerCache {
+
+    /** kind → (namespace::name → {username, userid}). */
+    final Map<String, Map<String, String @Nullable []>> mapsByKind = new HashMap<>();
+    /** Kinds whose owner map load failed — cached so later targets neither retry nor re-throw. */
+    final Set<String> failedKinds = new HashSet<>();
+
+    boolean isLoaded(String kind) {
+      return this.mapsByKind.containsKey(kind) || this.failedKinds.contains(kind);
+    }
+
+    boolean isFailed(String kind) {
+      return this.failedKinds.contains(kind);
+    }
+
+    String @Nullable [] lookup(String kind, String namespace, String name) {
+      Map<String, String @Nullable []> ownerMap = this.mapsByKind.get(kind);
+      if (ownerMap == null) {
+        return null;
+      }
+      return ownerMap.get(namespace + "::" + name);
+    }
+
+  }
+
   private enum SyncResult {
     ALREADY_IN_SYNC,
     PATCHED,
@@ -338,13 +508,39 @@ public class UserLabelSynchronizer {
   }
 
   private static final class Counters {
-    int totalPods;
+    int totalObjects;
     int processed;
     int skippedNoWorkloadLabel;
     int ownerLookupFailed;
     int alreadyInSync;
     int patched;
     int patchFailed;
+    int listFailed;
+    int targetFailed;
+
+    void add(Counters other) {
+      this.totalObjects += other.totalObjects;
+      this.processed += other.processed;
+      this.skippedNoWorkloadLabel += other.skippedNoWorkloadLabel;
+      this.ownerLookupFailed += other.ownerLookupFailed;
+      this.alreadyInSync += other.alreadyInSync;
+      this.patched += other.patched;
+      this.patchFailed += other.patchFailed;
+      this.listFailed += other.listFailed;
+      this.targetFailed += other.targetFailed;
+    }
+
+    String toBreakdownEntry() {
+      return "{total=" + this.totalObjects
+          + ", processed=" + this.processed
+          + ", skipped=" + this.skippedNoWorkloadLabel
+          + ", ownerLookupFailed=" + this.ownerLookupFailed
+          + ", alreadyInSync=" + this.alreadyInSync
+          + ", patched=" + this.patched
+          + ", patchFailed=" + this.patchFailed
+          + ", listFailed=" + this.listFailed
+          + ", targetFailed=" + this.targetFailed + "}";
+    }
   }
 
 }

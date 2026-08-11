@@ -196,6 +196,29 @@ spec:
 Project Controller는 리소스가 만들어지거나 바뀌는 시점에 admission webhook을 통해 프로젝트 경계를 지킵니다.
 새로 만들어지는 리소스에는 어느 프로젝트와 사용자에 속하는지를 표시해 소유 관계를 분명히 하고, 사용자가 요청한 작업이 그가 가진 권한 범위 안에 있는지 확인합니다.
 
+=== 소유권 이벤트 로그 조회
+
+컨트롤러는 소유권 대상 리소스(OwnershipPolicy.OWNED_TARGETS 의 네이티브 16종)의
+소유 오브젝트 변화를 INFO 레벨로 기록합니다.
+
+* `Started owned-object informers` — 기동 시 소유권 추적 시작
+* `Owned object created` / `Owned object ownership changed` / `Owned object deleted` — 소유 오브젝트 생성·소유권 변경·삭제
+
+[source,bash]
+----
+# 소유 오브젝트 생성/변경/삭제 로그
+kubectl logs -n project-controller deploy/project-controller | grep "Owned object"
+
+# 특정 사용자의 소유 오브젝트 이벤트만
+kubectl logs -n project-controller deploy/project-controller | grep "Owned object" | grep "owner=<aipub사용자명>"
+
+# 실시간 스트리밍
+kubectl logs -n project-controller deploy/project-controller -f --tail=200 \
+  | grep --line-buffered "Owned object"
+----
+
+참고: 컨트롤러가 재기동하면 초기 동기화 과정에서 기존 소유 오브젝트 전체가 `Owned object created` 로 한 번씩 다시 출력됩니다(재기동 시점의 인벤토리이며, 오브젝트가 실제로 새로 생성된 것은 아닙니다).
+
 === 버그 리포팅 및 개선 사항, 질의
 
 버그를 발견하시거나 개선 사항, 질의가 있다면 link:https://github.com/ten1010-io/project-controller/issues[Github Issue]를 열어주세요.

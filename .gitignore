@@ -40,3 +40,6 @@ build/
 /.claude/settings.json
 harbor/.env
 /image_push.sh
+/_workspace
+/_workspace_prev_*
+target/

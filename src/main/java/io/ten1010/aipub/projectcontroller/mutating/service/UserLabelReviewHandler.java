@@ -53,6 +53,7 @@ public class UserLabelReviewHandler implements ReviewHandler {
     if (!OPERATION_CREATE.equals(request.getOperation())) {
       return false;
     }
+    // 소유권 대상(OwnershipPolicy.OWNED_TARGETS)은 전부 네임스페이스 리소스다
     return request.getNamespace() != null && !request.getNamespace().isEmpty();
   }
 

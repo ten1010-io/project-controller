@@ -831,6 +831,20 @@ public class ReconciliationService {
     return reconciledRules;
   }
 
+  public List<V1PolicyRule> reconcileAipubUserRoleRules(
+      V1alpha1AipubUser aipubUser,
+      V1alpha1Project project,
+      List<KubernetesObject> workloads,
+      List<OwnedObject> ownedObjects) {
+    List<V1PolicyRule> reconciledRules = new ArrayList<>(
+        reconcileAipubUserRoleRules(aipubUser, project, workloads));
+    for (OwnedObject ownedObject : ownedObjects) {
+      reconciledRules.add(buildUpdateDeleteRoleRule(ownedObject.group(),
+          ownedObject.resource(), ownedObject.name()));
+    }
+    return reconciledRules;
+  }
+
   public V1RoleRef reconcileClusterRoleRef(V1alpha1Project project, ProjectRoleEnum projRoleEnum) {
     String roleName = this.roleNameResolver.resolveRoleName(K8sObjectUtils.getName(project),
         projRoleEnum);
