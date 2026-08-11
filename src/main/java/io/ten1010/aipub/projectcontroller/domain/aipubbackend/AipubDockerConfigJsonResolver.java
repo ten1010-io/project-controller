@@ -65,6 +65,13 @@ public class AipubDockerConfigJsonResolver implements DockerConfigJsonResolver {
     return json;
   }
 
+  @Override
+  public Optional<String> resolveImageRegistryRobotId(V1alpha1Project project) {
+    String username = this.imageRegistryRobotUsernameResolver.resolve(
+        K8sObjectUtils.getName(project));
+    return findByUsername(username).map(ImageRegistryRobot::getId);
+  }
+
   private String getPassword(ImageRegistryRobot robot) {
     Objects.requireNonNull(robot.getId());
     ImageRegistryRobotSecret secret = this.imageRegistryRobotService.refreshSecret(robot.getId());

@@ -16,6 +16,8 @@ public final class LabelConstants {
       ProjectApiConstants.AIPUB_GROUP + "/" + "workload-name";
   public static final String WORKLOAD_KIND_KEY =
       ProjectApiConstants.AIPUB_GROUP + "/" + "workload-kind";
+  public static final String IMAGE_REGISTRY_ROBOT_ID_KEY =
+      ProjectApiConstants.PROJECT_GROUP + "/" + "image-registry-robot-id";
 
   private LabelConstants() {
   }
