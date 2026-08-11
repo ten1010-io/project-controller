@@ -41,12 +41,12 @@ jobs:
               ;;
             develop)
               case "$HEAD" in
-                hotfix/*|feature/*|feat/*|fix/*|chore/*)
+                hotfix/*|feature/*|feat/*|fix/*|chore/*|docs/*)
                   echo "OK: '${HEAD}' -> develop 은 허용된 패턴입니다."
                   exit 0
                   ;;
                 *)
-                  echo "::error::develop 은 hotfix/*, feature/*, feat/*, fix/*, chore/* 브랜치에서만 머지할 수 있습니다 (현재 소스: ${HEAD})"
+                  echo "::error::develop 은 hotfix/*, feature/*, feat/*, fix/*, chore/*, docs/* 브랜치에서만 머지할 수 있습니다 (현재 소스: ${HEAD})"
                   exit 1
                   ;;
               esac
