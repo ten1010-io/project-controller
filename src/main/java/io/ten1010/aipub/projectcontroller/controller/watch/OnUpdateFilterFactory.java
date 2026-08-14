@@ -7,6 +7,7 @@ import io.kubernetes.client.openapi.models.V1CronJob;
 import io.kubernetes.client.openapi.models.V1DaemonSet;
 import io.kubernetes.client.openapi.models.V1Deployment;
 import io.kubernetes.client.openapi.models.V1Job;
+import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1Node;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1ReplicaSet;
@@ -16,6 +17,7 @@ import io.kubernetes.client.openapi.models.V1RoleBinding;
 import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1StatefulSet;
 import io.ten1010.aipub.projectcontroller.domain.k8s.AipubUserRoleNameResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.LabelConstants;
 import io.ten1010.aipub.projectcontroller.domain.k8s.RoleNameResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1beta1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
@@ -52,6 +54,12 @@ public class OnUpdateFilterFactory {
     return (oldObj, newObj) ->
         !K8sObjectUtils.getOwnerReferences(oldObj).equals(K8sObjectUtils.getOwnerReferences(newObj))
             || !K8sObjectUtils.getLabels(oldObj).equals(K8sObjectUtils.getLabels(newObj));
+  }
+
+  public BiPredicate<V1Namespace, V1Namespace> namespaceAllowlistLabelFilter() {
+    return (oldObj, newObj) -> !Objects.equals(
+        K8sObjectUtils.getLabels(oldObj).get(LabelConstants.ALLOWLISTED_KEY),
+        K8sObjectUtils.getLabels(newObj).get(LabelConstants.ALLOWLISTED_KEY));
   }
 
   public BiPredicate<V1alpha1Project, V1alpha1Project> projectSpecFieldFilter() {

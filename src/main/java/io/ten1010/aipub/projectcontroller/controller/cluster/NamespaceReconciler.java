@@ -13,6 +13,7 @@ import io.ten1010.aipub.projectcontroller.controller.AbstractReconciler;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceNameResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
@@ -20,7 +21,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class NamespaceReconciler extends AbstractReconciler {
 
   private final KeyResolver keyResolver;
@@ -57,6 +60,16 @@ public class NamespaceReconciler extends AbstractReconciler {
         this.namespaceIndexer.getByKey(namespaceKey));
     Optional<V1alpha1Project> projectOpt = Optional.ofNullable(
         this.projectIndexer.getByKey(projKey));
+
+    // allowlist 네임스페이스는 라벨/ownerReference 정리 대상이 아니다. 동명의 project가 함께 있으면
+    // allowlist를 우선하고 경고 로그만 남긴다.
+    if (namespaceOpt.isPresent() && NamespaceAllowlistResolver.isAllowlisted(namespaceOpt.get())) {
+      if (projectOpt.isPresent()) {
+        log.warn("Namespace {} is allowlisted but a project with the same name exists;"
+            + " skipping reconciliation (allowlist takes precedence)", nsName);
+      }
+      return new Result(false);
+    }
 
     Map<String, String> reconciledLabels = this.reconciliationService.reconcileNamespaceLabels(
         namespaceOpt.orElse(null), projectOpt.orElse(null));

@@ -3,6 +3,7 @@ package io.ten1010.aipub.projectcontroller.mutating.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kubernetes.client.openapi.models.V1OwnerReference;
+import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ObjectMapperFactory;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
@@ -23,11 +24,14 @@ public class UserOwnerReviewHandler implements ReviewHandler {
 
   private final UserInfoAnalyzer userInfoAnalyzer;
   private final Set<String> exceptGvkSet;
+  private final NamespaceAllowlistResolver namespaceAllowlistResolver;
   private final ObjectMapper mapper;
 
-  public UserOwnerReviewHandler(UserInfoAnalyzer userInfoAnalyzer, Set<String> exceptGvkSet) {
+  public UserOwnerReviewHandler(UserInfoAnalyzer userInfoAnalyzer, Set<String> exceptGvkSet,
+      NamespaceAllowlistResolver namespaceAllowlistResolver) {
     this.userInfoAnalyzer = userInfoAnalyzer;
     this.exceptGvkSet = exceptGvkSet;
+    this.namespaceAllowlistResolver = namespaceAllowlistResolver;
     this.mapper = new ObjectMapperFactory().createObjectMapper();
   }
 
@@ -52,6 +56,11 @@ public class UserOwnerReviewHandler implements ReviewHandler {
     Objects.requireNonNull(request.getKind().getKind());
     Objects.requireNonNull(request.getUserInfo());
     Objects.requireNonNull(request.getObject());
+
+    if (this.namespaceAllowlistResolver.isAllowlisted(request.getNamespace())) {
+      V1AdmissionReviewUtils.allowMerging(review);
+      return;
+    }
 
     String group = request.getKind().getGroup() != null ? request.getKind().getGroup() : "";
     String gvk = group + "/"
