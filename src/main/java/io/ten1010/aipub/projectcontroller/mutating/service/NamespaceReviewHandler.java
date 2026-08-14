@@ -24,6 +24,7 @@ public class NamespaceReviewHandler extends AbstractReviewHandler<V1Namespace> {
 
   private static final String OPERATION_CREATE = "CREATE";
   private static final String OPERATION_UPDATE = "UPDATE";
+  private static final String OPERATION_DELETE = "DELETE";
 
   private final AipubProperties aipubProperties;
   private final KeyResolver keyResolver;
@@ -46,13 +47,14 @@ public class NamespaceReviewHandler extends AbstractReviewHandler<V1Namespace> {
     Objects.requireNonNull(review.getRequest());
     Objects.requireNonNull(review.getRequest().getUserInfo());
 
-    String operation = review.getRequest().getOperation();
-    if (OPERATION_CREATE.equals(operation) || OPERATION_UPDATE.equals(operation)) {
-      handleAllowlistLabeling(review);
-      return;
+    // 이 웹훅의 operation별 책임: CREATE/UPDATE는 allowlist 라벨 가드, DELETE는 reserved 이름
+    // 가드가 전부다. 새 검사를 추가할 때는 해당 operation 분기 안에 넣는다.
+    String operation = Objects.requireNonNull(review.getRequest().getOperation());
+    switch (operation) {
+      case OPERATION_CREATE, OPERATION_UPDATE -> handleAllowlistLabeling(review);
+      case OPERATION_DELETE -> handleReservedDeletion(review);
+      default -> V1AdmissionReviewUtils.allow(review);
     }
-
-    handleReservedDeletion(review);
   }
 
   /**
