@@ -63,6 +63,11 @@ class ProjectReviewHandlerTest {
   }
 
   private V1AdmissionReview createReview(String projectName, List<String> groups) {
+    return createReview(projectName, groups, "CREATE");
+  }
+
+  private V1AdmissionReview createReview(String projectName, List<String> groups,
+      String operation) {
     V1alpha1Project project = new V1alpha1Project();
     project.setMetadata(new V1ObjectMeta().name(projectName));
 
@@ -72,7 +77,7 @@ class ProjectReviewHandlerTest {
 
     V1AdmissionReviewRequest request = new V1AdmissionReviewRequest();
     request.setUid("test-uid");
-    request.setOperation("CREATE");
+    request.setOperation(operation);
     request.setUserInfo(userInfo);
     request.setObject(this.mapper.valueToTree(project));
 
@@ -107,6 +112,30 @@ class ProjectReviewHandlerTest {
     assertThat(review.getResponse()).isNotNull();
     assertThat(review.getResponse().getAllowed()).isFalse();
     assertThat(review.getResponse().getStatus().getCode()).isEqualTo(409);
+  }
+
+  @Test
+  @DisplayName("reserved 이름이라도 UPDATE는 hard block을 통과한다(finalizer 제거 교착 방지)")
+  void reservedName_update_allows() {
+    V1AdmissionReview review = createReview("aipub",
+        List.of(K8sGroupConstants.SYSTEM_MASTERS_GROUP_NAME), "UPDATE");
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse()).isNotNull();
+    assertThat(review.getResponse().getAllowed()).isTrue();
+  }
+
+  @Test
+  @DisplayName("allowlist 네임스페이스 이름이라도 UPDATE는 hard block을 통과한다")
+  void allowlistedName_update_allows() {
+    V1AdmissionReview review = createReview("kubevirt",
+        List.of(K8sGroupConstants.SYSTEM_MASTERS_GROUP_NAME), "UPDATE");
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse()).isNotNull();
+    assertThat(review.getResponse().getAllowed()).isTrue();
   }
 
   @Test

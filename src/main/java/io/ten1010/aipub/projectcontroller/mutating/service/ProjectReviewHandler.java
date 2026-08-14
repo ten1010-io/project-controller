@@ -27,6 +27,8 @@ import org.springframework.http.HttpStatus;
 @Slf4j
 public class ProjectReviewHandler extends AbstractReviewHandler<V1alpha1Project> {
 
+  private static final String OPERATION_CREATE = "CREATE";
+
   private final AipubProperties aipubProperties;
   private final SubjectResolver subjectResolver;
   private final KeyResolver keyResolver;
@@ -54,24 +56,29 @@ public class ProjectReviewHandler extends AbstractReviewHandler<V1alpha1Project>
     V1UserInfo userInfo = review.getRequest().getUserInfo();
     V1alpha1Project proj = getRequestObject(review);
     String projName = K8sObjectUtils.getName(proj);
-    // reserved 네임스페이스 이름으로 project를 만들면 project 관리(quota, RBAC, secret)가 인프라
-    // 네임스페이스로 새어 나간다. 그래서 아래에서 임의의 project 생성이 허용되는 system admin에게도
-    // 예외 없이 막는 hard block이다.
-    if (isReservedName(projName)) {
-      log.debug("Project name {} is reserved", projName);
-      V1AdmissionReviewUtils.reject(review, HttpStatus.CONFLICT.value(),
-          String.format("%s is reserved name", projName));
-      return;
-    }
+    // 이름 기반 hard block은 CREATE에만 적용한다. UPDATE까지 거부하면 이미 존재하는 project의
+    // finalizer 제거(UPDATE)가 막혀 삭제가 영구 terminating으로 교착되기 때문이다. 이 웹훅은
+    // failurePolicy가 Fail이라 우회도 불가능하다.
+    if (OPERATION_CREATE.equals(review.getRequest().getOperation())) {
+      // reserved 네임스페이스 이름으로 project를 만들면 project 관리(quota, RBAC, secret)가 인프라
+      // 네임스페이스로 새어 나간다. 그래서 아래에서 임의의 project 생성이 허용되는 system admin에게도
+      // 예외 없이 막는 hard block이다.
+      if (isReservedName(projName)) {
+        log.debug("Project name {} is reserved", projName);
+        V1AdmissionReviewUtils.reject(review, HttpStatus.CONFLICT.value(),
+            String.format("%s is reserved name", projName));
+        return;
+      }
 
-    // allowlist 네임스페이스 이름의 project는 관리하지 않으므로(allowlist 우선), 애매한 상태를 막기
-    // 위해 생성을 거부한다. allowlist가 먼저 부여된 의미라 우선하며, system-admin 예외 없는 hard
-    // block이다.
-    if (this.namespaceAllowlistResolver.isAllowlisted(projName)) {
-      log.debug("Project name {} matches allowlisted namespace", projName);
-      V1AdmissionReviewUtils.reject(review, HttpStatus.CONFLICT.value(),
-          String.format("%s is allowlisted namespace", projName));
-      return;
+      // allowlist 네임스페이스 이름의 project는 관리하지 않으므로(allowlist 우선), 애매한 상태를 막기
+      // 위해 생성을 거부한다. allowlist가 먼저 부여된 의미라 우선하며, system-admin 예외 없는 hard
+      // block이다.
+      if (this.namespaceAllowlistResolver.isAllowlisted(projName)) {
+        log.debug("Project name {} matches allowlisted namespace", projName);
+        V1AdmissionReviewUtils.reject(review, HttpStatus.CONFLICT.value(),
+            String.format("%s is allowlisted namespace", projName));
+        return;
+      }
     }
 
     if (userInfo.getGroups() != null &&

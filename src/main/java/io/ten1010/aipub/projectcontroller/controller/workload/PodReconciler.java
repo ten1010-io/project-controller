@@ -6,7 +6,6 @@ import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
-import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1Node;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.ten1010.aipub.projectcontroller.controller.AbstractReconciler;
@@ -38,7 +37,8 @@ public class PodReconciler extends AbstractReconciler {
   public PodReconciler(
       SharedInformerFactory sharedInformerFactory,
       K8sApiProvider k8sApiProvider,
-      PodNodesResolver podNodesResolver) {
+      PodNodesResolver podNodesResolver,
+      NamespaceAllowlistResolver namespaceAllowlistResolver) {
     this.keyResolver = new KeyResolver();
     this.namespaceNameResolver = new NamespaceNameResolver();
     this.podIndexer = sharedInformerFactory
@@ -52,9 +52,7 @@ public class PodReconciler extends AbstractReconciler {
         .getIndexer();
     this.coreV1Api = new CoreV1Api(k8sApiProvider.getApiClient());
     this.podNodesResolver = podNodesResolver;
-    this.namespaceAllowlistResolver = new NamespaceAllowlistResolver(sharedInformerFactory
-        .getExistingSharedIndexInformer(V1Namespace.class)
-        .getIndexer());
+    this.namespaceAllowlistResolver = namespaceAllowlistResolver;
   }
 
   @Override

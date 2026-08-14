@@ -19,6 +19,8 @@ import org.jspecify.annotations.Nullable;
  */
 public class NamespaceAllowlistResolver {
 
+  private static final String ALLOWLISTED_VALUE = "true";
+
   private final KeyResolver keyResolver;
   private final Indexer<V1Namespace> namespaceIndexer;
 
@@ -33,7 +35,7 @@ public class NamespaceAllowlistResolver {
     if (value == null) {
       return false;
     }
-    return value.equalsIgnoreCase(NamespaceAllowlistValueEnum.TRUE.getStr());
+    return value.equalsIgnoreCase(ALLOWLISTED_VALUE);
   }
 
   public boolean isAllowlisted(@Nullable String namespaceName) {

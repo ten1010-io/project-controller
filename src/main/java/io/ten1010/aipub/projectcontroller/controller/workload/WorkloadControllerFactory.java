@@ -25,6 +25,8 @@ public abstract class WorkloadControllerFactory<T extends KubernetesObject> impl
   protected final DefaultControllerBuilder builder;
   protected final SharedInformerFactory sharedInformerFactory;
   protected final ReconciliationService reconciliationService;
+  private final OnUpdateFilterFactory onUpdateFilterFactory;
+  private final RequestBuilderFactory requestBuilderFactory;
 
   public WorkloadControllerFactory(
       SharedInformerFactory sharedInformerFactory,
@@ -32,6 +34,8 @@ public abstract class WorkloadControllerFactory<T extends KubernetesObject> impl
     this.builder = ControllerBuilder.defaultBuilder(sharedInformerFactory);
     this.sharedInformerFactory = sharedInformerFactory;
     this.reconciliationService = reconciliationService;
+    this.onUpdateFilterFactory = new OnUpdateFilterFactory();
+    this.requestBuilderFactory = new RequestBuilderFactory(sharedInformerFactory);
   }
 
   @Override
@@ -73,9 +77,9 @@ public abstract class WorkloadControllerFactory<T extends KubernetesObject> impl
   private ControllerWatch<V1Namespace> createNamespaceWatch(WorkQueue<Request> workQueue) {
     DefaultControllerWatch<V1Namespace> watch = new DefaultControllerWatch<>(workQueue,
         V1Namespace.class);
-    watch.setOnUpdateFilter(new OnUpdateFilterFactory().namespaceAllowlistLabelFilter());
-    watch.setRequestBuilder(new RequestBuilderFactory(this.sharedInformerFactory)
-        .namespaceToNamespacedObjects(getObjectType().objClass()));
+    watch.setOnUpdateFilter(this.onUpdateFilterFactory.namespaceAllowlistLabelFilter());
+    watch.setRequestBuilder(
+        this.requestBuilderFactory.namespaceToNamespacedObjects(getObjectType().objClass()));
     return watch;
   }
 

@@ -14,6 +14,7 @@ import io.ten1010.aipub.projectcontroller.controller.watch.DefaultControllerWatc
 import io.ten1010.aipub.projectcontroller.controller.watch.OnUpdateFilterFactory;
 import io.ten1010.aipub.projectcontroller.controller.watch.RequestBuilderFactory;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
+import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeGroup;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 
@@ -24,16 +25,19 @@ public class PodControllerFactory implements ControllerFactory {
   private final RequestBuilderFactory requestBuilderFactory;
   private final K8sApiProvider k8sApiProvider;
   private final PodNodesResolver podNodesResolver;
+  private final NamespaceAllowlistResolver namespaceAllowlistResolver;
 
   public PodControllerFactory(
       SharedInformerFactory sharedInformerFactory,
       K8sApiProvider k8sApiProvider,
-      PodNodesResolver podNodesResolver) {
+      PodNodesResolver podNodesResolver,
+      NamespaceAllowlistResolver namespaceAllowlistResolver) {
     this.sharedInformerFactory = sharedInformerFactory;
     this.onUpdateFilterFactory = new OnUpdateFilterFactory();
     this.requestBuilderFactory = new RequestBuilderFactory(sharedInformerFactory);
     this.k8sApiProvider = k8sApiProvider;
     this.podNodesResolver = podNodesResolver;
+    this.namespaceAllowlistResolver = namespaceAllowlistResolver;
   }
 
   @Override
@@ -60,7 +64,8 @@ public class PodControllerFactory implements ControllerFactory {
         .withReconciler(new PodReconciler(
             this.sharedInformerFactory,
             this.k8sApiProvider,
-            this.podNodesResolver))
+            this.podNodesResolver,
+            this.namespaceAllowlistResolver))
         .build();
   }
 
