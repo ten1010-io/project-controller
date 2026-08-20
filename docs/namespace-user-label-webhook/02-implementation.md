@@ -33,7 +33,7 @@ kubectl create ns foo (사용자 토큰)
 2. `aipub.ten1010.io/username` 라벨 (예: `aipubadmin`) → **사용자가 직접 생성한 네임스페이스** (이번 작업으로 부여)
 3. 둘 다 없음 → **시스템 네임스페이스**
 
-사용자 생성 라벨은 요청자가 aipub-member(AipubUser 존재)일 때만 붙는다 — kubeconfig 인증서/SA로 생성된 네임스페이스는 라벨이 없어 3번(시스템)으로 분류된다.
+사용자 생성 라벨은 요청자가 **aipub-member 또는 aipub-admin**(AipubUser CR 존재)일 때 붙는다 — admin 토큰에는 `oidc:aipub-member` 그룹이 없고 k8s RBAC에서도 `oidc:aipub-admin`/`oidc:aipub-member`가 별개 그룹이므로(클러스터10 실측: member 검사만으로는 aipubadmin이 만든 ns가 시스템으로 분류되는 버그), Namespace에 한해 admin도 라벨 대상에 포함했다. namespaced 리소스는 기존 quota/소유권 동작 보존을 위해 member만 유지. AipubUser CR 없는 admin은 거부하지 않고 라벨 없이 허용. kubeconfig 인증서/SA로 생성된 네임스페이스는 라벨이 없어 3번(시스템)으로 분류된다.
 
 ## 핵심 불변식
 - namespaced 리소스의 기존 동작(allowlist 스킵, controller ownerReference 라벨 전파) 불변.

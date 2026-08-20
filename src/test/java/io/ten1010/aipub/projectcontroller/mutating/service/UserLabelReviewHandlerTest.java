@@ -261,6 +261,62 @@ class UserLabelReviewHandlerTest {
     assertThat(review.getResponse().getPatch()).isNull();
   }
 
+  // admin 토큰에는 aipub-member 그룹이 없지만 (k8s RBAC 별개 그룹) Namespace 는 admin 도 라벨 대상
+  @Test
+  void handle_adminCreatesNamespace_addsLabels() {
+    V1AdmissionReview review = createNamespaceReview("test-ns");
+
+    V1alpha1AipubUser aipubUser = createAipubUser("aipubadmin", "uid-admin", "admin-id-1");
+    UserInfoAnalysis analysis = new UserInfoAnalysis(
+        "oidc:aipubadmin",
+        List.of("oidc:aipub-admin", "system:authenticated"),
+        aipubUser);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse()).isNotNull();
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(review.getResponse().getPatch()).isNotNull();
+  }
+
+  // AipubUser CR 없는 admin 은 거부하지 않고 라벨 없이 허용한다 (admin 운영 경로 보존)
+  @Test
+  void handle_adminWithoutAipubUserCreatesNamespace_allowsWithoutPatch() {
+    V1AdmissionReview review = createNamespaceReview("test-ns");
+
+    UserInfoAnalysis analysis = new UserInfoAnalysis(
+        "oidc:someadmin",
+        List.of("oidc:aipub-admin", "system:authenticated"),
+        null);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse()).isNotNull();
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(review.getResponse().getPatch()).isNull();
+  }
+
+  // namespaced 리소스는 admin 라벨 대상이 아니다 (기존 quota/소유권 동작 보존)
+  @Test
+  void handle_adminCreatesNamespacedResource_allowsWithoutPatch() {
+    V1AdmissionReview review = createReview("CREATE", "default");
+
+    V1alpha1AipubUser aipubUser = createAipubUser("aipubadmin", "uid-admin", "admin-id-1");
+    UserInfoAnalysis analysis = new UserInfoAnalysis(
+        "oidc:aipubadmin",
+        List.of("oidc:aipub-admin", "system:authenticated"),
+        aipubUser);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse()).isNotNull();
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(review.getResponse().getPatch()).isNull();
+  }
+
   @Test
   void handle_analyzerThrows_rejects() {
     V1AdmissionReview review = createReview("CREATE", "default");
