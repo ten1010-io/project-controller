@@ -11,7 +11,8 @@
 1. Namespace CREATE 시 username/userid 라벨 주입.
 2. allowlist(`project.ten1010.io/allowlisted: "true"`) 네임스페이스여도 **라벨은 주입**하고 allow 동작은 동일. (allowlist 스킵은 "allowlist 네임스페이스 안의 리소스"에 대한 규칙이지 네임스페이스 오브젝트 자체의 규칙이 아님)
 3. `UserOwnerReviewHandler`의 AipubUser ownerReference 삽입은 Namespace에 적용하지 않음.
-4. **aipub admin이 아닌 aipub member가 Namespace의 소유자 라벨(username/userid)을 UPDATE로 추가/변경/삭제하려 하면 권한 없음(403)으로 deny.** admin과 aipub 그룹 밖 주체(시스템 컴포넌트, cluster-admin)는 제한하지 않음 — 컨트롤러/운영자의 정정 경로 보존. Namespace는 `UserLabelSynchronizer` 보정 대상이 아니므로 이 가드가 유일한 방어선.
+
+> 참고: "admin 아닌 member의 라벨 UPDATE 차단" 가드(`UserLabelGuardReviewHandler`)를 구현했다가 제거했다 — member/admin 권한 관리가 k8s RBAC로 이루어지고 member에게 namespace update 권한이 없어 웹훅 가드는 중복 방어라는 리뷰 결론.
 
 ## 설계 결정 (검토한 대안 포함)
 - **채택: userrelationship 웹훅 확장** — 라벨 결정 로직(UserInfoAnalyzer, AipubUser 조회, allowlist 처리)의 단일 원천이 이미 `UserLabelReviewHandler`에 있음.

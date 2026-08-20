@@ -22,7 +22,6 @@ import io.ten1010.aipub.projectcontroller.mutating.service.ProjectReviewHandler;
 import io.ten1010.aipub.projectcontroller.mutating.service.ReviewHandler;
 import io.ten1010.aipub.projectcontroller.mutating.service.UserInfoAnalyzer;
 import io.ten1010.aipub.projectcontroller.mutating.service.ApiResourceDiscovery;
-import io.ten1010.aipub.projectcontroller.mutating.service.UserLabelGuardReviewHandler;
 import io.ten1010.aipub.projectcontroller.mutating.service.UserLabelReviewHandler;
 import io.ten1010.aipub.projectcontroller.mutating.service.UserLabelSynchronizer;
 import io.ten1010.aipub.projectcontroller.mutating.service.UserOwnerReviewHandler;
@@ -129,8 +128,7 @@ public class MutatingConfiguration {
         userInfoAnalyzer, exceptGvkSet, namespaceAllowlistResolver);
     UserLabelReviewHandler userLabelReviewHandler = new UserLabelReviewHandler(
         userInfoAnalyzer, apiResourceDiscovery, apiClient, namespaceAllowlistResolver);
-    UserLabelGuardReviewHandler userLabelGuardReviewHandler = new UserLabelGuardReviewHandler();
-    return List.of(userOwnerReviewHandler, userLabelReviewHandler, userLabelGuardReviewHandler);
+    return List.of(userOwnerReviewHandler, userLabelReviewHandler);
   }
 
   @Bean

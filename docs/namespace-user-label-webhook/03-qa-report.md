@@ -4,8 +4,7 @@
 
 ## 빌드/테스트
 - `./gradlew build` 전체 통과 (전 모듈, 기존 테스트 포함 회귀 없음).
-- 신규 단위 테스트 14건 통과 (라벨 주입 6건 + 라벨 가드 8건):
-  - `UserLabelGuardReviewHandlerTest`: canHandle(UPDATE Namespace true / CREATE false / namespaced 리소스 false), member 라벨 변경·삭제 → 403, member 무변경 UPDATE → allow, admin 변경 → allow, 비멤버 변경 → allow
+- 신규 단위 테스트 6건 통과:
   - `UserLabelReviewHandlerTest`: canHandle Namespace true / 멤버 → 라벨 주입 / **allowlist Namespace여도 라벨 주입** / allowlist 네임스페이스 안의 리소스는 기존대로 무변경(회귀 가드) / 비멤버 Namespace → 무변경 allow
   - `UserOwnerReviewHandlerTest`: Namespace CREATE(request.namespace가 자신 이름) → canHandle false
 

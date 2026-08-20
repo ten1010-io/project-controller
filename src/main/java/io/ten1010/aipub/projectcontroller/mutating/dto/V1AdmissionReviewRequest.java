@@ -23,7 +23,5 @@ public class V1AdmissionReviewRequest {
   private V1UserInfo userInfo;
   @Nullable
   private JsonNode object;
-  @Nullable
-  private JsonNode oldObject;
 
 }

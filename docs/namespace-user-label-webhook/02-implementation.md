@@ -3,11 +3,7 @@
 ## 변경 파일
 | 파일 | 변경 |
 |---|---|
-| `kubernetes/controller/project-controller/templates/java-webhook-configuration.yaml` | userrelationship 웹훅 rules에 `apiGroups [""] / v1 / namespaces / CREATE, UPDATE / scope: Cluster` 추가 |
-| `src/main/java/.../mutating/dto/V1AdmissionReviewRequest.java` | `oldObject` 필드 추가 (UPDATE 시 라벨 변경 감지용) |
-| `src/main/java/.../mutating/service/UserLabelGuardReviewHandler.java` | **신규** — Namespace UPDATE에서 username/userid 라벨 변경 시 admin 아닌 member를 403 거부 |
-| `src/main/java/.../configuration/MutatingConfiguration.java` | `aipubReviewHandlers`에 가드 핸들러 추가 |
-| `src/test/java/.../UserLabelGuardReviewHandlerTest.java` | **신규** — 가드 케이스 8건 |
+| `kubernetes/controller/project-controller/templates/java-webhook-configuration.yaml` | userrelationship 웹훅 rules에 `apiGroups [""] / v1 / namespaces / CREATE / scope: Cluster` 추가 |
 | `src/main/java/.../mutating/V1AdmissionReviewUtils.java` | `isNamespaceRequest(V1AdmissionReviewRequest)` 정적 헬퍼 추가 (core group + kind=Namespace 판별) |
 | `src/main/java/.../mutating/service/UserLabelReviewHandler.java` | `canHandle`에 Namespace 허용 분기, `handle`에서 Namespace는 allowlist 스킵 우회 + 비멤버 Namespace는 무변경 allow |
 | `src/main/java/.../mutating/service/UserOwnerReviewHandler.java` | `canHandle`에서 Namespace 명시 제외 |
@@ -30,19 +26,6 @@ kubectl create ns foo (사용자 토큰)
      ├ AipubUser 멤버        → username/userid 라벨 JSON Patch, allow
      ├ 멤버인데 AipubUser 無 → reject 400 / spec.id 無 → reject 500
      └ 비멤버                → 무변경 allow (owner 전파 경로 없음)
-```
-
-## 웹훅 흐름 (Namespace UPDATE — 라벨 가드)
-```
-kubectl label/edit ns foo (사용자 토큰)
-  → POST /api/v1/userrelationship/mutate
-     canHandle 순회: UserOwnerReviewHandler → false (CREATE 전용)
-                     UserLabelReviewHandler  → false (CREATE 전용)
-                     UserLabelGuardReviewHandler → true (UPDATE + Namespace)
-  → UserLabelGuardReviewHandler.handle
-     ├ oldObject vs object 의 username/userid 라벨 비교 → 변경 없음 → allow
-     ├ 변경 있음 + member ∧ ¬admin → reject 403 "Only aipub admin can modify user label: ..."
-     └ 변경 있음 + admin 또는 비멤버 → allow
 ```
 
 ## 핵심 불변식

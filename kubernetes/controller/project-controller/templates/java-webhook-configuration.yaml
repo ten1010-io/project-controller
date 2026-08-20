@@ -63,11 +63,10 @@ webhooks:
         resources: [ "*" ]
         scope: "Namespaced"
       # Namespace 오브젝트에는 namespaceSelector 가 오브젝트 자신의 라벨에 평가되므로
-      # 위 kubernetes.io/metadata.name NotIn 제외 목록이 시스템 네임스페이스에 그대로 적용된다.
-      # CREATE 는 사용자 라벨 주입, UPDATE 는 소유자 라벨 무단 변경 가드.
+      # 위 kubernetes.io/metadata.name NotIn 제외 목록이 시스템 네임스페이스 생성에 그대로 적용된다.
       - apiGroups: [ "" ]
         apiVersions: [ "v1" ]
-        operations: [ "CREATE", "UPDATE" ]
+        operations: [ "CREATE" ]
         resources: [ "namespaces" ]
         scope: "Cluster"
     sideEffects: None
