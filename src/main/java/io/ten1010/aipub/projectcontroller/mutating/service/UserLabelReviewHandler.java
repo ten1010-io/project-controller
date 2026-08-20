@@ -101,7 +101,14 @@ public class UserLabelReviewHandler implements ReviewHandler {
     String username;
     String userid;
 
-    if (analysis.isAipubMember() && analysis.getAipubUser().isPresent()) {
+    // Namespace 는 admin 도 라벨 대상이다. admin 토큰에는 aipub-member 그룹이 없어
+    // (k8s RBAC 도 oidc:aipub-admin/oidc:aipub-member 별개 그룹) member 검사만으로는
+    // admin 이 만든 네임스페이스가 시스템 네임스페이스로 분류된다. namespaced 리소스는
+    // 기존 quota/소유권 동작 보존을 위해 member 만 유지한다.
+    boolean labelSubject = analysis.isAipubMember()
+        || (namespaceRequest && analysis.isAipubAdmin());
+
+    if (labelSubject && analysis.getAipubUser().isPresent()) {
       V1alpha1AipubUser aipubUser = analysis.getAipubUser().get();
       if (aipubUser.getSpec() == null || aipubUser.getSpec().getId() == null) {
         V1AdmissionReviewUtils.reject(review, HttpStatus.INTERNAL_SERVER_ERROR.value(),
