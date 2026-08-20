@@ -57,6 +57,10 @@ public class UserLabelReviewHandler implements ReviewHandler {
     if (!OPERATION_CREATE.equals(request.getOperation())) {
       return false;
     }
+    // cluster-scoped 리소스 중에서는 Namespace 만 라벨 주입 대상이다
+    if (V1AdmissionReviewUtils.isNamespaceRequest(request)) {
+      return true;
+    }
     // 소유권 대상(OwnershipPolicy.OWNED_TARGETS)은 전부 네임스페이스 리소스다
     return request.getNamespace() != null && !request.getNamespace().isEmpty();
   }
@@ -68,11 +72,16 @@ public class UserLabelReviewHandler implements ReviewHandler {
     V1AdmissionReviewRequest request = review.getRequest();
     Objects.requireNonNull(request.getUserInfo());
     Objects.requireNonNull(request.getObject());
-    Objects.requireNonNull(request.getNamespace());
 
-    if (this.namespaceAllowlistResolver.isAllowlisted(request.getNamespace())) {
-      V1AdmissionReviewUtils.allowMerging(review);
-      return;
+    // Namespace 자신의 CREATE 는 allowlist 여부와 무관하게 라벨을 주입한다. allowlist 스킵은
+    // "allowlist 네임스페이스 안의 리소스"에 대한 규칙이지, 네임스페이스 오브젝트 자체의 규칙이 아니다.
+    boolean namespaceRequest = V1AdmissionReviewUtils.isNamespaceRequest(request);
+    if (!namespaceRequest) {
+      Objects.requireNonNull(request.getNamespace());
+      if (this.namespaceAllowlistResolver.isAllowlisted(request.getNamespace())) {
+        V1AdmissionReviewUtils.allowMerging(review);
+        return;
+      }
     }
 
     log.debug("UserLabel handle: user={}, namespace={}, operation={}",
@@ -105,6 +114,12 @@ public class UserLabelReviewHandler implements ReviewHandler {
     } else if (analysis.isAipubMember()) {
       V1AdmissionReviewUtils.reject(review, 400,
           "Not found aipub user: " + analysis.getUsername());
+      return;
+    } else if (namespaceRequest) {
+      // Namespace 는 controller ownerReference 를 갖지 않으므로 owner 전파 경로가 없다.
+      // 비멤버(시스템 컴포넌트 등)가 만드는 네임스페이스는 라벨 없이 허용한다.
+      log.debug("UserLabel: not aipub member creating namespace, allowing without mutation");
+      V1AdmissionReviewUtils.allowMerging(review);
       return;
     } else {
       log.debug("UserLabel: not aipub member, looking up owner labels");

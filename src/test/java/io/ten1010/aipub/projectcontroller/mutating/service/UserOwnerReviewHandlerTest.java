@@ -115,6 +115,13 @@ class UserOwnerReviewHandlerTest {
     assertThat(this.handler.canHandle(review)).isFalse();
   }
 
+  // Namespace CREATE 는 request.namespace 가 자신의 이름으로 채워지지만 ownerReference 는 붙이지 않는다
+  @Test
+  void canHandle_createNamespaceWithSelfNamespace_returnsFalse() {
+    V1AdmissionReview review = createReview("CREATE", "test-ns", "", "v1", "Namespace");
+    assertThat(this.handler.canHandle(review)).isFalse();
+  }
+
   @Test
   void handle_exceptedGvk_allowsWithoutPatch() {
     V1AdmissionReview review = createReview(
