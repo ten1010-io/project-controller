@@ -3,6 +3,15 @@
 ## 개요
 워크로드 생성 시 요청자 토큰에서 추출한 사용자 정보를 `aipub.ten1010.io/username`/`aipub.ten1010.io/userid` 라벨로 주입하는 기존 메커니즘(userrelationship 뮤테이팅 웹훅)을 cluster-scoped 리소스인 **Namespace CREATE**까지 확장한다.
 
+## 배경 — 네임스페이스 3분류 (모니터링 팀의 ns 구분 기준)
+이 작업으로 클러스터의 네임스페이스는 라벨로 다음 3가지로 구분되며, 모니터링 팀이 이 기준을 사용한다:
+
+| 구분 | 판별 라벨 | 의미 |
+|---|---|---|
+| project 네임스페이스 | `project.aipub.ten1010.io/project` | Project CR에 의해 생성된 네임스페이스 |
+| 사용자 생성 네임스페이스 | `aipub.ten1010.io/username` (예: `aipubadmin`) | AIPub 사용자가 직접 생성한 네임스페이스 (**이번 추가 작업**) |
+| 시스템 네임스페이스 | 위 두 라벨 모두 없음 | 설치/시스템 컴포넌트가 만든 네임스페이스 |
+
 ## 배경
 - 기존 라벨 주입은 `UserLabelReviewHandler`가 담당하며, 웹훅 rules(`java-webhook-configuration.yaml`)와 `canHandle` 모두 namespaced 리소스 전제였다.
 - Namespace에도 생성자 정보를 남겨야 한다는 요구가 대두되었다(향후 다른 cluster-scoped 리소스 확장 가능성 포함).

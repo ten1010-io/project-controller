@@ -28,6 +28,13 @@ kubectl create ns foo (사용자 토큰)
      └ 비멤버                → 무변경 allow (owner 전파 경로 없음)
 ```
 
+## 네임스페이스 3분류 (모니터링 팀 사용 기준)
+1. `project.aipub.ten1010.io/project` 라벨 → **project가 생성한 네임스페이스**
+2. `aipub.ten1010.io/username` 라벨 (예: `aipubadmin`) → **사용자가 직접 생성한 네임스페이스** (이번 작업으로 부여)
+3. 둘 다 없음 → **시스템 네임스페이스**
+
+사용자 생성 라벨은 요청자가 aipub-member(AipubUser 존재)일 때만 붙는다 — kubeconfig 인증서/SA로 생성된 네임스페이스는 라벨이 없어 3번(시스템)으로 분류된다.
+
 ## 핵심 불변식
 - namespaced 리소스의 기존 동작(allowlist 스킵, controller ownerReference 라벨 전파) 불변.
 - Namespace 판별은 kind 기반 — `request.namespace`는 Namespace CREATE에서 자신의 이름으로 채워지므로 신뢰 불가.
