@@ -9,7 +9,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.kubernetes.client.informer.cache.Cache;
 import io.kubernetes.client.openapi.ApiClient;
+import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
+import io.ten1010.aipub.projectcontroller.domain.k8s.LabelConstants;
 import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ObjectMapperFactory;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
@@ -64,6 +66,19 @@ class UserLabelReviewHandlerTest {
     review.setKind("AdmissionReview");
     review.setRequest(request);
 
+    return review;
+  }
+
+  private V1AdmissionReview createNamespaceReview(String namespaceName) {
+    V1AdmissionReview review = createReview("CREATE", namespaceName);
+    V1Kind v1Kind = new V1Kind();
+    v1Kind.setGroup("");
+    v1Kind.setVersion("v1");
+    v1Kind.setKind("Namespace");
+    review.getRequest().setKind(v1Kind);
+    ObjectNode objNode = this.mapper.createObjectNode();
+    objNode.putObject("metadata").put("name", namespaceName);
+    review.getRequest().setObject(objNode);
     return review;
   }
 
@@ -144,6 +159,97 @@ class UserLabelReviewHandlerTest {
 
     UserInfoAnalysis analysis = new UserInfoAnalysis(
         "system:serviceaccount:kube-system:replicaset-controller",
+        List.of("system:serviceaccounts", "system:authenticated"),
+        null);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse()).isNotNull();
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(review.getResponse().getPatch()).isNull();
+  }
+
+  @Test
+  void canHandle_createNamespace_returnsTrue() {
+    V1AdmissionReview review = createNamespaceReview("test-ns");
+    assertThat(this.handler.canHandle(review)).isTrue();
+  }
+
+  @Test
+  void handle_memberCreatesNamespace_addsLabels() {
+    V1AdmissionReview review = createNamespaceReview("test-ns");
+
+    V1alpha1AipubUser aipubUser = createAipubUser("testuser", "uid-123", "user-id-456");
+    UserInfoAnalysis analysis = new UserInfoAnalysis(
+        "oidc:testuser",
+        List.of("oidc:aipub-member", "system:authenticated"),
+        aipubUser);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse()).isNotNull();
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(review.getResponse().getPatch()).isNotNull();
+    assertThat(review.getResponse().getPatchType()).isEqualTo("JSONPatch");
+  }
+
+  // 네임스페이스 오브젝트 자체는 allowlist여도 라벨을 주입한다 — allowlist 스킵은
+  // "allowlist 네임스페이스 안의 리소스" 규칙이지 네임스페이스 자신의 규칙이 아니다
+  @Test
+  void handle_memberCreatesAllowlistedNamespace_addsLabels() {
+    Cache<V1Namespace> namespaceCache = new Cache<>();
+    namespaceCache.add(new V1Namespace().metadata(new V1ObjectMeta()
+        .name("allowlisted-ns")
+        .labels(java.util.Map.of(LabelConstants.ALLOWLISTED_KEY, "true"))));
+    UserLabelReviewHandler allowlistAwareHandler = new UserLabelReviewHandler(
+        this.mockAnalyzer, mock(ApiResourceDiscovery.class), mock(ApiClient.class),
+        new NamespaceAllowlistResolver(namespaceCache));
+
+    V1AdmissionReview review = createNamespaceReview("allowlisted-ns");
+
+    V1alpha1AipubUser aipubUser = createAipubUser("testuser", "uid-123", "user-id-456");
+    UserInfoAnalysis analysis = new UserInfoAnalysis(
+        "oidc:testuser",
+        List.of("oidc:aipub-member", "system:authenticated"),
+        aipubUser);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);
+
+    allowlistAwareHandler.handle(review);
+
+    assertThat(review.getResponse()).isNotNull();
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(review.getResponse().getPatch()).isNotNull();
+  }
+
+  // allowlist 네임스페이스 "안의" 리소스는 기존대로 라벨 없이 통과한다 (회귀 방지)
+  @Test
+  void handle_namespacedResourceInAllowlistedNamespace_allowsWithoutPatch() {
+    Cache<V1Namespace> namespaceCache = new Cache<>();
+    namespaceCache.add(new V1Namespace().metadata(new V1ObjectMeta()
+        .name("allowlisted-ns")
+        .labels(java.util.Map.of(LabelConstants.ALLOWLISTED_KEY, "true"))));
+    UserLabelReviewHandler allowlistAwareHandler = new UserLabelReviewHandler(
+        this.mockAnalyzer, mock(ApiResourceDiscovery.class), mock(ApiClient.class),
+        new NamespaceAllowlistResolver(namespaceCache));
+
+    V1AdmissionReview review = createReview("CREATE", "allowlisted-ns");
+
+    allowlistAwareHandler.handle(review);
+
+    assertThat(review.getResponse()).isNotNull();
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(review.getResponse().getPatch()).isNull();
+  }
+
+  // 비멤버(시스템 컴포넌트)가 만드는 네임스페이스는 owner 전파 경로가 없으므로 라벨 없이 허용
+  @Test
+  void handle_nonMemberCreatesNamespace_allowsWithoutPatch() {
+    V1AdmissionReview review = createNamespaceReview("test-ns");
+
+    UserInfoAnalysis analysis = new UserInfoAnalysis(
+        "system:serviceaccount:kube-system:namespace-controller",
         List.of("system:serviceaccounts", "system:authenticated"),
         null);
     when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);

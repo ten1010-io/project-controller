@@ -43,6 +43,12 @@ public class UserOwnerReviewHandler implements ReviewHandler {
     if (!OPERATION_CREATE.equals(request.getOperation())) {
       return false;
     }
+    // Namespace CREATE 는 request.namespace 가 자신의 이름으로 채워져 아래 검사를 통과하지만,
+    // Namespace 에는 AipubUser ownerReference 를 붙이지 않는다 (라벨 주입만 UserLabelReviewHandler
+    // 가 담당). 붙이면 AipubUser 삭제 시 네임스페이스가 garbage collection 으로 함께 지워진다.
+    if (V1AdmissionReviewUtils.isNamespaceRequest(request)) {
+      return false;
+    }
     return request.getNamespace() != null && !request.getNamespace().isEmpty();
   }
 
