@@ -476,6 +476,15 @@ public class ReconciliationService {
     };
     reconciled.add(storageClassesApiRule);
 
+    V1PolicyRule persistentVolumesApiRule = switch (projectRoleEnum) {
+      case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+          .withApiGroups("")
+          .withResources("persistentvolumes")
+          .withVerbs("get", "list")
+          .build();
+    };
+    reconciled.add(persistentVolumesApiRule);
+
     V1PolicyRule ingressClassesApiRule = switch (projectRoleEnum) {
       case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
           .withApiGroups("networking.k8s.io")
