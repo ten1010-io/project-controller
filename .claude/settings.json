@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "b=$(git -C \"${CLAUDE_PROJECT_DIR:-$PWD}\" symbolic-ref --quiet --short HEAD 2>/dev/null); case \"$b\" in develop|main) printf '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"현재 브랜치가 %s 입니다. 작업 브랜치를 먼저 따세요 — /start-work 를 쓰면 분기 기준(develop / main)을 물어보고 브랜치를 만들어 줍니다. 그래도 %s 에서 바로 진행하려면 승인하세요.\"}}' \"$b\" \"$b\";; esac; exit 0",
+            "timeout": 10,
+            "statusMessage": "브랜치 확인"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "b=$(git -C \"${CLAUDE_PROJECT_DIR:-$PWD}\" symbolic-ref --quiet --short HEAD 2>/dev/null); case \"$b\" in develop|main) printf '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"현재 브랜치가 %s 입니다. 작업 브랜치를 먼저 따세요 — /start-work 를 쓰면 분기 기준(develop / main)을 물어보고 브랜치를 만들어 줍니다. 그래도 %s 에서 바로 진행하려면 승인하세요.\"}}' \"$b\" \"$b\";; esac; exit 0",
+            "timeout": 10,
+            "statusMessage": "브랜치 확인",
+            "if": "Bash(git commit*)"
+          }
+        ]
+      }
+    ]
+  }
+}
