@@ -66,6 +66,9 @@ public final class ProjectApiConstants {
   public static final String AIPUB_VOLUME_RESOURCE_KIND = "AIPubVolume";
   public static final String AIPUB_VOLUME_RESOURCE_PLURAL = "aipubvolumes";
 
+  public static final String CLUSTER_VOLUME_RESOURCE_KIND = "ClusterVolume";
+  public static final String CLUSTER_VOLUME_RESOURCE_PLURAL = "clustervolumes";
+
   public static final String SFTP_SERVER_RESOURCE_KIND = "SFTPServer";
   public static final String SFTP_SERVER_RESOURCE_PLURAL = "sftpservers";
 
