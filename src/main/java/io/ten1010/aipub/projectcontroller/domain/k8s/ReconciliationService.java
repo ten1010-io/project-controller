@@ -722,6 +722,11 @@ public class ReconciliationService {
             .withResources(ProjectApiConstants.IMAGE_BUILD_RESOURCE_PLURAL)
             .withVerbs("*")
             .build();
+        V1PolicyRule fileServerApiRule = new V1PolicyRuleBuilder()
+            .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
+            .withResources(ProjectApiConstants.FILE_SERVER_RESOURCE_PLURAL)
+            .withVerbs("*")
+            .build();
         //todo --
 
         yield List.of(
@@ -740,7 +745,8 @@ public class ReconciliationService {
             aipubVolumesApiRule,
             resourceQuotaApiRule,
             commitApiRule,
-            imageBuildApiRule
+            imageBuildApiRule,
+            fileServerApiRule
         );
       }
 
@@ -833,6 +839,14 @@ public class ReconciliationService {
             .withResources(ProjectApiConstants.IMAGE_BUILD_RESOURCE_PLURAL)
             .withVerbs(BASIC_VERBS)
             .build();
+        // FileServer 수정/삭제는 여기서 주지 않는다 — 생성자 본인에게만
+        // AipubUser per-user Role 의 resourceName 단위 update/patch/delete 로 부여된다
+        // (reconcileAipubUserRoleRules → WorkloadResourceResolver 경로).
+        V1PolicyRule fileServerApiRule = new V1PolicyRuleBuilder()
+            .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
+            .withResources(ProjectApiConstants.FILE_SERVER_RESOURCE_PLURAL)
+            .withVerbs(BASIC_VERBS)
+            .build();
         //todo --
 
         yield List.of(
@@ -851,7 +865,8 @@ public class ReconciliationService {
             aipubVolumesApiRule,
             resourceQuotaApiRule,
             commitApiRule,
-            imageBuildApiRule
+            imageBuildApiRule,
+            fileServerApiRule
         );
       }
     };
