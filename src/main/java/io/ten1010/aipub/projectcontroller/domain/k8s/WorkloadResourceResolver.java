@@ -3,6 +3,7 @@ package io.ten1010.aipub.projectcontroller.domain.k8s;
 import io.kubernetes.client.common.KubernetesObject;
 import io.kubernetes.client.openapi.models.V1CronJob;
 import io.kubernetes.client.openapi.models.V1Job;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1FileServer;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageBuild;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
@@ -18,6 +19,7 @@ public class WorkloadResourceResolver {
         case "Operation" -> "operations";
         case "AIPubVolume" -> "aipubvolumes";
         case "SFTPServer" -> "sftpservers";
+        case "FileServer" -> "fileservers";
         case "FtpServer" -> "ftpservers";
         case "Job" -> "jobs";
         case "CronJob" -> "cronjobs";
@@ -37,6 +39,9 @@ public class WorkloadResourceResolver {
     }
     if (workload instanceof V1alpha1ImageBuild) {
       return Optional.of("imagebuilds");
+    }
+    if (workload instanceof V1alpha1FileServer) {
+      return Optional.of(ProjectApiConstants.FILE_SERVER_RESOURCE_PLURAL);
     }
     return Optional.empty();
   }

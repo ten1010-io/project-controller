@@ -702,6 +702,11 @@ public class ReconciliationService {
             .withResources("sftpservers")
             .withVerbs("*")
             .build();
+        V1PolicyRule aipubFileServerApiRule = new V1PolicyRuleBuilder().withApiGroups(
+                ProjectApiConstants.AIPUB_GROUP)
+            .withResources(ProjectApiConstants.FILE_SERVER_RESOURCE_PLURAL)
+            .withVerbs("*")
+            .build();
         V1PolicyRule aipubVolumesApiRule = new V1PolicyRuleBuilder().withApiGroups(
                 "aipub.ten1010.io")
             .withResources("aipubvolumes")
@@ -737,6 +742,7 @@ public class ReconciliationService {
             aipubWorkspaceApiRule,
             chainJobsApiRule,
             aipubSFtpServerApiRule,
+            aipubFileServerApiRule,
             aipubVolumesApiRule,
             resourceQuotaApiRule,
             commitApiRule,
@@ -813,6 +819,11 @@ public class ReconciliationService {
             .withResources("sftpservers")
             .withVerbs(BASIC_VERBS)
             .build();
+        V1PolicyRule aipubFileServerApiRule = new V1PolicyRuleBuilder().withApiGroups(
+                ProjectApiConstants.AIPUB_GROUP)
+            .withResources(ProjectApiConstants.FILE_SERVER_RESOURCE_PLURAL)
+            .withVerbs(BASIC_VERBS)
+            .build();
         V1PolicyRule aipubVolumesApiRule = new V1PolicyRuleBuilder().withApiGroups(
                 "aipub.ten1010.io")
             .withResources("aipubvolumes")
@@ -848,6 +859,7 @@ public class ReconciliationService {
             aipubWorkspaceApiRule,
             chainJobsApiRule,
             aipubSFtpServerApiRule,
+            aipubFileServerApiRule,
             aipubVolumesApiRule,
             resourceQuotaApiRule,
             commitApiRule,

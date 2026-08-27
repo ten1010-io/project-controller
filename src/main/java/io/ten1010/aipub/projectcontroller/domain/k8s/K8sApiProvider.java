@@ -10,6 +10,8 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubVolume;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubVolumeList;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ChainJob;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ChainJobList;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1FileServer;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1FileServerList;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageBuild;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageBuildList;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageHub;
@@ -40,6 +42,7 @@ public class K8sApiProvider {
   private final GenericKubernetesApi<V1alpha1Operation, V1alpha1OperationList> operationApi;
   private final GenericKubernetesApi<V1alpha1AipubVolume, V1alpha1AipubVolumeList> aipubVolumeApi;
   private final GenericKubernetesApi<V1alpha1SftpServer, V1alpha1SftpServerList> sftpServerApi;
+  private final GenericKubernetesApi<V1alpha1FileServer, V1alpha1FileServerList> fileServerApi;
   private final GenericKubernetesApi<V1alpha1ImageBuild, V1alpha1ImageBuildList> imageBuildApi;
 
   public K8sApiProvider(ApiClient apiClient) {
@@ -54,6 +57,7 @@ public class K8sApiProvider {
     this.operationApi = createOperationApi(apiClient);
     this.aipubVolumeApi = createAipubVolumeApi(apiClient);
     this.sftpServerApi = createSftpServerApi(apiClient);
+    this.fileServerApi = createFileServerApi(apiClient);
     this.imageBuildApi = createImageBuildApi(apiClient);
   }
 
@@ -169,6 +173,18 @@ public class K8sApiProvider {
         ProjectApiConstants.AIPUB_GROUP,
         ProjectApiConstants.VERSION_V1ALPHA1,
         ProjectApiConstants.SFTP_SERVER_RESOURCE_PLURAL,
+        apiClient
+    );
+  }
+
+  private static GenericKubernetesApi<V1alpha1FileServer, V1alpha1FileServerList> createFileServerApi(
+      ApiClient apiClient) {
+    return new GenericKubernetesApi<>(
+        V1alpha1FileServer.class,
+        V1alpha1FileServerList.class,
+        ProjectApiConstants.AIPUB_GROUP,
+        ProjectApiConstants.VERSION_V1ALPHA1,
+        ProjectApiConstants.FILE_SERVER_RESOURCE_PLURAL,
         apiClient
     );
   }
