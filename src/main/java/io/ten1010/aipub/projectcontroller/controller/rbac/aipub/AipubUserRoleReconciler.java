@@ -27,6 +27,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1beta1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubVolume;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ChainJob;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1FileServer;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageBuild;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Operation;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
@@ -60,6 +61,7 @@ public class AipubUserRoleReconciler extends AbstractReconciler {
   private final Indexer<V1alpha1AipubVolume> aipubVolumeIndexer;
   private final Indexer<V1alpha1SftpServer> sftpServerIndexer;
   private final Indexer<V1alpha1ImageBuild> imageBuildIndexer;
+  private final Indexer<V1alpha1FileServer> fileServerIndexer;
   private final BoundObjectResolver boundObjectResolver;
   private final RbacAuthorizationV1Api rbacAuthorizationV1Api;
   private final OwnedObjectInformerManager ownedObjectInformerManager;
@@ -107,6 +109,9 @@ public class AipubUserRoleReconciler extends AbstractReconciler {
         .getIndexer();
     this.imageBuildIndexer = sharedInformerFactory
         .getExistingSharedIndexInformer(V1alpha1ImageBuild.class)
+        .getIndexer();
+    this.fileServerIndexer = sharedInformerFactory
+        .getExistingSharedIndexInformer(V1alpha1FileServer.class)
         .getIndexer();
     this.boundObjectResolver = new BoundObjectResolver(sharedInformerFactory);
     this.ownedObjectInformerManager = ownedObjectInformerManager;
@@ -167,6 +172,8 @@ public class AipubUserRoleReconciler extends AbstractReconciler {
         IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME, request.getNamespace());
     List<V1alpha1ImageBuild> imageBuilds = this.imageBuildIndexer.byIndex(
         IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME, request.getNamespace());
+    List<V1alpha1FileServer> fileServers = this.fileServerIndexer.byIndex(
+        IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME, request.getNamespace());
     workloads.addAll(v1beta1Workspaces);
     workloads.addAll(chainJobs);
     workloads.addAll(jobs);
@@ -175,6 +182,7 @@ public class AipubUserRoleReconciler extends AbstractReconciler {
     workloads.addAll(aipubVolumes);
     workloads.addAll(sftpServers);
     workloads.addAll(imageBuilds);
+    workloads.addAll(fileServers);
 
     List<V1OwnerReference> reconciledReferences = this.reconciliationService.reconcileOwnerReferences(
         roleOpt.orElse(null), userOpt.get());

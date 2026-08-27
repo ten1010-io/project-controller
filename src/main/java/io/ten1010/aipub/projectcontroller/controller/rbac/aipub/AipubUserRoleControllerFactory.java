@@ -19,6 +19,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1beta1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubVolume;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ChainJob;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1FileServer;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageBuild;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Operation;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
@@ -74,6 +75,8 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
             V1alpha1SftpServer.class)::hasSynced)
         .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
             V1alpha1ImageBuild.class)::hasSynced)
+        .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
+            V1alpha1FileServer.class)::hasSynced)
         .watch(this::createRoleWatch)
         .watch(this::createProjectWatch)
         .watch(this::createAipubUserWatch)
@@ -85,6 +88,7 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
         .watch(this::createAipubVolumeWatch)
         .watch(this::createSftpServerWatch)
         .watch(this::createImageBuildWatch)
+        .watch(this::createFileServerWatch)
         .withReconciler(new AipubUserRoleReconciler(this.sharedInformerFactory, this.k8sApiProvider,
             this.reconciliationService, this.ownedObjectInformerManager))
         .build();
@@ -179,6 +183,14 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
         V1alpha1ImageBuild.class);
     watch.setOnUpdateFilter(this.onUpdateFilterFactory.imageBuildFilter());
     watch.setRequestBuilder(this.requestBuilderFactory.imageBuildToAipubUserRoles());
+    return watch;
+  }
+
+  private ControllerWatch<V1alpha1FileServer> createFileServerWatch(WorkQueue<Request> workQueue) {
+    DefaultControllerWatch<V1alpha1FileServer> watch = new DefaultControllerWatch<>(workQueue,
+        V1alpha1FileServer.class);
+    watch.setOnUpdateFilter(this.onUpdateFilterFactory.fileServerFilter());
+    watch.setRequestBuilder(this.requestBuilderFactory.fileServerToAipubUserRoles());
     return watch;
   }
 
