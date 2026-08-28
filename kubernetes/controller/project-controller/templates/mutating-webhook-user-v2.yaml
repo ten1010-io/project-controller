@@ -79,5 +79,15 @@ webhooks:
         operations: [ "CREATE" ]
         resources: [ "*" ]
         scope: "Namespaced"
+      # cluster-scoped ClusterVolume 의 CREATE 를 인터셉트해 생성자 AipubUser
+      # ownerReference 를 붙인다 (AipubUser 삭제 시 GC 로 함께 정리). cluster-scoped 리소스에는
+      # namespaceSelector 가 평가되지 않으므로 위 제외 목록과 무관하게 모든 생성이 경유한다 —
+      # 비멤버(백엔드 SA·시스템 컴포넌트) 생성은 핸들러가 무변경 통과시킨다.
+      # 소유권 기반 update/delete RBAC 대상은 아니다(OwnershipPolicy 는 네임스페이스 리소스 전용).
+      - apiGroups: [ "aipub.ten1010.io" ]
+        apiVersions: [ "*" ]
+        operations: [ "CREATE" ]
+        resources: [ "clustervolumes" ]
+        scope: "Cluster"
     sideEffects: None
     timeoutSeconds: 10

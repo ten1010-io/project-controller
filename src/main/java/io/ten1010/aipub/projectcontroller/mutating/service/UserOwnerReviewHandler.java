@@ -49,6 +49,12 @@ public class UserOwnerReviewHandler implements ReviewHandler {
     if (V1AdmissionReviewUtils.isNamespaceRequest(request)) {
       return false;
     }
+    // cluster-scoped 리소스 중에서는 ClusterVolume 만 ownerReference 주입 대상이다.
+    // 소유자인 AipubUser 도 cluster-scoped 이므로 owner 참조가 성립하며(cluster-scoped
+    // 오브젝트는 cluster-scoped 소유자만 가질 수 있다), AipubUser 삭제 시 GC 로 함께 정리된다.
+    if (V1AdmissionReviewUtils.isClusterVolumeRequest(request)) {
+      return true;
+    }
     return request.getNamespace() != null && !request.getNamespace().isEmpty();
   }
 
@@ -63,7 +69,10 @@ public class UserOwnerReviewHandler implements ReviewHandler {
     Objects.requireNonNull(request.getUserInfo());
     Objects.requireNonNull(request.getObject());
 
-    if (this.namespaceAllowlistResolver.isAllowlisted(request.getNamespace())) {
+    // allowlist 스킵은 "allowlist 네임스페이스 안의 리소스"에 대한 규칙이므로
+    // cluster-scoped ClusterVolume 에는 적용할 대상 네임스페이스가 없다.
+    if (!V1AdmissionReviewUtils.isClusterVolumeRequest(request)
+        && this.namespaceAllowlistResolver.isAllowlisted(request.getNamespace())) {
       V1AdmissionReviewUtils.allowMerging(review);
       return;
     }
