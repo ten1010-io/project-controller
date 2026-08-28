@@ -82,6 +82,20 @@ class UserLabelReviewHandlerTest {
     return review;
   }
 
+  private V1AdmissionReview createClusterVolumeReview() {
+    // cluster-scoped 요청은 request.namespace 가 비어 온다
+    V1AdmissionReview review = createReview("CREATE", null);
+    V1Kind v1Kind = new V1Kind();
+    v1Kind.setGroup("aipub.ten1010.io");
+    v1Kind.setVersion("v1alpha1");
+    v1Kind.setKind("ClusterVolume");
+    review.getRequest().setKind(v1Kind);
+    ObjectNode objNode = this.mapper.createObjectNode();
+    objNode.putObject("metadata").put("name", "cv-test");
+    review.getRequest().setObject(objNode);
+    return review;
+  }
+
   private V1alpha1AipubUser createAipubUser(String name, String uid, String userId) {
     V1alpha1AipubUser user = new V1alpha1AipubUser();
     user.setApiVersion("project.aipub.ten1010.io/v1alpha1");
@@ -303,6 +317,80 @@ class UserLabelReviewHandlerTest {
   void handle_adminCreatesNamespacedResource_allowsWithoutPatch() {
     V1AdmissionReview review = createReview("CREATE", "default");
 
+    V1alpha1AipubUser aipubUser = createAipubUser("aipubadmin", "uid-admin", "admin-id-1");
+    UserInfoAnalysis analysis = new UserInfoAnalysis(
+        "oidc:aipubadmin",
+        List.of("oidc:aipub-admin", "system:authenticated"),
+        aipubUser);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse()).isNotNull();
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(review.getResponse().getPatch()).isNull();
+  }
+
+  @Test
+  void canHandle_createClusterVolume_returnsTrue() {
+    assertThat(this.handler.canHandle(createClusterVolumeReview())).isTrue();
+  }
+
+  // ClusterVolume 은 라벨이 유일한 소유자 기록이므로 멤버 생성 시 반드시 찍혀야 한다
+  @Test
+  void handle_memberCreatesClusterVolume_addsLabels() {
+    V1AdmissionReview review = createClusterVolumeReview();
+    V1alpha1AipubUser aipubUser = createAipubUser("testuser", "uid-123", "user-id-456");
+    UserInfoAnalysis analysis = new UserInfoAnalysis(
+        "oidc:testuser",
+        List.of("oidc:aipub-member", "system:authenticated"),
+        aipubUser);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse()).isNotNull();
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(review.getResponse().getPatch()).isNotNull();
+    assertThat(review.getResponse().getPatchType()).isEqualTo("JSONPatch");
+  }
+
+  // 백엔드 SA·시스템 컴포넌트 생성은 무변경 통과 (cluster-scoped 는 owner 전파 경로가 없다)
+  @Test
+  void handle_nonMemberCreatesClusterVolume_allowsWithoutPatch() {
+    V1AdmissionReview review = createClusterVolumeReview();
+    UserInfoAnalysis analysis = new UserInfoAnalysis(
+        "system:serviceaccount:aipub:aipub-backend",
+        List.of("system:serviceaccounts", "system:authenticated"), null);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse()).isNotNull();
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(review.getResponse().getPatch()).isNull();
+  }
+
+  // 멤버인데 AipubUser CR 이 없으면 400 — CREATE 가 막힌다 (Namespace 와 같은 계약)
+  @Test
+  void handle_memberWithoutAipubUserCreatesClusterVolume_rejects() {
+    V1AdmissionReview review = createClusterVolumeReview();
+    UserInfoAnalysis analysis = new UserInfoAnalysis(
+        "oidc:ghost",
+        List.of("oidc:aipub-member", "system:authenticated"), null);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse()).isNotNull();
+    assertThat(review.getResponse().getAllowed()).isFalse();
+    assertThat(review.getResponse().getStatus().getCode()).isEqualTo(400);
+  }
+
+  // admin 전용 라벨링은 Namespace 에만 적용된다 — ClusterVolume 은 member 검사만 쓴다
+  @Test
+  void handle_adminCreatesClusterVolume_allowsWithoutPatch() {
+    V1AdmissionReview review = createClusterVolumeReview();
     V1alpha1AipubUser aipubUser = createAipubUser("aipubadmin", "uid-admin", "admin-id-1");
     UserInfoAnalysis analysis = new UserInfoAnalysis(
         "oidc:aipubadmin",
