@@ -32,6 +32,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ResourceSet;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1SftpServer;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.AipubUserUtils;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.ClusterVolumeUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.UsernameUtils;
 import io.ten1010.aipub.projectcontroller.informer.IndexerConstants;
@@ -444,6 +445,16 @@ public class RequestBuilderFactory {
       }
       return List.of();
     };
+  }
+
+  /**
+   * ClusterVolume 자식(PVC/PV) → owner 라벨이 가리키는 ClusterVolume 요청. cluster-scoped 라
+   * namespace 는 null(DefaultControllerWatch 기본 빌더가 CV 자신에 만드는 Request 와 같은 키).
+   */
+  public <T extends KubernetesObject> Function<T, List<Request>> clusterVolumeChildToClusterVolume() {
+    return child -> ClusterVolumeUtils.getOwnerClusterVolumeName(child)
+        .map(clusterVolumeName -> List.of(new Request(null, clusterVolumeName)))
+        .orElse(List.of());
   }
 
   public Function<V1alpha1FileServer, List<Request>> fileServerToAipubUserRoles() {

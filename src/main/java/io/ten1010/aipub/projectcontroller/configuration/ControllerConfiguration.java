@@ -11,6 +11,7 @@ import io.ten1010.aipub.projectcontroller.controller.ProjectCudEventPublishingRe
 import io.ten1010.aipub.projectcontroller.controller.cluster.NamespaceControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cluster.NodeControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cr.AipubUserControllerFactory;
+import io.ten1010.aipub.projectcontroller.controller.cr.ClusterVolumeChildLabelControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cr.ImageHubControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cr.NodeGroupControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cr.ProjectControllerFactory;
@@ -126,6 +127,15 @@ public class ControllerConfiguration {
       ReconciliationService reconciliationService) {
     return new AipubUserClusterRoleBindingControllerFactory(sharedInformerFactory, k8sApiProvider,
         reconciliationService)
+        .createController();
+  }
+
+  @Bean
+  public Controller clusterVolumeChildLabelController(SharedInformerFactory sharedInformerFactory,
+      K8sApiProvider k8sApiProvider,
+      NamespaceAllowlistResolver namespaceAllowlistResolver) {
+    return new ClusterVolumeChildLabelControllerFactory(sharedInformerFactory, k8sApiProvider,
+        namespaceAllowlistResolver)
         .createController();
   }
 

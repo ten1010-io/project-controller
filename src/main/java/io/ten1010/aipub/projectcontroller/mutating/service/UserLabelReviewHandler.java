@@ -6,6 +6,7 @@ import io.kubernetes.client.openapi.ApiClient;
 import io.ten1010.aipub.projectcontroller.domain.k8s.LabelConstants;
 import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ObjectMapperFactory;
+import io.ten1010.aipub.projectcontroller.domain.k8s.ProjectApiConstants;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.mutating.V1AdmissionReviewUtils;
@@ -17,6 +18,7 @@ import io.ten1010.common.jsonpatch.dto.JsonPatchOperation;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Call;
 import okhttp3.Response;
@@ -32,6 +34,11 @@ public class UserLabelReviewHandler implements ReviewHandler {
       LabelConstants.OBJECT_OWN_USERNAME_KEY;
   private static final String USERID_LABEL_KEY =
       LabelConstants.OBJECT_OWN_USERID_KEY;
+  private static final String CLUSTER_VOLUME_OWNER_LABEL_KEY =
+      LabelConstants.CLUSTER_VOLUME_OWNER_KEY;
+  /** RFC 1123 DNS label — ClusterVolume CRD 가 metadata.name 에 강제하는 형식과 동일. */
+  private static final Pattern DNS_LABEL_PATTERN =
+      Pattern.compile("^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$");
 
   private final UserInfoAnalyzer userInfoAnalyzer;
   private final ApiResourceDiscovery apiResourceDiscovery;
@@ -57,12 +64,15 @@ public class UserLabelReviewHandler implements ReviewHandler {
     if (!OPERATION_CREATE.equals(request.getOperation())) {
       return false;
     }
-    // cluster-scoped 리소스 중 라벨 주입 대상은 Namespace 와 ClusterVolume 뿐이다.
+    // cluster-scoped 리소스 중 라벨 주입 대상은 Namespace, ClusterVolume, PersistentVolume 이다.
     // ClusterVolume 은 라벨이 유일한 소유자 기록이다 — 생성자 신원은 어드미션 시점에만
     // 존재하고(request.userInfo) 오브젝트에는 남지 않으므로, 여기서 찍어두지 않으면
     // 이후 리컨실러·GUI 가 소유자를 알 방법이 없다.
+    // PersistentVolume 은 ClusterVolume 컨트롤러가 만드는 복제/앵커 PV 가 대상이다 — 부모 CV 의
+    // 소유자 라벨을 owner 라벨(clustervolumes.aipub.ten1010.io/owner)을 따라 전파한다.
     if (V1AdmissionReviewUtils.isNamespaceRequest(request)
-        || V1AdmissionReviewUtils.isClusterVolumeRequest(request)) {
+        || V1AdmissionReviewUtils.isClusterVolumeRequest(request)
+        || V1AdmissionReviewUtils.isPersistentVolumeRequest(request)) {
       return true;
     }
     // 소유권 대상(OwnershipPolicy.OWNED_TARGETS)은 전부 네임스페이스 리소스다
@@ -79,10 +89,12 @@ public class UserLabelReviewHandler implements ReviewHandler {
 
     // Namespace 자신의 CREATE 는 allowlist 여부와 무관하게 라벨을 주입한다. allowlist 스킵은
     // "allowlist 네임스페이스 안의 리소스"에 대한 규칙이지, 네임스페이스 오브젝트 자체의 규칙이 아니다.
-    // ClusterVolume 도 cluster-scoped 라 적용할 대상 네임스페이스가 없다.
+    // ClusterVolume·PersistentVolume 도 cluster-scoped 라 적용할 대상 네임스페이스가 없다.
     boolean namespaceRequest = V1AdmissionReviewUtils.isNamespaceRequest(request);
-    boolean clusterScopedRequest =
-        namespaceRequest || V1AdmissionReviewUtils.isClusterVolumeRequest(request);
+    boolean clusterVolumeRequest = V1AdmissionReviewUtils.isClusterVolumeRequest(request);
+    boolean clusterScopedRequest = namespaceRequest
+        || clusterVolumeRequest
+        || V1AdmissionReviewUtils.isPersistentVolumeRequest(request);
     if (!clusterScopedRequest) {
       Objects.requireNonNull(request.getNamespace());
       if (this.namespaceAllowlistResolver.isAllowlisted(request.getNamespace())) {
@@ -108,12 +120,13 @@ public class UserLabelReviewHandler implements ReviewHandler {
     String username;
     String userid;
 
-    // Namespace 는 admin 도 라벨 대상이다. admin 토큰에는 aipub-member 그룹이 없어
-    // (k8s RBAC 도 oidc:aipub-admin/oidc:aipub-member 별개 그룹) member 검사만으로는
-    // admin 이 만든 네임스페이스가 시스템 네임스페이스로 분류된다. namespaced 리소스는
-    // 기존 quota/소유권 동작 보존을 위해 member 만 유지한다.
+    // Namespace·ClusterVolume 은 admin 도 라벨 대상이다. admin 토큰에는 aipub-member 그룹이
+    // 없어(k8s RBAC 도 oidc:aipub-admin/oidc:aipub-member 별개 그룹) member 검사만으로는 admin 이
+    // 만든 오브젝트가 시스템 소유물로 분류된다. CV 는 라벨이 유일한 소유자 기록이고 자식(PVC/PV)
+    // 라벨 전파의 원천이므로, admin 이 직접 만든 CV 도 찍어야 소유자·자식 추적이 성립한다.
+    // namespaced 리소스는 기존 quota/소유권 동작 보존을 위해 member 만 유지한다.
     boolean labelSubject = analysis.isAipubMember()
-        || (namespaceRequest && analysis.isAipubAdmin());
+        || ((namespaceRequest || clusterVolumeRequest) && analysis.isAipubAdmin());
 
     if (labelSubject && analysis.getAipubUser().isPresent()) {
       V1alpha1AipubUser aipubUser = analysis.getAipubUser().get();
@@ -129,19 +142,13 @@ public class UserLabelReviewHandler implements ReviewHandler {
       V1AdmissionReviewUtils.reject(review, 400,
           "Not found aipub user: " + analysis.getUsername());
       return;
-    } else if (clusterScopedRequest) {
-      // cluster-scoped 오브젝트는 owner 전파 경로가 없다 — Namespace 는 controller
-      // ownerReference 를 갖지 않고, owner 조회는 네임스페이스 GET 이라 성립하지 않는다.
-      // 비멤버(시스템 컴포넌트·백엔드 SA 등)가 만든 것은 라벨 없이 허용한다.
-      log.debug("UserLabel: not aipub member creating cluster-scoped object, "
-          + "allowing without mutation");
-      V1AdmissionReviewUtils.allowMerging(review);
-      return;
     } else {
+      // 비멤버(시스템 컴포넌트·백엔드 SA·다른 컨트롤러)가 만든 오브젝트는 부모에서 라벨을
+      // 전파한다. 전파 경로가 없으면 라벨 없이 허용한다.
       log.debug("UserLabel: not aipub member, looking up owner labels");
       String[] ownerLabels;
       try {
-        ownerLabels = getLabelsFromOwner(request.getObject(), request.getNamespace());
+        ownerLabels = resolveOwnerLabels(request, clusterScopedRequest);
       } catch (Exception e) {
         // Python: owner_service.get_owner_object non-404 ApiException → 500
         log.warn("Failed to get owner object", e);
@@ -191,6 +198,81 @@ public class UserLabelReviewHandler implements ReviewHandler {
     jsonPatchBuilder.addToOperations(useridPatchOp);
 
     V1AdmissionReviewUtils.allowMerging(review, jsonPatchBuilder.build());
+  }
+
+  /**
+   * 비멤버가 만든 오브젝트의 소유자 라벨을 부모에서 찾는다. 우선순위:
+   * <ol>
+   *   <li>ClusterVolume owner 라벨({@code clustervolumes.aipub.ten1010.io/owner=<CV명>}) —
+   *   ClusterVolume 컨트롤러가 만든 복제/앵커 PVC·PV 는 이 라벨로 부모 CV 를 가리킨다.
+   *   부모가 cluster-scoped 라 아래 controller ownerReference 경로로는 닿지 않는다.
+   *   PVC·PV 에만 적용한다 — 다른 kind 가 이 라벨을 갖는 경우(예: 워크로드 템플릿 라벨을 상속한
+   *   Pod)는 CV 자식이 아니므로 기존 경로를 그대로 탄다.</li>
+   *   <li>controller ownerReference — 기존 워크로드 전파 경로. 부모가 네임스페이스 리소스일
+   *   때만 성립하므로 cluster-scoped 요청(Namespace·ClusterVolume·PersistentVolume)에는
+   *   적용하지 않는다.</li>
+   * </ol>
+   *
+   * @return {username, userid} 또는 전파할 소유자가 없으면 null
+   */
+  @Nullable
+  private String[] resolveOwnerLabels(V1AdmissionReviewRequest request,
+      boolean clusterScopedRequest) {
+    JsonNode objectNode = request.getObject();
+    if (isClusterVolumeChildCandidate(request)) {
+      String clusterVolumeName = getClusterVolumeOwnerName(objectNode);
+      if (clusterVolumeName != null) {
+        return getLabelsFromClusterVolume(clusterVolumeName);
+      }
+    }
+    if (clusterScopedRequest) {
+      log.debug("resolveOwnerLabels: cluster-scoped object without ClusterVolume owner label, "
+          + "no propagation path");
+      return null;
+    }
+    return getLabelsFromOwner(objectNode, request.getNamespace());
+  }
+
+  private static boolean isClusterVolumeChildCandidate(V1AdmissionReviewRequest request) {
+    return V1AdmissionReviewUtils.isPersistentVolumeClaimRequest(request)
+        || V1AdmissionReviewUtils.isPersistentVolumeRequest(request);
+  }
+
+  /**
+   * owner 라벨 값(= 부모 ClusterVolume 이름)을 읽는다. CRD 가 CV 이름을 DNS label(63자)로 강제하므로
+   * 같은 형식만 받는다 — mutating admission 은 스키마 검증 전이라 라벨 값이 아직 보장되지 않는데,
+   * 이 값이 그대로 GET 경로에 들어가므로 형식이 다르면 CV 자식이 아닌 것으로 보고 null 을 돌려준다.
+   */
+  @Nullable
+  private String getClusterVolumeOwnerName(JsonNode objectNode) {
+    JsonNode ownerNode = objectNode.path("metadata").path("labels")
+        .get(CLUSTER_VOLUME_OWNER_LABEL_KEY);
+    if (ownerNode == null || !ownerNode.isTextual()) {
+      return null;
+    }
+    String name = ownerNode.textValue();
+    if (!DNS_LABEL_PATTERN.matcher(name).matches()) {
+      log.debug("getClusterVolumeOwnerName: owner label is not a DNS label, ignoring: {}", name);
+      return null;
+    }
+    return name;
+  }
+
+  /**
+   * owner 라벨이 가리키는 ClusterVolume 의 소유자 라벨을 읽는다. ClusterVolume 이 없거나(404)
+   * 라벨이 없으면 null — 자식은 라벨 없이 통과한다. 그 외 API 오류는 예외로 전파되어 500 으로
+   * 거부된다(기존 controller owner 조회와 같은 계약).
+   */
+  @Nullable
+  private String[] getLabelsFromClusterVolume(String name) {
+    log.debug("getLabelsFromClusterVolume: name={}", name);
+    JsonNode clusterVolume = fetchClusterScopedObject(ProjectApiConstants.AIPUB_API_VERSION,
+        ProjectApiConstants.CLUSTER_VOLUME_RESOURCE_PLURAL, name);
+    if (clusterVolume == null) {
+      log.debug("getLabelsFromClusterVolume: ClusterVolume not found: {}", name);
+      return null;
+    }
+    return extractUserLabels(clusterVolume, "ClusterVolume " + name);
   }
 
   @Nullable
@@ -246,23 +328,33 @@ public class UserLabelReviewHandler implements ReviewHandler {
       return null;
     }
 
+    return extractUserLabels(ownerObject, "owner " + kind + "/" + name);
+  }
+
+  /**
+   * 부모 오브젝트의 username/userid 라벨 쌍을 읽는다. 둘 중 하나라도 없거나 문자열이 아니면 null.
+   */
+  @Nullable
+  private String[] extractUserLabels(JsonNode ownerObject, String ownerDescription) {
     JsonNode ownerLabels = ownerObject.path("metadata").path("labels");
     if (!ownerLabels.isObject()) {
-      log.debug("getLabelsFromOwner: owner has no labels");
+      log.debug("extractUserLabels: {} has no labels", ownerDescription);
       return null;
     }
 
     JsonNode usernameNode = ownerLabels.get(USERNAME_LABEL_KEY);
     JsonNode useridNode = ownerLabels.get(USERID_LABEL_KEY);
     if (usernameNode == null || useridNode == null) {
-      log.debug("getLabelsFromOwner: owner missing username/userid labels. labels={}", ownerLabels);
+      log.debug("extractUserLabels: {} missing username/userid labels. labels={}",
+          ownerDescription, ownerLabels);
       return null;
     }
 
     String username = usernameNode.textValue();
     String userid = useridNode.textValue();
     if (username == null || userid == null) {
-      log.debug("getLabelsFromOwner: owner labels are not string type. labels={}", ownerLabels);
+      log.debug("extractUserLabels: {} labels are not string type. labels={}",
+          ownerDescription, ownerLabels);
       return null;
     }
 
@@ -271,13 +363,21 @@ public class UserLabelReviewHandler implements ReviewHandler {
 
   @Nullable
   private JsonNode fetchObject(String apiVersion, String namespace, String plural, String name) {
-    String path;
-    if (apiVersion.contains("/")) {
-      path = "/apis/" + apiVersion + "/namespaces/" + namespace + "/" + plural + "/" + name;
-    } else {
-      path = "/api/" + apiVersion + "/namespaces/" + namespace + "/" + plural + "/" + name;
-    }
+    return fetchObjectByPath(
+        apiPathPrefix(apiVersion) + "/namespaces/" + namespace + "/" + plural + "/" + name);
+  }
 
+  @Nullable
+  private JsonNode fetchClusterScopedObject(String apiVersion, String plural, String name) {
+    return fetchObjectByPath(apiPathPrefix(apiVersion) + "/" + plural + "/" + name);
+  }
+
+  private static String apiPathPrefix(String apiVersion) {
+    return (apiVersion.contains("/") ? "/apis/" : "/api/") + apiVersion;
+  }
+
+  @Nullable
+  private JsonNode fetchObjectByPath(String path) {
     try {
       Call call = this.k8sApiClient.buildCall(
           this.k8sApiClient.getBasePath(), path, "GET",

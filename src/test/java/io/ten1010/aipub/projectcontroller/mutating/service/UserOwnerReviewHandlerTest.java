@@ -145,6 +145,15 @@ class UserOwnerReviewHandlerTest {
     assertThat(this.handler.canHandle(review)).isFalse();
   }
 
+  // PersistentVolume 은 소유자 라벨 전파 대상(UserLabelReviewHandler)이지만 AipubUser ownerReference
+  // 는 붙이지 않는다 — 둘 다 cluster-scoped 라 참조가 성립하므로, 붙이면 사용자 삭제 시
+  // ClusterVolume 의 복제/앵커 PV 가 GC 로 함께 지워진다
+  @Test
+  void canHandle_createPersistentVolume_returnsFalse() {
+    V1AdmissionReview review = createReview("CREATE", null, "", "v1", "PersistentVolume");
+    assertThat(this.handler.canHandle(review)).isFalse();
+  }
+
   // 같은 이름의 다른 그룹 kind 는 대상이 아니다
   @Test
   void canHandle_createClusterVolumeOfOtherGroup_returnsFalse() {

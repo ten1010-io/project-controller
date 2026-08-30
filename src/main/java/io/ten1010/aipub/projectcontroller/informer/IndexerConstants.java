@@ -23,6 +23,9 @@ public final class IndexerConstants {
   public static final String NAMESPACE_TO_OBJECTS_INDEXER_NAME = "NAMESPACE_TO_OBJECTS";
   public static final String LABEL_STRING_TO_OBJECTS_INDEXER_NAME = "LABEL_STRING_TO_OBJECTS";
 
+  /** ClusterVolume 자식(PVC/PV) 인포머: owner 라벨 값(= CV 이름) → 자식 오브젝트 */
+  public static final String CLUSTER_VOLUME_OWNER_TO_OBJECTS_INDEXER_NAME = "CLUSTER_VOLUME_OWNER_TO_OBJECTS";
+
   public static final String TRUE_VALUE = "true";
   public static final String FALSE_VALUE = "false";
 

@@ -14,6 +14,10 @@ import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1NamespaceList;
 import io.kubernetes.client.openapi.models.V1Node;
 import io.kubernetes.client.openapi.models.V1NodeList;
+import io.kubernetes.client.openapi.models.V1PersistentVolume;
+import io.kubernetes.client.openapi.models.V1PersistentVolumeClaim;
+import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimList;
+import io.kubernetes.client.openapi.models.V1PersistentVolumeList;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.openapi.models.V1ResourceQuota;
@@ -27,10 +31,12 @@ import io.kubernetes.client.openapi.models.V1SecretList;
 import io.kubernetes.client.util.CallGeneratorParams;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.LabelConstants;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1beta1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubVolume;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ChainJob;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ClusterVolume;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1FileServer;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageBuild;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageHub;
@@ -40,6 +46,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectMember;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ResourceSet;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1SftpServer;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.ClusterVolumeUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.LabelUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.NodeGroupUtils;
@@ -88,6 +95,9 @@ public class SharedInformerFactoryProvider {
     registerSftpServerInformer(informerFactory);
     registerImageBuildInformer(informerFactory);
     registerFileServerInformer(informerFactory);
+    registerClusterVolumeInformer(informerFactory);
+    registerClusterVolumeChildPersistentVolumeClaimInformer(informerFactory);
+    registerClusterVolumeChildPersistentVolumeInformer(informerFactory);
     registerPodInformer(informerFactory);
     this.registrars.forEach(e -> e.registerInformer(informerFactory));
 
@@ -381,6 +391,61 @@ public class SharedInformerFactoryProvider {
     informer.addIndexers(Map.of(
         IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
         obj -> List.of(K8sObjectUtils.getNamespace(obj))));
+  }
+
+  private void registerClusterVolumeInformer(SharedInformerFactory informerFactory) {
+    // cluster-scoped — 키는 이름 그대로(KeyResolver.resolveKey(name)). 네임스페이스 인덱서 없음
+    informerFactory.sharedIndexInformerFor(
+        this.k8sApiProvider.getClusterVolumeApi(),
+        V1alpha1ClusterVolume.class,
+        DEFAULT_RESYNC_PERIOD);
+  }
+
+  /**
+   * ClusterVolume 컨트롤러가 만든 자식 PVC 만 — owner 라벨(clustervolumes.aipub.ten1010.io/owner)이
+   * 있는 것만 list/watch 한다(서버사이드 필터). 이 팩토리의 V1PersistentVolumeClaim 인포머는 그래서
+   * 클러스터의 모든 PVC 를 담고 있지 않다 — 전체 PVC 가 필요한 기능이 생기면 이 인포머를 재사용하지
+   * 말고 셀렉터를 넓히거나 별도 팩토리를 써야 한다(SharedInformerFactory 는 타입 클래스로 캐싱한다).
+   */
+  private void registerClusterVolumeChildPersistentVolumeClaimInformer(
+      SharedInformerFactory informerFactory) {
+    ApiClient apiClient = this.k8sApiProvider.getApiClient();
+    SharedIndexInformer<V1PersistentVolumeClaim> informer = informerFactory.sharedIndexInformerFor(
+        (CallGeneratorParams params) -> new CoreV1Api(apiClient)
+            .listPersistentVolumeClaimForAllNamespaces()
+            .labelSelector(LabelConstants.CLUSTER_VOLUME_OWNER_KEY)
+            .resourceVersion(params.resourceVersion)
+            .watch(params.watch)
+            .timeoutSeconds(params.timeoutSeconds)
+            .buildCall(null),
+        V1PersistentVolumeClaim.class,
+        V1PersistentVolumeClaimList.class);
+    informer.addIndexers(Map.of(
+        IndexerConstants.CLUSTER_VOLUME_OWNER_TO_OBJECTS_INDEXER_NAME,
+        obj -> ClusterVolumeUtils.getOwnerClusterVolumeName(obj)
+            .map(List::of)
+            .orElse(List.of())));
+  }
+
+  /** PV 도 같은 제약 — owner 라벨이 있는 복제/앵커 PV 만 담는다. */
+  private void registerClusterVolumeChildPersistentVolumeInformer(
+      SharedInformerFactory informerFactory) {
+    ApiClient apiClient = this.k8sApiProvider.getApiClient();
+    SharedIndexInformer<V1PersistentVolume> informer = informerFactory.sharedIndexInformerFor(
+        (CallGeneratorParams params) -> new CoreV1Api(apiClient)
+            .listPersistentVolume()
+            .labelSelector(LabelConstants.CLUSTER_VOLUME_OWNER_KEY)
+            .resourceVersion(params.resourceVersion)
+            .watch(params.watch)
+            .timeoutSeconds(params.timeoutSeconds)
+            .buildCall(null),
+        V1PersistentVolume.class,
+        V1PersistentVolumeList.class);
+    informer.addIndexers(Map.of(
+        IndexerConstants.CLUSTER_VOLUME_OWNER_TO_OBJECTS_INDEXER_NAME,
+        obj -> ClusterVolumeUtils.getOwnerClusterVolumeName(obj)
+            .map(List::of)
+            .orElse(List.of())));
   }
 
   private void registerPodInformer(SharedInformerFactory informerFactory) {

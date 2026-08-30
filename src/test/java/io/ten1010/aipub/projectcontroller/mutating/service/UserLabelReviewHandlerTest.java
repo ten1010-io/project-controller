@@ -2,9 +2,17 @@ package io.ten1010.aipub.projectcontroller.mutating.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.kubernetes.client.informer.cache.Cache;
@@ -20,7 +28,16 @@ import io.ten1010.aipub.projectcontroller.mutating.dto.V1AdmissionReview;
 import io.ten1010.aipub.projectcontroller.mutating.dto.V1AdmissionReviewRequest;
 import io.ten1010.aipub.projectcontroller.mutating.dto.V1Kind;
 import io.ten1010.aipub.projectcontroller.mutating.dto.V1UserInfo;
+import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import okhttp3.Call;
+import okhttp3.Protocol;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -28,15 +45,17 @@ class UserLabelReviewHandlerTest {
 
   private UserLabelReviewHandler handler;
   private UserInfoAnalyzer mockAnalyzer;
+  private ApiClient mockApiClient;
   private ObjectMapper mapper;
 
   @BeforeEach
   void setUp() {
     this.mockAnalyzer = mock(UserInfoAnalyzer.class);
     ApiResourceDiscovery mockDiscovery = mock(ApiResourceDiscovery.class);
-    ApiClient mockApiClient = mock(ApiClient.class);
-    this.handler = new UserLabelReviewHandler(this.mockAnalyzer, mockDiscovery, mockApiClient,
-        new NamespaceAllowlistResolver(new Cache<>()));
+    this.mockApiClient = mock(ApiClient.class);
+    when(this.mockApiClient.getBasePath()).thenReturn("https://localhost:6443");
+    this.handler = new UserLabelReviewHandler(this.mockAnalyzer, mockDiscovery,
+        this.mockApiClient, new NamespaceAllowlistResolver(new Cache<>()));
     this.mapper = new ObjectMapperFactory().createObjectMapper();
   }
 
@@ -387,15 +406,34 @@ class UserLabelReviewHandlerTest {
     assertThat(review.getResponse().getStatus().getCode()).isEqualTo(400);
   }
 
-  // admin 전용 라벨링은 Namespace 에만 적용된다 — ClusterVolume 은 member 검사만 쓴다
+  // ClusterVolume 은 Namespace 처럼 admin 도 라벨 대상이다 — 라벨이 유일한 소유자 기록이고
+  // 자식(PVC/PV) 라벨 전파의 원천이므로, admin 이 직접 만든 CV 도 본인 라벨이 찍혀야 한다
   @Test
-  void handle_adminCreatesClusterVolume_allowsWithoutPatch() {
+  void handle_adminCreatesClusterVolume_addsLabels() throws Exception {
     V1AdmissionReview review = createClusterVolumeReview();
     V1alpha1AipubUser aipubUser = createAipubUser("aipubadmin", "uid-admin", "admin-id-1");
     UserInfoAnalysis analysis = new UserInfoAnalysis(
         "oidc:aipubadmin",
         List.of("oidc:aipub-admin", "system:authenticated"),
         aipubUser);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse()).isNotNull();
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    Map<String, String> adds = decodePatchAdds(review);
+    assertThat(adds).containsEntry(USERNAME_PATCH_PATH, "aipubadmin");
+    assertThat(adds).containsEntry(USERID_PATCH_PATH, "admin-id-1");
+  }
+
+  // admin 인데 AipubUser CR 이 없으면 라벨 없이 허용 — Namespace 의 admin 계약과 동일 (400 이 아님)
+  @Test
+  void handle_adminWithoutAipubUserCreatesClusterVolume_allowsWithoutPatch() {
+    V1AdmissionReview review = createClusterVolumeReview();
+    UserInfoAnalysis analysis = new UserInfoAnalysis(
+        "oidc:ghost-admin",
+        List.of("oidc:aipub-admin", "system:authenticated"), null);
     when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);
 
     this.handler.handle(review);
@@ -416,6 +454,320 @@ class UserLabelReviewHandlerTest {
     assertThat(review.getResponse()).isNotNull();
     assertThat(review.getResponse().getAllowed()).isFalse();
     assertThat(review.getResponse().getStatus().getCode()).isEqualTo(500);
+  }
+
+  // ---- ClusterVolume 자식(복제/앵커 PVC·PV) 소유자 라벨 전파 ----
+  // CV 컨트롤러(비멤버 SA)가 만드는 자식은 clustervolumes.aipub.ten1010.io/owner=<CV명> 라벨로
+  // 부모를 가리킨다. 부모가 cluster-scoped 라 controller ownerReference 경로로는 닿지 않으므로
+  // 핸들러가 이 라벨로 CV 를 GET 해 username/userid 를 복사한다.
+
+  private static final String CV_NAME = "cv-test";
+  private static final String CV_GET_PATH =
+      "/apis/aipub.ten1010.io/v1alpha1/clustervolumes/" + CV_NAME;
+  private static final String USERNAME_PATCH_PATH =
+      "/metadata/labels/" + LabelConstants.OBJECT_OWN_USERNAME_KEY.replace("/", "~1");
+  private static final String USERID_PATCH_PATH =
+      "/metadata/labels/" + LabelConstants.OBJECT_OWN_USERID_KEY.replace("/", "~1");
+
+  /** kind 는 core/v1 PersistentVolumeClaim 또는 PersistentVolume. namespace null 은 cluster-scoped. */
+  private V1AdmissionReview createClusterVolumeChildReview(String kind, String namespace,
+      String ownerLabelValue) {
+    V1AdmissionReview review = createReview("CREATE", namespace);
+    V1Kind v1Kind = new V1Kind();
+    v1Kind.setGroup("");
+    v1Kind.setVersion("v1");
+    v1Kind.setKind(kind);
+    review.getRequest().setKind(v1Kind);
+    ObjectNode objNode = this.mapper.createObjectNode();
+    ObjectNode metadata = objNode.putObject("metadata").put("name", CV_NAME);
+    if (namespace != null) {
+      metadata.put("namespace", namespace);
+    }
+    if (ownerLabelValue != null) {
+      metadata.putObject("labels").put(LabelConstants.CLUSTER_VOLUME_OWNER_KEY, ownerLabelValue);
+    }
+    review.getRequest().setObject(objNode);
+    return review;
+  }
+
+  private UserInfoAnalysis clusterVolumeControllerAnalysis() {
+    return new UserInfoAnalysis(
+        "system:serviceaccount:aipub:clustervolume-controller",
+        List.of("system:serviceaccounts", "system:authenticated"), null);
+  }
+
+  private String clusterVolumeJson(Map<String, String> labels) throws Exception {
+    Map<String, Object> metadata = new HashMap<>();
+    metadata.put("name", CV_NAME);
+    if (labels != null) {
+      metadata.put("labels", labels);
+    }
+    return this.mapper.writeValueAsString(Map.of(
+        "apiVersion", "aipub.ten1010.io/v1alpha1",
+        "kind", "ClusterVolume",
+        "metadata", metadata));
+  }
+
+  private Response buildResponse(int code, String body) {
+    return new Response.Builder()
+        .request(new Request.Builder().url("https://localhost:6443/test").build())
+        .protocol(Protocol.HTTP_1_1)
+        .code(code)
+        .message("OK")
+        .body(ResponseBody.create(body, okhttp3.MediaType.parse("application/json")))
+        .build();
+  }
+
+  private Call mockCallWithResponse(Response response) throws Exception {
+    Call call = mock(Call.class);
+    when(call.execute()).thenReturn(response);
+    return call;
+  }
+
+  /** GET 을 경로별로 스텁한다. 모르는 경로는 404, serverErrorPaths 는 500. */
+  private void stubGetByPath(Map<String, String> pathToBody, Set<String> serverErrorPaths)
+      throws Exception {
+    when(this.mockApiClient.buildCall(
+        anyString(), anyString(), eq("GET"),
+        anyList(), anyList(), isNull(),
+        anyMap(), anyMap(), anyMap(),
+        any(String[].class), isNull()))
+        .thenAnswer(invocation -> {
+          String path = invocation.getArgument(1);
+          if (serverErrorPaths.contains(path)) {
+            return mockCallWithResponse(buildResponse(500, "{}"));
+          }
+          String body = pathToBody.get(path);
+          if (body == null) {
+            return mockCallWithResponse(buildResponse(404, ""));
+          }
+          return mockCallWithResponse(buildResponse(200, body));
+        });
+  }
+
+  private void stubClusterVolume(Map<String, String> labels) throws Exception {
+    stubGetByPath(Map.of(CV_GET_PATH, clusterVolumeJson(labels)), Set.of());
+  }
+
+  private void verifyNoApiCall() throws Exception {
+    verify(this.mockApiClient, never()).buildCall(
+        anyString(), anyString(), anyString(),
+        anyList(), anyList(), any(),
+        anyMap(), anyMap(), anyMap(),
+        any(String[].class), any());
+  }
+
+  /** 응답 패치의 add 연산을 path → value(text) 맵으로 푼다. */
+  private Map<String, String> decodePatchAdds(V1AdmissionReview review) throws Exception {
+    byte[] decoded = Base64.getDecoder().decode(review.getResponse().getPatch());
+    JsonNode ops = this.mapper.readTree(decoded);
+    Map<String, String> adds = new HashMap<>();
+    for (JsonNode op : ops) {
+      if ("add".equals(op.path("op").textValue()) && op.path("value").isTextual()) {
+        adds.put(op.path("path").textValue(), op.path("value").textValue());
+      }
+    }
+    return adds;
+  }
+
+  @Test
+  void canHandle_createPersistentVolume_returnsTrue() {
+    V1AdmissionReview review = createClusterVolumeChildReview("PersistentVolume", null, CV_NAME);
+    assertThat(this.handler.canHandle(review)).isTrue();
+  }
+
+  @Test
+  void canHandle_updatePersistentVolume_returnsFalse() {
+    V1AdmissionReview review = createClusterVolumeChildReview("PersistentVolume", null, CV_NAME);
+    review.getRequest().setOperation("UPDATE");
+    assertThat(this.handler.canHandle(review)).isFalse();
+  }
+
+  // 복제 PVC(대상 ns): 부모 CV 의 username/userid 가 그대로 복사된다
+  @Test
+  void handle_controllerCreatesReplicaPvc_propagatesClusterVolumeLabels() throws Exception {
+    V1AdmissionReview review = createClusterVolumeChildReview(
+        "PersistentVolumeClaim", "proj-a", CV_NAME);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(clusterVolumeControllerAnalysis());
+    stubClusterVolume(Map.of(
+        LabelConstants.OBJECT_OWN_USERNAME_KEY, "cvowner",
+        LabelConstants.OBJECT_OWN_USERID_KEY, "cvowner-id"));
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(review.getResponse().getPatchType()).isEqualTo("JSONPatch");
+    Map<String, String> adds = decodePatchAdds(review);
+    assertThat(adds).containsEntry(USERNAME_PATCH_PATH, "cvowner");
+    assertThat(adds).containsEntry(USERID_PATCH_PATH, "cvowner-id");
+  }
+
+  // 복제/앵커 PV(cluster-scoped, request.namespace 없음): 같은 라벨로 부모를 찾는다
+  @Test
+  void handle_controllerCreatesReplicaPv_propagatesClusterVolumeLabels() throws Exception {
+    V1AdmissionReview review = createClusterVolumeChildReview("PersistentVolume", null, CV_NAME);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(clusterVolumeControllerAnalysis());
+    stubClusterVolume(Map.of(
+        LabelConstants.OBJECT_OWN_USERNAME_KEY, "cvowner",
+        LabelConstants.OBJECT_OWN_USERID_KEY, "cvowner-id"));
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    Map<String, String> adds = decodePatchAdds(review);
+    assertThat(adds).containsEntry(USERNAME_PATCH_PATH, "cvowner");
+    assertThat(adds).containsEntry(USERID_PATCH_PATH, "cvowner-id");
+  }
+
+  // owner 라벨의 값이 곧 CV 이름이다 — 자식 이름이 아니라 라벨 값으로 GET 해야 한다
+  @Test
+  void handle_ownerLabelDiffersFromChildName_fetchesClusterVolumeByLabelValue()
+      throws Exception {
+    V1AdmissionReview review = createClusterVolumeChildReview(
+        "PersistentVolumeClaim", "proj-a", "other-cv");
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(clusterVolumeControllerAnalysis());
+    stubGetByPath(Map.of(
+        "/apis/aipub.ten1010.io/v1alpha1/clustervolumes/other-cv",
+        this.mapper.writeValueAsString(Map.of(
+            "apiVersion", "aipub.ten1010.io/v1alpha1",
+            "kind", "ClusterVolume",
+            "metadata", Map.of("name", "other-cv", "labels", Map.of(
+                LabelConstants.OBJECT_OWN_USERNAME_KEY, "other",
+                LabelConstants.OBJECT_OWN_USERID_KEY, "other-id"))))), Set.of());
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(decodePatchAdds(review)).containsEntry(USERNAME_PATCH_PATH, "other");
+  }
+
+  // owner 라벨이 없는 PV(CSI 프로비저너·시스템이 만든 일반 PV)는 조회 없이 무변경 통과
+  @Test
+  void handle_nonMemberCreatesPvWithoutOwnerLabel_allowsWithoutPatchAndWithoutLookup()
+      throws Exception {
+    V1AdmissionReview review = createClusterVolumeChildReview("PersistentVolume", null, null);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(clusterVolumeControllerAnalysis());
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(review.getResponse().getPatch()).isNull();
+    verifyNoApiCall();
+  }
+
+  // 부모 CV 가 없으면(404) 자식 생성을 막지 않고 라벨 없이 통과 — 삭제 경합·stale 라벨 허용
+  @Test
+  void handle_clusterVolumeNotFound_allowsWithoutPatch() throws Exception {
+    V1AdmissionReview review = createClusterVolumeChildReview(
+        "PersistentVolumeClaim", "proj-a", CV_NAME);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(clusterVolumeControllerAnalysis());
+    stubGetByPath(Map.of(), Set.of());
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(review.getResponse().getPatch()).isNull();
+  }
+
+  // 부모 CV 에 소유자 라벨이 없으면(비멤버가 만든 CV) 전파할 것이 없다 — 무변경 통과
+  @Test
+  void handle_clusterVolumeWithoutUserLabels_allowsWithoutPatch() throws Exception {
+    V1AdmissionReview review = createClusterVolumeChildReview(
+        "PersistentVolumeClaim", "proj-a", CV_NAME);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(clusterVolumeControllerAnalysis());
+    stubClusterVolume(null);
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(review.getResponse().getPatch()).isNull();
+  }
+
+  // 404 외의 API 오류는 기존 owner 조회와 같은 계약으로 500 거부 (fail-closed)
+  @Test
+  void handle_clusterVolumeFetchFails_rejects500() throws Exception {
+    V1AdmissionReview review = createClusterVolumeChildReview(
+        "PersistentVolumeClaim", "proj-a", CV_NAME);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(clusterVolumeControllerAnalysis());
+    stubGetByPath(Map.of(), Set.of(CV_GET_PATH));
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse().getAllowed()).isFalse();
+    assertThat(review.getResponse().getStatus().getCode()).isEqualTo(500);
+  }
+
+  // 멤버가 직접 만든 오브젝트는 owner 라벨이 있어도 생성자 본인 라벨이 우선 — CV 조회 없음
+  @Test
+  void handle_memberCreatesPvcWithOwnerLabel_usesMemberLabelsWithoutLookup() throws Exception {
+    V1AdmissionReview review = createClusterVolumeChildReview(
+        "PersistentVolumeClaim", "proj-a", CV_NAME);
+    V1alpha1AipubUser aipubUser = createAipubUser("testuser", "uid-123", "user-id-456");
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(new UserInfoAnalysis(
+        "oidc:testuser",
+        List.of("oidc:aipub-member", "system:authenticated"),
+        aipubUser));
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    Map<String, String> adds = decodePatchAdds(review);
+    assertThat(adds).containsEntry(USERNAME_PATCH_PATH, "testuser");
+    assertThat(adds).containsEntry(USERID_PATCH_PATH, "user-id-456");
+    verifyNoApiCall();
+  }
+
+  // allowlist 네임스페이스(시스템 ns 의 앵커 PVC 등) 안의 자식은 기존 규칙대로 라벨 없이 통과
+  @Test
+  void handle_replicaPvcInAllowlistedNamespace_allowsWithoutPatch() throws Exception {
+    Cache<V1Namespace> namespaceCache = new Cache<>();
+    namespaceCache.add(new V1Namespace().metadata(new V1ObjectMeta()
+        .name("allowlisted-ns")
+        .labels(Map.of(LabelConstants.ALLOWLISTED_KEY, "true"))));
+    UserLabelReviewHandler allowlistAwareHandler = new UserLabelReviewHandler(
+        this.mockAnalyzer, mock(ApiResourceDiscovery.class), this.mockApiClient,
+        new NamespaceAllowlistResolver(namespaceCache));
+    V1AdmissionReview review = createClusterVolumeChildReview(
+        "PersistentVolumeClaim", "allowlisted-ns", CV_NAME);
+
+    allowlistAwareHandler.handle(review);
+
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(review.getResponse().getPatch()).isNull();
+    verifyNoApiCall();
+  }
+
+  // CV owner 라벨 경로는 PVC·PV 에만 적용된다 — 워크로드 템플릿 라벨을 상속한 Pod/ReplicaSet 등
+  // 다른 kind 에 이 라벨이 있어도 CV 를 조회하지 않고 기존 controller ownerReference 경로를 탄다
+  // (QA 지적: 그렇지 않으면 CV 소유자가 생성자 아닌 오브젝트의 update/delete 를 얻는다)
+  @Test
+  void handle_nonPvcKindWithOwnerLabel_skipsClusterVolumeLookup() throws Exception {
+    V1AdmissionReview review = createReview("CREATE", "proj-a"); // apps/v1 Deployment
+    ObjectNode objNode = this.mapper.createObjectNode();
+    objNode.putObject("metadata").put("name", "deploy-1")
+        .putObject("labels").put(LabelConstants.CLUSTER_VOLUME_OWNER_KEY, CV_NAME);
+    review.getRequest().setObject(objNode);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(clusterVolumeControllerAnalysis());
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(review.getResponse().getPatch()).isNull(); // ownerReference 없음 → 전파할 부모 없음
+    verifyNoApiCall();
+  }
+
+  // owner 라벨 값은 GET 경로에 그대로 들어가므로 DNS label 형식(CRD 가 CV 이름에 강제)만 받는다
+  @Test
+  void handle_ownerLabelNotDnsLabel_skipsClusterVolumeLookup() throws Exception {
+    V1AdmissionReview review = createClusterVolumeChildReview(
+        "PersistentVolumeClaim", "proj-a", "Not.A_Label");
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(clusterVolumeControllerAnalysis());
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(review.getResponse().getPatch()).isNull();
+    verifyNoApiCall();
   }
 
 }

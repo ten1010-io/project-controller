@@ -51,6 +51,34 @@ public abstract class V1AdmissionReviewUtils {
         && ProjectApiConstants.CLUSTER_VOLUME_RESOURCE_KIND.equals(kind.getKind());
   }
 
+  /**
+   * 요청 대상이 cluster-scoped core/v1 PersistentVolume 인지 판별한다. ClusterVolume 컨트롤러가
+   * 만드는 복제/앵커 PV 가 소유자 라벨 전파 대상이라 kind 로 식별한다
+   * ({@link #isClusterVolumeRequest} 와 같은 이유로 namespace 필드로는 구분할 수 없다).
+   */
+  public static boolean isPersistentVolumeRequest(V1AdmissionReviewRequest request) {
+    V1Kind kind = request.getKind();
+    if (kind == null) {
+      return false;
+    }
+    String group = kind.getGroup();
+    return (group == null || group.isEmpty()) && "PersistentVolume".equals(kind.getKind());
+  }
+
+  /**
+   * 요청 대상이 core/v1 PersistentVolumeClaim 인지 판별한다. ClusterVolume 컨트롤러가 만드는
+   * 복제/앵커 PVC 가 소유자 라벨 전파 대상이다.
+   */
+  public static boolean isPersistentVolumeClaimRequest(V1AdmissionReviewRequest request) {
+    V1Kind kind = request.getKind();
+    if (kind == null) {
+      return false;
+    }
+    String group = kind.getGroup();
+    return (group == null || group.isEmpty())
+        && "PersistentVolumeClaim".equals(kind.getKind());
+  }
+
   public static V1AdmissionReview clone(V1AdmissionReview review) {
     V1AdmissionReview clone = new V1AdmissionReview();
     clone.setApiVersion(review.getApiVersion());
