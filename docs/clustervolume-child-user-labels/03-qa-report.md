@@ -1,5 +1,9 @@
 # QA 보고서 — ClusterVolume 자식(PVC/PV)에 소유자 라벨 전파
 
+> **이력 문서**: 1·2차 QA 는 웹훅 자식 경로 + 리컨실러 구현(커밋 902a377) 시점의 기록이다.
+> 이후 해당 구현은 주기 동기화(`ClusterVolumeChildLabelSynchronizer`)로 교체·제거되었다 —
+> 아래 "3차 QA" 와 "4차 검증" 이 최종 구조에 대한 기록이다.
+
 브랜치 `feat/clustervolume-child-user-labels` (base `upstream/develop` @ `87011f8`). 독립 QA(qa-validator) 1회 + 권고 반영 후 재검증.
 
 ## 빌드/테스트 (권고 반영 후 최종)

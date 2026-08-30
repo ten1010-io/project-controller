@@ -51,27 +51,6 @@ public class OnUpdateFilterFactory {
     return (oldObj, newObj) -> false;
   }
 
-  /** 라벨 맵이 바뀐 update 만 통과. */
-  public <T extends KubernetesObject> BiPredicate<T, T> labelsFilter() {
-    return (oldObj, newObj) ->
-        !K8sObjectUtils.getLabels(oldObj).equals(K8sObjectUtils.getLabels(newObj));
-  }
-
-  /**
-   * 소유자 라벨(username/userid) 중 하나라도 바뀐 update 만 통과 — 소유권 이전(transfer) 감지용.
-   * status 갱신처럼 소유자와 무관한 update 는 걸러낸다.
-   */
-  public <T extends KubernetesObject> BiPredicate<T, T> ownerLabelsFilter() {
-    return (oldObj, newObj) -> {
-      var oldLabels = K8sObjectUtils.getLabels(oldObj);
-      var newLabels = K8sObjectUtils.getLabels(newObj);
-      return !Objects.equals(oldLabels.get(LabelConstants.OBJECT_OWN_USERNAME_KEY),
-          newLabels.get(LabelConstants.OBJECT_OWN_USERNAME_KEY))
-          || !Objects.equals(oldLabels.get(LabelConstants.OBJECT_OWN_USERID_KEY),
-          newLabels.get(LabelConstants.OBJECT_OWN_USERID_KEY));
-    };
-  }
-
   public <T extends KubernetesObject> BiPredicate<T, T> projectNamespaceFilter() {
     return (oldObj, newObj) ->
         !K8sObjectUtils.getOwnerReferences(oldObj).equals(K8sObjectUtils.getOwnerReferences(newObj))

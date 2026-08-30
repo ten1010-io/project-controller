@@ -13,6 +13,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.SubjectResolver;
 import io.ten1010.aipub.projectcontroller.mutating.AdmissionReviewController;
 import io.ten1010.aipub.projectcontroller.mutating.RequestContentCachingFilter;
 import io.ten1010.aipub.projectcontroller.mutating.service.AdmissionReviewService;
+import io.ten1010.aipub.projectcontroller.mutating.service.ClusterVolumeChildLabelSynchronizer;
 import io.ten1010.aipub.projectcontroller.mutating.service.CompositeReviewHandler;
 import io.ten1010.aipub.projectcontroller.mutating.service.DeploymentReviewHandler;
 import io.ten1010.aipub.projectcontroller.mutating.service.ImageReviewReviewHandler;
@@ -135,6 +136,12 @@ public class MutatingConfiguration {
   public UserLabelSynchronizer userLabelSynchronizer(
       ApiResourceDiscovery apiResourceDiscovery, ApiClient apiClient) {
     return new UserLabelSynchronizer(apiResourceDiscovery, apiClient);
+  }
+
+  @Bean
+  public ClusterVolumeChildLabelSynchronizer clusterVolumeChildLabelSynchronizer(
+      ApiClient apiClient, NamespaceAllowlistResolver namespaceAllowlistResolver) {
+    return new ClusterVolumeChildLabelSynchronizer(apiClient, namespaceAllowlistResolver);
   }
 
   @Bean

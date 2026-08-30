@@ -10,8 +10,6 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubVolume;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubVolumeList;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ChainJob;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ChainJobList;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ClusterVolume;
-import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ClusterVolumeList;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1FileServer;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1FileServerList;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageBuild;
@@ -46,7 +44,6 @@ public class K8sApiProvider {
   private final GenericKubernetesApi<V1alpha1SftpServer, V1alpha1SftpServerList> sftpServerApi;
   private final GenericKubernetesApi<V1alpha1ImageBuild, V1alpha1ImageBuildList> imageBuildApi;
   private final GenericKubernetesApi<V1alpha1FileServer, V1alpha1FileServerList> fileServerApi;
-  private final GenericKubernetesApi<V1alpha1ClusterVolume, V1alpha1ClusterVolumeList> clusterVolumeApi;
 
   public K8sApiProvider(ApiClient apiClient) {
     this.apiClient = apiClient;
@@ -62,7 +59,6 @@ public class K8sApiProvider {
     this.sftpServerApi = createSftpServerApi(apiClient);
     this.imageBuildApi = createImageBuildApi(apiClient);
     this.fileServerApi = createFileServerApi(apiClient);
-    this.clusterVolumeApi = createClusterVolumeApi(apiClient);
   }
 
   private static GenericKubernetesApi<V1alpha1Project, V1alpha1ProjectList> createProjectApi(
@@ -201,18 +197,6 @@ public class K8sApiProvider {
         ProjectApiConstants.AIPUB_GROUP,
         ProjectApiConstants.VERSION_V1ALPHA1,
         ProjectApiConstants.FILE_SERVER_RESOURCE_PLURAL,
-        apiClient
-    );
-  }
-
-  private static GenericKubernetesApi<V1alpha1ClusterVolume, V1alpha1ClusterVolumeList> createClusterVolumeApi(
-      ApiClient apiClient) {
-    return new GenericKubernetesApi<>(
-        V1alpha1ClusterVolume.class,
-        V1alpha1ClusterVolumeList.class,
-        ProjectApiConstants.AIPUB_GROUP,
-        ProjectApiConstants.VERSION_V1ALPHA1,
-        ProjectApiConstants.CLUSTER_VOLUME_RESOURCE_PLURAL,
         apiClient
     );
   }

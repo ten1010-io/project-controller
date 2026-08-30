@@ -91,36 +91,3 @@ webhooks:
         scope: "Cluster"
     sideEffects: None
     timeoutSeconds: 10
-  # ClusterVolume 컨트롤러가 만드는 복제/앵커 PersistentVolume 에 부모 ClusterVolume 의 소유자
-  # 라벨(username/userid)을 전파한다. 핸들러는 PV 의 clustervolumes.aipub.ten1010.io/owner 라벨로
-  # 부모 CV 를 찾는다(복제 PVC 는 위 웹훅의 persistentvolumeclaims rule 이 같은 방식으로 처리).
-  # 별도 웹훅으로 분리한 이유: objectSelector 는 rule 단위가 아니라 웹훅 단위로 걸린다.
-  # owner 라벨이 있는 PV(CV 컨트롤러가 만든 것)만 인터셉트해, CSI 프로비저너·시스템 컴포넌트가
-  # 만드는 일반 PV 가 fail-closed 웹훅에 묶이지 않게 한다. PV 는 cluster-scoped 라
-  # namespaceSelector 는 평가되지 않는다. AipubUser ownerReference 는 붙이지 않는다
-  # (UserOwnerReviewHandler 는 PV 를 대상으로 보지 않는다 — 붙이면 사용자 삭제 시 PV 가 GC 된다).
-  - name: userrelationship-v2-clustervolume-pv.project-controller.project.aipub.ten1010.io
-    admissionReviewVersions: [ "v1" ]
-    clientConfig:
-      caBundle: <CA_BUNDLE>
-      service:
-        namespace: project-controller
-        name: project-controller
-        path: /api/v1/userrelationship/mutate
-        port: 8080
-    failurePolicy: Fail
-    matchPolicy: Equivalent
-    namespaceSelector: { }
-    objectSelector:
-      matchExpressions:
-        - key: clustervolumes.aipub.ten1010.io/owner
-          operator: Exists
-    reinvocationPolicy: IfNeeded
-    rules:
-      - apiGroups: [ "" ]
-        apiVersions: [ "*" ]
-        operations: [ "CREATE" ]
-        resources: [ "persistentvolumes" ]
-        scope: "Cluster"
-    sideEffects: None
-    timeoutSeconds: 10
