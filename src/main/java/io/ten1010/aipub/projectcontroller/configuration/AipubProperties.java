@@ -17,12 +17,8 @@ public class AipubProperties {
   /** 이미지 레지스트리(harbor)의 외부 접근 주소. (예: https://aipub-harbor.example.com) */
   @Nullable
   private String harborExternalUrl;
-  @Nullable
-  private Boolean verifyingSsl;
-  @Nullable
-  private String username;
-  @Nullable
-  private String password;
+  /** aipub-backend-gateway 머신 전용 포트(mTLS) 접속에 쓰는 인증 재료. */
+  private MtlsProperty mtls = new MtlsProperty();
   private List<String> reservedNamespace = new ArrayList<>();
   private List<String> addOwnerExceptGvkList = new ArrayList<>();
   /**
@@ -36,5 +32,23 @@ public class AipubProperties {
    * {@link io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver} 참고.
    */
   private List<String> reconcileExcludedLabelSelectors = new ArrayList<>();
+
+  /**
+   * 내부 서비스 간 통신(mTLS) 재료. 두 파일 모두 installer 가 Secret 으로 마운트하며,
+   * 신원(keystore)과 신뢰(truststore)를 서로 다른 경로에 둔다.
+   */
+  @Data
+  public static class MtlsProperty {
+
+    /** 자기 신원. 서비스 전용 Secret 이 마운트된 PKCS#12 파일. */
+    @Nullable
+    private String keyStoreFile;
+    /** installer 가 발급하는 PKCS#12 는 빈 암호다. */
+    private String keyStorePassword = "";
+    /** 신뢰. 내부 전용 CA 인증서(PEM). ingress CA 와는 다른 CA 다. */
+    @Nullable
+    private String caCertificateFile;
+
+  }
 
 }
