@@ -22,7 +22,7 @@ class AipubBackendClientFactoryTest {
       throws Exception {
     AipubProperties.MtlsProperty mtls = mtlsProperty(writeCaCertificate(dir), writeKeyStore(dir));
 
-    ApiClient client = AipubBackendClientFactory.create(SERVER_URL, mtls);
+    ApiClient client = AipubBackendClientFactory.create(SERVER_URL, true, mtls);
 
     assertThat(client.getBasePath()).isEqualTo(SERVER_URL + "/api/v1alpha1");
     assertThat(client.isVerifyingSsl()).isTrue();
@@ -33,11 +33,24 @@ class AipubBackendClientFactoryTest {
   }
 
   @Test
+  void verificationCanBeDisabledWhileStillPresentingClientCertificate(@TempDir Path dir)
+      throws Exception {
+    AipubProperties.MtlsProperty mtls = mtlsProperty(writeCaCertificate(dir), writeKeyStore(dir));
+
+    ApiClient client = AipubBackendClientFactory.create(SERVER_URL, false, mtls);
+
+    assertThat(client.isVerifyingSsl()).isFalse();
+    // 비상 스위치는 서버 검증만 끈다 — 클라이언트 인증서는 계속 제시되므로 게이트웨이 쪽
+    // mTLS 인증은 그대로 동작한다.
+    assertThat(client.getKeyManagers()).isNotNull();
+  }
+
+  @Test
   void failsWhenKeyStoreFileIsMissing(@TempDir Path dir) throws Exception {
     AipubProperties.MtlsProperty mtls = mtlsProperty(
         writeCaCertificate(dir), dir.resolve("absent.p12"));
 
-    assertThatThrownBy(() -> AipubBackendClientFactory.create(SERVER_URL, mtls))
+    assertThatThrownBy(() -> AipubBackendClientFactory.create(SERVER_URL, true, mtls))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("Failed to load client key store");
   }
@@ -47,7 +60,7 @@ class AipubBackendClientFactoryTest {
     AipubProperties.MtlsProperty mtls = mtlsProperty(
         dir.resolve("absent.crt"), writeKeyStore(dir));
 
-    assertThatThrownBy(() -> AipubBackendClientFactory.create(SERVER_URL, mtls))
+    assertThatThrownBy(() -> AipubBackendClientFactory.create(SERVER_URL, true, mtls))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("Failed to read internal CA certificate");
   }
@@ -56,7 +69,7 @@ class AipubBackendClientFactoryTest {
   void failsWhenMtlsPropertiesAreNotConfigured() {
     AipubProperties.MtlsProperty mtls = new AipubProperties.MtlsProperty();
 
-    assertThatThrownBy(() -> AipubBackendClientFactory.create(SERVER_URL, mtls))
+    assertThatThrownBy(() -> AipubBackendClientFactory.create(SERVER_URL, true, mtls))
         .isInstanceOf(NullPointerException.class)
         .hasMessageContaining("app.aipub.mtls.key-store-file");
   }

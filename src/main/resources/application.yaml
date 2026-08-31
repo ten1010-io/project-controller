@@ -27,6 +27,9 @@ app:
     # 머신 전용 mTLS 포트. 8080 은 ingress 가 사용자 트래픽을 보내는 포트라 쓰지 않는다.
     server-url: "https://aipub-backend-gateway.aipub.svc.cluster.local:8443"
     harbor-external-url: "https://aipub-harbor.example.com"
+    # 설치 현장에서 인증서 문제로 막혔을 때 쓰는 비상 스위치. 끄더라도 클라이언트 인증서는
+    # 계속 제시되므로 게이트웨이 쪽 mTLS 인증은 그대로 동작한다.
+    verifying-ssl: true
     # installer 가 Secret 으로 마운트한다. 파일이 없으면 기동에 실패한다.
     mtls:
       key-store-file: /etc/aipub/tls/tls.p12

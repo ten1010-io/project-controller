@@ -17,6 +17,12 @@ public class AipubProperties {
   /** 이미지 레지스트리(harbor)의 외부 접근 주소. (예: https://aipub-harbor.example.com) */
   @Nullable
   private String harborExternalUrl;
+  /**
+   * 서버 인증서 검증 여부. 기본은 검증하며, 설치 현장에서 인증서 문제로 막혔을 때 쓰는
+   * 비상 스위치다. 끄더라도 클라이언트 인증서는 계속 제시되므로 게이트웨이 쪽 mTLS 인증은
+   * 그대로 동작한다.
+   */
+  private boolean verifyingSsl = true;
   /** aipub-backend-gateway 머신 전용 포트(mTLS) 접속에 쓰는 인증 재료. */
   private MtlsProperty mtls = new MtlsProperty();
   private List<String> reservedNamespace = new ArrayList<>();

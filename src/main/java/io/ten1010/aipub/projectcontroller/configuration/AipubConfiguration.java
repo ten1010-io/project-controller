@@ -49,7 +49,8 @@ public class AipubConfiguration {
 
       this.harborExternalUrl = aipubProperties.getHarborExternalUrl();
       this.aipubBackendClient = AipubBackendClientFactory.create(
-          aipubProperties.getServerUrl(), aipubProperties.getMtls());
+          aipubProperties.getServerUrl(), aipubProperties.isVerifyingSsl(),
+          aipubProperties.getMtls());
     } else {
       this.aipubBackendClient = null;
       this.harborExternalUrl = null;

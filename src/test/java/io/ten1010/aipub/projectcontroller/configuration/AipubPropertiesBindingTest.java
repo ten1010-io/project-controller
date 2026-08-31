@@ -36,6 +36,16 @@ class AipubPropertiesBindingTest {
         .isEqualTo("/certificates/aipub-internal-ca.crt");
     // installer 는 암호를 주입하지 않는다 — 발급되는 p12 가 빈 암호이기 때문이다.
     assertThat(properties.getMtls().getKeyStorePassword()).isEmpty();
+    // 주입이 없으면 검증은 켜진 상태여야 한다.
+    assertThat(properties.isVerifyingSsl()).isTrue();
+  }
+
+  @Test
+  void verifyingSslCanBeTurnedOffByInstallerEnvironmentVariable() {
+    Map<String, Object> variables = new HashMap<>();
+    variables.put("APP_AIPUB_VERIFYINGSSL", "false");
+
+    assertThat(bind(variables).isVerifyingSsl()).isFalse();
   }
 
   private static AipubProperties bind(Map<String, Object> variables) {
