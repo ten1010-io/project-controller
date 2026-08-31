@@ -81,8 +81,8 @@ public class UserLabelReviewHandler implements ReviewHandler {
     // "allowlist 네임스페이스 안의 리소스"에 대한 규칙이지, 네임스페이스 오브젝트 자체의 규칙이 아니다.
     // ClusterVolume 도 cluster-scoped 라 적용할 대상 네임스페이스가 없다.
     boolean namespaceRequest = V1AdmissionReviewUtils.isNamespaceRequest(request);
-    boolean clusterScopedRequest =
-        namespaceRequest || V1AdmissionReviewUtils.isClusterVolumeRequest(request);
+    boolean clusterVolumeRequest = V1AdmissionReviewUtils.isClusterVolumeRequest(request);
+    boolean clusterScopedRequest = namespaceRequest || clusterVolumeRequest;
     if (!clusterScopedRequest) {
       Objects.requireNonNull(request.getNamespace());
       if (this.namespaceAllowlistResolver.isAllowlisted(request.getNamespace())) {
@@ -108,12 +108,14 @@ public class UserLabelReviewHandler implements ReviewHandler {
     String username;
     String userid;
 
-    // Namespace 는 admin 도 라벨 대상이다. admin 토큰에는 aipub-member 그룹이 없어
-    // (k8s RBAC 도 oidc:aipub-admin/oidc:aipub-member 별개 그룹) member 검사만으로는
-    // admin 이 만든 네임스페이스가 시스템 네임스페이스로 분류된다. namespaced 리소스는
-    // 기존 quota/소유권 동작 보존을 위해 member 만 유지한다.
+    // Namespace·ClusterVolume 은 admin 도 라벨 대상이다. admin 토큰에는 aipub-member 그룹이
+    // 없어(k8s RBAC 도 oidc:aipub-admin/oidc:aipub-member 별개 그룹) member 검사만으로는 admin 이
+    // 만든 오브젝트가 시스템 소유물로 분류된다. CV 는 라벨이 유일한 소유자 기록이고 자식(PVC/PV)
+    // 라벨 전파(ClusterVolumeChildLabelSynchronizer)의 원천이므로, admin 이 직접 만든 CV 도
+    // 찍어야 소유자·자식 추적이 성립한다. namespaced 리소스는 기존 quota/소유권 동작 보존을 위해
+    // member 만 유지한다.
     boolean labelSubject = analysis.isAipubMember()
-        || (namespaceRequest && analysis.isAipubAdmin());
+        || ((namespaceRequest || clusterVolumeRequest) && analysis.isAipubAdmin());
 
     if (labelSubject && analysis.getAipubUser().isPresent()) {
       V1alpha1AipubUser aipubUser = analysis.getAipubUser().get();
@@ -133,6 +135,8 @@ public class UserLabelReviewHandler implements ReviewHandler {
       // cluster-scoped 오브젝트는 owner 전파 경로가 없다 — Namespace 는 controller
       // ownerReference 를 갖지 않고, owner 조회는 네임스페이스 GET 이라 성립하지 않는다.
       // 비멤버(시스템 컴포넌트·백엔드 SA 등)가 만든 것은 라벨 없이 허용한다.
+      // CV 자식(PVC/PV)의 소유자 라벨은 웹훅이 아니라 ClusterVolumeChildLabelSynchronizer 가
+      // 주기적으로 부모 CV 에서 전파한다 — 어드미션 경로에 CV 조회를 얹지 않는다.
       log.debug("UserLabel: not aipub member creating cluster-scoped object, "
           + "allowing without mutation");
       V1AdmissionReviewUtils.allowMerging(review);

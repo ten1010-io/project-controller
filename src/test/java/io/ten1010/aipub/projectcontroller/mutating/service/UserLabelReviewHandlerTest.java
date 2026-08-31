@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.kubernetes.client.informer.cache.Cache;
@@ -20,7 +21,10 @@ import io.ten1010.aipub.projectcontroller.mutating.dto.V1AdmissionReview;
 import io.ten1010.aipub.projectcontroller.mutating.dto.V1AdmissionReviewRequest;
 import io.ten1010.aipub.projectcontroller.mutating.dto.V1Kind;
 import io.ten1010.aipub.projectcontroller.mutating.dto.V1UserInfo;
+import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -94,6 +98,24 @@ class UserLabelReviewHandlerTest {
     objNode.putObject("metadata").put("name", "cv-test");
     review.getRequest().setObject(objNode);
     return review;
+  }
+
+  private static final String USERNAME_PATCH_PATH =
+      "/metadata/labels/" + LabelConstants.OBJECT_OWN_USERNAME_KEY.replace("/", "~1");
+  private static final String USERID_PATCH_PATH =
+      "/metadata/labels/" + LabelConstants.OBJECT_OWN_USERID_KEY.replace("/", "~1");
+
+  /** 응답 패치의 add 연산을 path → value(text) 맵으로 푼다. */
+  private Map<String, String> decodePatchAdds(V1AdmissionReview review) throws Exception {
+    byte[] decoded = Base64.getDecoder().decode(review.getResponse().getPatch());
+    JsonNode ops = this.mapper.readTree(decoded);
+    Map<String, String> adds = new HashMap<>();
+    for (JsonNode op : ops) {
+      if ("add".equals(op.path("op").textValue()) && op.path("value").isTextual()) {
+        adds.put(op.path("path").textValue(), op.path("value").textValue());
+      }
+    }
+    return adds;
   }
 
   private V1alpha1AipubUser createAipubUser(String name, String uid, String userId) {
@@ -387,15 +409,35 @@ class UserLabelReviewHandlerTest {
     assertThat(review.getResponse().getStatus().getCode()).isEqualTo(400);
   }
 
-  // admin 전용 라벨링은 Namespace 에만 적용된다 — ClusterVolume 은 member 검사만 쓴다
+  // ClusterVolume 은 Namespace 처럼 admin 도 라벨 대상이다 — 라벨이 유일한 소유자 기록이고
+  // 자식(PVC/PV) 라벨 전파(ClusterVolumeChildLabelSynchronizer)의 원천이므로,
+  // admin 이 직접 만든 CV 도 본인 라벨이 찍혀야 한다
   @Test
-  void handle_adminCreatesClusterVolume_allowsWithoutPatch() {
+  void handle_adminCreatesClusterVolume_addsLabels() throws Exception {
     V1AdmissionReview review = createClusterVolumeReview();
     V1alpha1AipubUser aipubUser = createAipubUser("aipubadmin", "uid-admin", "admin-id-1");
     UserInfoAnalysis analysis = new UserInfoAnalysis(
         "oidc:aipubadmin",
         List.of("oidc:aipub-admin", "system:authenticated"),
         aipubUser);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse()).isNotNull();
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    Map<String, String> adds = decodePatchAdds(review);
+    assertThat(adds).containsEntry(USERNAME_PATCH_PATH, "aipubadmin");
+    assertThat(adds).containsEntry(USERID_PATCH_PATH, "admin-id-1");
+  }
+
+  // admin 인데 AipubUser CR 이 없으면 라벨 없이 허용 — Namespace 의 admin 계약과 동일 (400 이 아님)
+  @Test
+  void handle_adminWithoutAipubUserCreatesClusterVolume_allowsWithoutPatch() {
+    V1AdmissionReview review = createClusterVolumeReview();
+    UserInfoAnalysis analysis = new UserInfoAnalysis(
+        "oidc:ghost-admin",
+        List.of("oidc:aipub-admin", "system:authenticated"), null);
     when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);
 
     this.handler.handle(review);
