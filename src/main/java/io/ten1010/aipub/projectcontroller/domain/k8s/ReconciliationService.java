@@ -71,10 +71,12 @@ public class ReconciliationService {
   private final ObjectMapper mapper;
   private final List<String> reservedNamespaces;
   private final WorkloadExclusionResolver workloadExclusionResolver;
+  private final NamespaceAllowlistResolver namespaceAllowlistResolver;
 
   public ReconciliationService(SubjectResolver subjectResolver,
       DockerConfigJsonResolver dockerConfigJsonResolver, List<String> reservedNamespaces,
-      WorkloadExclusionResolver workloadExclusionResolver) {
+      WorkloadExclusionResolver workloadExclusionResolver,
+      NamespaceAllowlistResolver namespaceAllowlistResolver) {
     this.subjectResolver = subjectResolver;
     this.dockerConfigJsonResolver = dockerConfigJsonResolver;
     this.roleNameResolver = new RoleNameResolver();
@@ -84,15 +86,25 @@ public class ReconciliationService {
     this.mapper = new ObjectMapperFactory().createObjectMapper();
     this.reservedNamespaces = reservedNamespaces;
     this.workloadExclusionResolver = workloadExclusionResolver;
+    this.namespaceAllowlistResolver = namespaceAllowlistResolver;
   }
 
   /**
-   * 주어진 워크로드가 reconcile/mutating 대상에서 제외되어야 하는지 판정한다. virt-operator처럼
-   * 자체 워크로드를 직접 소유하는 인프라 오퍼레이터의 객체를 project controller가 건드리지 않도록
+   * 주어진 워크로드가 reconcile/mutating 대상에서 제외되어야 하는지 판정한다. 자체 워크로드를 직접
+   * 소유하는 인프라 오퍼레이터의 객체를 project controller가 건드리지 않도록
    * {@code app.aipub.reconcile-excluded-label-selectors} 설정으로 지정한다.
    */
   public boolean isExcludedFromReconciliation(KubernetesObject object) {
     return this.workloadExclusionResolver.isExcluded(object);
+  }
+
+  /**
+   * 주어진 네임스페이스가 allowlist인지 반환한다. allowlist 네임스페이스는 reconcile과 eviction에서
+   * 빠지고, 그 워크로드에는 project-managed 노드에 스케줄될 수 있도록 {@code Exists} toleration이
+   * 붙는다. {@link NamespaceAllowlistResolver} 참고.
+   */
+  public boolean isNamespaceAllowlisted(@Nullable String namespaceName) {
+    return this.namespaceAllowlistResolver.isAllowlisted(namespaceName);
   }
 
   private static List<V1OwnerReference> removeOwnerReferencesThatReferToProjectKind(
@@ -274,6 +286,38 @@ public class ReconciliationService {
     return List.of(noSchedule, noExecute);
   }
 
+  /**
+   * allowlist 네임스페이스의 워크로드에 주입할 toleration 쌍을 만든다. project-managed taint의 값은
+   * 노드 이름이므로, 모든 project-managed 노드에서 견딜 수 있도록 {@code Exists} operator를 쓴다.
+   */
+  private static List<V1Toleration> buildAllowlistedNamespaceTolerations() {
+    V1Toleration noSchedule = new V1TolerationBuilder()
+        .withKey(TaintConstants.PROJECT_MANAGED_KEY)
+        .withEffect(TaintConstants.NO_SCHEDULE_EFFECT)
+        .withOperator("Exists")
+        .build();
+    V1Toleration noExecute = new V1TolerationBuilder()
+        .withKey(TaintConstants.PROJECT_MANAGED_KEY)
+        .withEffect(TaintConstants.NO_EXECUTE_EFFECT)
+        .withOperator("Exists")
+        .build();
+    return List.of(noSchedule, noExecute);
+  }
+
+  /**
+   * allowlist 네임스페이스의 toleration을 reconcile한다. 일반 경로({@code reconcileTolerations})와
+   * 달리 {@code replaceAllKey*} 재작성은 적용하지 않는다. 워크로드가 스스로 붙인 catch-all
+   * toleration을 보존해야 하기 때문이다. project-managed toleration만 제거하고 {@code Exists} 쌍을
+   * 덧붙이므로 멱등하다.
+   */
+  private static List<V1Toleration> reconcileTolerationsForAllowlistedNamespace(
+      List<V1Toleration> existing) {
+    List<V1Toleration> reconciled = new ArrayList<>(removeProjectManagedTolerations(existing));
+    reconciled.addAll(buildAllowlistedNamespaceTolerations());
+
+    return reconciled;
+  }
+
   private static V1NodeSelectorTerm buildProjectManagedNodeSelectorTerm() {
     return new V1NodeSelectorTermBuilder()
         .withMatchExpressions(buildProjectManagedNodeSelectorRequirement())
@@ -431,6 +475,15 @@ public class ReconciliationService {
           .build();
     };
     reconciled.add(storageClassesApiRule);
+
+    V1PolicyRule persistentVolumesApiRule = switch (projectRoleEnum) {
+      case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+          .withApiGroups("")
+          .withResources("persistentvolumes")
+          .withVerbs("get", "list")
+          .build();
+    };
+    reconciled.add(persistentVolumesApiRule);
 
     V1PolicyRule ingressClassesApiRule = switch (projectRoleEnum) {
       case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
@@ -669,6 +722,11 @@ public class ReconciliationService {
             .withResources(ProjectApiConstants.IMAGE_BUILD_RESOURCE_PLURAL)
             .withVerbs("*")
             .build();
+        V1PolicyRule fileServerApiRule = new V1PolicyRuleBuilder()
+            .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
+            .withResources(ProjectApiConstants.FILE_SERVER_RESOURCE_PLURAL)
+            .withVerbs("*")
+            .build();
         //todo --
 
         yield List.of(
@@ -687,7 +745,8 @@ public class ReconciliationService {
             aipubVolumesApiRule,
             resourceQuotaApiRule,
             commitApiRule,
-            imageBuildApiRule
+            imageBuildApiRule,
+            fileServerApiRule
         );
       }
 
@@ -780,6 +839,14 @@ public class ReconciliationService {
             .withResources(ProjectApiConstants.IMAGE_BUILD_RESOURCE_PLURAL)
             .withVerbs(BASIC_VERBS)
             .build();
+        // FileServer 수정/삭제는 여기서 주지 않는다 — 생성자 본인에게만
+        // AipubUser per-user Role 의 resourceName 단위 update/patch/delete 로 부여된다
+        // (reconcileAipubUserRoleRules → WorkloadResourceResolver 경로).
+        V1PolicyRule fileServerApiRule = new V1PolicyRuleBuilder()
+            .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
+            .withResources(ProjectApiConstants.FILE_SERVER_RESOURCE_PLURAL)
+            .withVerbs(BASIC_VERBS)
+            .build();
         //todo --
 
         yield List.of(
@@ -798,7 +865,8 @@ public class ReconciliationService {
             aipubVolumesApiRule,
             resourceQuotaApiRule,
             commitApiRule,
-            imageBuildApiRule
+            imageBuildApiRule,
+            fileServerApiRule
         );
       }
     };
@@ -926,6 +994,15 @@ public class ReconciliationService {
     } catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  /**
+   * project 에 연결된 image registry robot 의 id 를 조회한다(secret 재발급 없이). 이미 반영된
+   * Secret 의 {@link LabelConstants#IMAGE_REGISTRY_ROBOT_ID_KEY} annotation 과 비교해서, robot
+   * 이 그대로인지(=비밀번호도 그대로 유효한지) 판단하는 용도로 쓰인다.
+   */
+  public Optional<String> resolveImageRegistryRobotId(V1alpha1Project project) {
+    return this.dockerConfigJsonResolver.resolveImageRegistryRobotId(project);
   }
 
   public Map<String, String> reconcileNodeLabels(V1Node existing) {
@@ -1074,6 +1151,17 @@ public class ReconciliationService {
       List<V1Node> allowedProjectNodes) {
     List<V1Toleration> existingTolerations = WorkloadUtils.getTolerations(existing);
     return reconcileTolerations(existingTolerations, allowedProjectNodes);
+  }
+
+  public List<V1Toleration> reconcileTolerationsForAllowlistedNamespace(V1Pod existing) {
+    List<V1Toleration> existingTolerations = WorkloadUtils.getTolerations(existing);
+    return reconcileTolerationsForAllowlistedNamespace(existingTolerations);
+  }
+
+  public List<V1Toleration> reconcileTolerationsForAllowlistedNamespace(
+      V1PodTemplateSpec existing) {
+    List<V1Toleration> existingTolerations = WorkloadUtils.getTolerations(existing);
+    return reconcileTolerationsForAllowlistedNamespace(existingTolerations);
   }
 
   public List<V1NodeSelectorTerm> reconcileNodeSelectorTerms(V1Pod existing,

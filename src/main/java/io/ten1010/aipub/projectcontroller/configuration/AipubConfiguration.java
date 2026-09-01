@@ -7,6 +7,7 @@ import io.ten1010.aipub.projectcontroller.domain.aipubbackend.AipubDockerConfigJ
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.AipubSubjectResolver;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ArtifactService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageHubService;
+import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotSecretStore;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotUsernameResolver;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.RepositoryService;
@@ -75,15 +76,28 @@ public class AipubConfiguration {
     return new DefaultSubjectResolver();
   }
 
+  /**
+   * robot 생성 응답의 평문 secret 을 {@code ImageRegistryRobotReconciler}(생성 측)에서
+   * {@link AipubDockerConfigJsonResolver}(K8s Secret 반영 측)로 넘기기 위한 저장소.
+   *
+   * <p>두 reconciler 가 같은 인스턴스를 봐야 전달이 성립하므로 반드시 단일 빈으로 공유한다.
+   */
   @Bean
-  public DockerConfigJsonResolver dockerConfigJsonResolver() {
+  public ImageRegistryRobotSecretStore imageRegistryRobotSecretStore() {
+    return new ImageRegistryRobotSecretStore();
+  }
+
+  @Bean
+  public DockerConfigJsonResolver dockerConfigJsonResolver(
+      ImageRegistryRobotSecretStore imageRegistryRobotSecretStore) {
     if (this.aipubEnabled) {
       Objects.requireNonNull(this.aipubBackendClient);
       Objects.requireNonNull(this.harborExternalUrl);
       ImageRegistryRobotService robotService = new ImageRegistryRobotServiceImpl(
           this.aipubBackendClient);
       ImageRegistryRobotUsernameResolver usernameResolver = new ImageRegistryRobotUsernameResolverImpl();
-      return new AipubDockerConfigJsonResolver(this.harborExternalUrl, robotService, usernameResolver);
+      return new AipubDockerConfigJsonResolver(this.harborExternalUrl, robotService, usernameResolver,
+          imageRegistryRobotSecretStore);
     }
     return new DefaultDockerConfigJsonResolver();
   }
@@ -116,14 +130,15 @@ public class AipubConfiguration {
   }
 
   @Bean
-  public Controller imageRegistryRobotController(SharedInformerFactory sharedInformerFactory) {
+  public Controller imageRegistryRobotController(SharedInformerFactory sharedInformerFactory,
+      ImageRegistryRobotSecretStore imageRegistryRobotSecretStore) {
     if (this.aipubEnabled) {
       Objects.requireNonNull(this.aipubBackendClient);
       ImageRegistryRobotService robotService = new ImageRegistryRobotServiceImpl(
           this.aipubBackendClient);
       ImageRegistryRobotUsernameResolver usernameResolver = new ImageRegistryRobotUsernameResolverImpl();
       return new ImageRegistryRobotControllerFactory(robotService, usernameResolver,
-          sharedInformerFactory)
+          imageRegistryRobotSecretStore, sharedInformerFactory)
           .createController();
     }
     return new Controller() {

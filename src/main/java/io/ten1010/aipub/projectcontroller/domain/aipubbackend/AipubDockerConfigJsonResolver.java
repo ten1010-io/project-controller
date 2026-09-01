@@ -20,15 +20,18 @@ public class AipubDockerConfigJsonResolver implements DockerConfigJsonResolver {
   private final String registryDomain;
   private final ImageRegistryRobotService imageRegistryRobotService;
   private final ImageRegistryRobotUsernameResolver imageRegistryRobotUsernameResolver;
+  private final ImageRegistryRobotSecretStore secretStore;
 
   public AipubDockerConfigJsonResolver(
       String harborExternalUrl,
       ImageRegistryRobotService imageRegistryRobotService,
-      ImageRegistryRobotUsernameResolver imageRegistryRobotUsernameResolver) {
+      ImageRegistryRobotUsernameResolver imageRegistryRobotUsernameResolver,
+      ImageRegistryRobotSecretStore secretStore) {
     Objects.requireNonNull(harborExternalUrl);
     this.registryDomain = removeHttpProtocolPrefix(harborExternalUrl);
     this.imageRegistryRobotService = imageRegistryRobotService;
     this.imageRegistryRobotUsernameResolver = imageRegistryRobotUsernameResolver;
+    this.secretStore = Objects.requireNonNull(secretStore);
   }
 
   private static String removeHttpProtocolPrefix(String input) {
@@ -65,9 +68,27 @@ public class AipubDockerConfigJsonResolver implements DockerConfigJsonResolver {
     return json;
   }
 
+  @Override
+  public Optional<String> resolveImageRegistryRobotId(V1alpha1Project project) {
+    String username = this.imageRegistryRobotUsernameResolver.resolve(
+        K8sObjectUtils.getName(project));
+    return findByUsername(username).map(ImageRegistryRobot::getId);
+  }
+
+  /**
+   * robot 의 평문 비밀번호를 구한다.
+   *
+   * <p>robot 이 방금 생성된 경우엔 생성 응답의 secret 이 {@link ImageRegistryRobotSecretStore} 에 들어
+   * 있으므로 그것을 쓴다. 없으면 refreshsecret 으로 새로 발급받는다. 재발급은 기존 비밀번호를 무효화하므로,
+   * 이미 쓸 수 있는 secret 이 있을 때 굳이 부르지 않는 편이 낫다.
+   */
   private String getPassword(ImageRegistryRobot robot) {
-    Objects.requireNonNull(robot.getId());
-    ImageRegistryRobotSecret secret = this.imageRegistryRobotService.refreshSecret(robot.getId());
+    String robotId = Objects.requireNonNull(robot.getId());
+    Optional<String> storedSecret = this.secretStore.take(robotId);
+    if (storedSecret.isPresent()) {
+      return storedSecret.get();
+    }
+    ImageRegistryRobotSecret secret = this.imageRegistryRobotService.refreshSecret(robotId);
     Objects.requireNonNull(secret.getSecret());
     return secret.getSecret();
   }

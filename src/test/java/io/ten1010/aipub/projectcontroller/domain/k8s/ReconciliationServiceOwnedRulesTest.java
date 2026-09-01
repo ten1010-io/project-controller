@@ -35,11 +35,25 @@ class ReconciliationServiceOwnedRulesTest {
       }
 
     };
+    DockerConfigJsonResolver dockerConfigJsonResolver = new DockerConfigJsonResolver() {
+
+      @Override
+      public java.util.Map<String, Object> resolve(V1alpha1Project project) {
+        return java.util.Map.of();
+      }
+
+      @Override
+      public Optional<String> resolveImageRegistryRobotId(V1alpha1Project project) {
+        return Optional.empty();
+      }
+
+    };
     this.reconciliationService = new ReconciliationService(
         subjectResolver,
-        project -> java.util.Map.of(),
+        dockerConfigJsonResolver,
         List.of(),
-        new WorkloadExclusionResolver(List.of()));
+        new WorkloadExclusionResolver(List.of()),
+        new NamespaceAllowlistResolver(new io.kubernetes.client.informer.cache.Cache<>()));
 
     this.user = new V1alpha1AipubUser();
     V1ObjectMeta userMeta = new V1ObjectMeta();

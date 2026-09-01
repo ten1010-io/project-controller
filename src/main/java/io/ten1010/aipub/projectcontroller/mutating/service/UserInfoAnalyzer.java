@@ -63,8 +63,10 @@ public class UserInfoAnalyzer {
     Objects.requireNonNull(userInfo.getUsername());
     Objects.requireNonNull(userInfo.getGroups());
 
+    // admin 토큰에는 aipub-member 그룹이 없다 (k8s RBAC에서도 oidc:aipub-admin 과
+    // oidc:aipub-member 는 별개 그룹) — admin 도 AipubUser CR 을 가지므로 함께 조회한다.
     V1alpha1AipubUser aipubUser = null;
-    if (isAipubMember(userInfo.getGroups())) {
+    if (isAipubMember(userInfo.getGroups()) || isAipubAdmin(userInfo.getGroups())) {
       String username = userInfo.getUsername();
       String aipubUserName = username.contains(":")
           ? username.substring(username.lastIndexOf(":") + 1)

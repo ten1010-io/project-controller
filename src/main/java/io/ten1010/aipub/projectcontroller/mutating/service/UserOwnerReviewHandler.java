@@ -3,6 +3,7 @@ package io.ten1010.aipub.projectcontroller.mutating.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kubernetes.client.openapi.models.V1OwnerReference;
+import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ObjectMapperFactory;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
@@ -23,11 +24,14 @@ public class UserOwnerReviewHandler implements ReviewHandler {
 
   private final UserInfoAnalyzer userInfoAnalyzer;
   private final Set<String> exceptGvkSet;
+  private final NamespaceAllowlistResolver namespaceAllowlistResolver;
   private final ObjectMapper mapper;
 
-  public UserOwnerReviewHandler(UserInfoAnalyzer userInfoAnalyzer, Set<String> exceptGvkSet) {
+  public UserOwnerReviewHandler(UserInfoAnalyzer userInfoAnalyzer, Set<String> exceptGvkSet,
+      NamespaceAllowlistResolver namespaceAllowlistResolver) {
     this.userInfoAnalyzer = userInfoAnalyzer;
     this.exceptGvkSet = exceptGvkSet;
+    this.namespaceAllowlistResolver = namespaceAllowlistResolver;
     this.mapper = new ObjectMapperFactory().createObjectMapper();
   }
 
@@ -38,6 +42,18 @@ public class UserOwnerReviewHandler implements ReviewHandler {
     V1AdmissionReviewRequest request = review.getRequest();
     if (!OPERATION_CREATE.equals(request.getOperation())) {
       return false;
+    }
+    // Namespace CREATE 는 request.namespace 가 자신의 이름으로 채워져 아래 검사를 통과하지만,
+    // Namespace 에는 AipubUser ownerReference 를 붙이지 않는다 (라벨 주입만 UserLabelReviewHandler
+    // 가 담당). 붙이면 AipubUser 삭제 시 네임스페이스가 garbage collection 으로 함께 지워진다.
+    if (V1AdmissionReviewUtils.isNamespaceRequest(request)) {
+      return false;
+    }
+    // cluster-scoped 리소스 중에서는 ClusterVolume 만 ownerReference 주입 대상이다.
+    // 소유자인 AipubUser 도 cluster-scoped 이므로 owner 참조가 성립하며(cluster-scoped
+    // 오브젝트는 cluster-scoped 소유자만 가질 수 있다), AipubUser 삭제 시 GC 로 함께 정리된다.
+    if (V1AdmissionReviewUtils.isClusterVolumeRequest(request)) {
+      return true;
     }
     return request.getNamespace() != null && !request.getNamespace().isEmpty();
   }
@@ -52,6 +68,14 @@ public class UserOwnerReviewHandler implements ReviewHandler {
     Objects.requireNonNull(request.getKind().getKind());
     Objects.requireNonNull(request.getUserInfo());
     Objects.requireNonNull(request.getObject());
+
+    // allowlist 스킵은 "allowlist 네임스페이스 안의 리소스"에 대한 규칙이므로
+    // cluster-scoped ClusterVolume 에는 적용할 대상 네임스페이스가 없다.
+    if (!V1AdmissionReviewUtils.isClusterVolumeRequest(request)
+        && this.namespaceAllowlistResolver.isAllowlisted(request.getNamespace())) {
+      V1AdmissionReviewUtils.allowMerging(review);
+      return;
+    }
 
     String group = request.getKind().getGroup() != null ? request.getKind().getGroup() : "";
     String gvk = group + "/"

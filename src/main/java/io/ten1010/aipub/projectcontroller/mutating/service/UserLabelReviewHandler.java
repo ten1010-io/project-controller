@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kubernetes.client.openapi.ApiClient;
 import io.ten1010.aipub.projectcontroller.domain.k8s.LabelConstants;
+import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ObjectMapperFactory;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
@@ -35,13 +36,16 @@ public class UserLabelReviewHandler implements ReviewHandler {
   private final UserInfoAnalyzer userInfoAnalyzer;
   private final ApiResourceDiscovery apiResourceDiscovery;
   private final ApiClient k8sApiClient;
+  private final NamespaceAllowlistResolver namespaceAllowlistResolver;
   private final ObjectMapper mapper;
 
   public UserLabelReviewHandler(UserInfoAnalyzer userInfoAnalyzer,
-      ApiResourceDiscovery apiResourceDiscovery, ApiClient k8sApiClient) {
+      ApiResourceDiscovery apiResourceDiscovery, ApiClient k8sApiClient,
+      NamespaceAllowlistResolver namespaceAllowlistResolver) {
     this.userInfoAnalyzer = userInfoAnalyzer;
     this.apiResourceDiscovery = apiResourceDiscovery;
     this.k8sApiClient = k8sApiClient;
+    this.namespaceAllowlistResolver = namespaceAllowlistResolver;
     this.mapper = new ObjectMapperFactory().createObjectMapper();
   }
 
@@ -52,6 +56,14 @@ public class UserLabelReviewHandler implements ReviewHandler {
     V1AdmissionReviewRequest request = review.getRequest();
     if (!OPERATION_CREATE.equals(request.getOperation())) {
       return false;
+    }
+    // cluster-scoped 리소스 중 라벨 주입 대상은 Namespace 와 ClusterVolume 뿐이다.
+    // ClusterVolume 은 라벨이 유일한 소유자 기록이다 — 생성자 신원은 어드미션 시점에만
+    // 존재하고(request.userInfo) 오브젝트에는 남지 않으므로, 여기서 찍어두지 않으면
+    // 이후 리컨실러·GUI 가 소유자를 알 방법이 없다.
+    if (V1AdmissionReviewUtils.isNamespaceRequest(request)
+        || V1AdmissionReviewUtils.isClusterVolumeRequest(request)) {
+      return true;
     }
     // 소유권 대상(OwnershipPolicy.OWNED_TARGETS)은 전부 네임스페이스 리소스다
     return request.getNamespace() != null && !request.getNamespace().isEmpty();
@@ -64,7 +76,20 @@ public class UserLabelReviewHandler implements ReviewHandler {
     V1AdmissionReviewRequest request = review.getRequest();
     Objects.requireNonNull(request.getUserInfo());
     Objects.requireNonNull(request.getObject());
-    Objects.requireNonNull(request.getNamespace());
+
+    // Namespace 자신의 CREATE 는 allowlist 여부와 무관하게 라벨을 주입한다. allowlist 스킵은
+    // "allowlist 네임스페이스 안의 리소스"에 대한 규칙이지, 네임스페이스 오브젝트 자체의 규칙이 아니다.
+    // ClusterVolume 도 cluster-scoped 라 적용할 대상 네임스페이스가 없다.
+    boolean namespaceRequest = V1AdmissionReviewUtils.isNamespaceRequest(request);
+    boolean clusterVolumeRequest = V1AdmissionReviewUtils.isClusterVolumeRequest(request);
+    boolean clusterScopedRequest = namespaceRequest || clusterVolumeRequest;
+    if (!clusterScopedRequest) {
+      Objects.requireNonNull(request.getNamespace());
+      if (this.namespaceAllowlistResolver.isAllowlisted(request.getNamespace())) {
+        V1AdmissionReviewUtils.allowMerging(review);
+        return;
+      }
+    }
 
     log.debug("UserLabel handle: user={}, namespace={}, operation={}",
         request.getUserInfo().getUsername(), request.getNamespace(), request.getOperation());
@@ -83,7 +108,16 @@ public class UserLabelReviewHandler implements ReviewHandler {
     String username;
     String userid;
 
-    if (analysis.isAipubMember() && analysis.getAipubUser().isPresent()) {
+    // Namespace·ClusterVolume 은 admin 도 라벨 대상이다. admin 토큰에는 aipub-member 그룹이
+    // 없어(k8s RBAC 도 oidc:aipub-admin/oidc:aipub-member 별개 그룹) member 검사만으로는 admin 이
+    // 만든 오브젝트가 시스템 소유물로 분류된다. CV 는 라벨이 유일한 소유자 기록이고 자식(PVC/PV)
+    // 라벨 전파(ClusterVolumeChildLabelSynchronizer)의 원천이므로, admin 이 직접 만든 CV 도
+    // 찍어야 소유자·자식 추적이 성립한다. namespaced 리소스는 기존 quota/소유권 동작 보존을 위해
+    // member 만 유지한다.
+    boolean labelSubject = analysis.isAipubMember()
+        || ((namespaceRequest || clusterVolumeRequest) && analysis.isAipubAdmin());
+
+    if (labelSubject && analysis.getAipubUser().isPresent()) {
       V1alpha1AipubUser aipubUser = analysis.getAipubUser().get();
       if (aipubUser.getSpec() == null || aipubUser.getSpec().getId() == null) {
         V1AdmissionReviewUtils.reject(review, HttpStatus.INTERNAL_SERVER_ERROR.value(),
@@ -96,6 +130,16 @@ public class UserLabelReviewHandler implements ReviewHandler {
     } else if (analysis.isAipubMember()) {
       V1AdmissionReviewUtils.reject(review, 400,
           "Not found aipub user: " + analysis.getUsername());
+      return;
+    } else if (clusterScopedRequest) {
+      // cluster-scoped 오브젝트는 owner 전파 경로가 없다 — Namespace 는 controller
+      // ownerReference 를 갖지 않고, owner 조회는 네임스페이스 GET 이라 성립하지 않는다.
+      // 비멤버(시스템 컴포넌트·백엔드 SA 등)가 만든 것은 라벨 없이 허용한다.
+      // CV 자식(PVC/PV)의 소유자 라벨은 웹훅이 아니라 ClusterVolumeChildLabelSynchronizer 가
+      // 주기적으로 부모 CV 에서 전파한다 — 어드미션 경로에 CV 조회를 얹지 않는다.
+      log.debug("UserLabel: not aipub member creating cluster-scoped object, "
+          + "allowing without mutation");
+      V1AdmissionReviewUtils.allowMerging(review);
       return;
     } else {
       log.debug("UserLabel: not aipub member, looking up owner labels");

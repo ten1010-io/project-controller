@@ -2,9 +2,12 @@ package io.ten1010.aipub.projectcontroller.mutating;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ObjectMapperFactory;
+import io.ten1010.aipub.projectcontroller.domain.k8s.ProjectApiConstants;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.JsonPatchHelper;
 import io.ten1010.aipub.projectcontroller.mutating.dto.V1AdmissionReview;
+import io.ten1010.aipub.projectcontroller.mutating.dto.V1AdmissionReviewRequest;
 import io.ten1010.aipub.projectcontroller.mutating.dto.V1AdmissionReviewResponse;
+import io.ten1010.aipub.projectcontroller.mutating.dto.V1Kind;
 import io.ten1010.aipub.projectcontroller.mutating.dto.V1Status;
 import io.ten1010.common.jsonpatch.dto.JsonPatch;
 import io.ten1010.common.jsonpatch.dto.JsonPatchOperation;
@@ -18,6 +21,35 @@ import java.util.Objects;
 public abstract class V1AdmissionReviewUtils {
 
   private static final ObjectMapper MAPPER = new ObjectMapperFactory().createObjectMapper();
+
+  /**
+   * 요청 대상이 core/v1 Namespace 인지 판별한다. Namespace CREATE 요청은
+   * {@code request.namespace}가 오브젝트 자신의 이름으로 채워지므로 namespace 필드 유무만으로는
+   * cluster-scoped 여부를 구분할 수 없다 — kind 로 판별해야 한다.
+   */
+  public static boolean isNamespaceRequest(V1AdmissionReviewRequest request) {
+    V1Kind kind = request.getKind();
+    if (kind == null) {
+      return false;
+    }
+    String group = kind.getGroup();
+    return (group == null || group.isEmpty()) && "Namespace".equals(kind.getKind());
+  }
+
+  /**
+   * 요청 대상이 cluster-scoped {@code aipub.ten1010.io/ClusterVolume} 인지 판별한다.
+   * cluster-scoped 리소스는 {@code request.namespace}가 비어 오므로 namespace 필드만으로는
+   * "네임스페이스 리소스가 아니다"까지만 알 수 있다 — 어떤 cluster-scoped 타입인지는 kind 로
+   * 판별해야 한다.
+   */
+  public static boolean isClusterVolumeRequest(V1AdmissionReviewRequest request) {
+    V1Kind kind = request.getKind();
+    if (kind == null) {
+      return false;
+    }
+    return ProjectApiConstants.AIPUB_GROUP.equals(kind.getGroup())
+        && ProjectApiConstants.CLUSTER_VOLUME_RESOURCE_KIND.equals(kind.getKind());
+  }
 
   public static V1AdmissionReview clone(V1AdmissionReview review) {
     V1AdmissionReview clone = new V1AdmissionReview();

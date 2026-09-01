@@ -23,6 +23,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1beta1Workspace;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubVolume;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ChainJob;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1FileServer;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageBuild;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageHub;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeGroup;
@@ -171,6 +172,20 @@ public class RequestBuilderFactory {
       List<? extends KubernetesObject> objects = objectIndexer.byIndex(
           IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
           namespace);
+      return objects.stream()
+          .map(e -> new Request(K8sObjectUtils.getNamespace(e), K8sObjectUtils.getName(e)))
+          .toList();
+    };
+  }
+
+  public Function<V1Namespace, List<Request>> namespaceToNamespacedObjects(
+      Class<? extends KubernetesObject> objectClass) {
+    Indexer<? extends KubernetesObject> objectIndexer = this.sharedInformerFactory.getExistingSharedIndexInformer(
+        objectClass).getIndexer();
+    return namespace -> {
+      List<? extends KubernetesObject> objects = objectIndexer.byIndex(
+          IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
+          K8sObjectUtils.getName(namespace));
       return objects.stream()
           .map(e -> new Request(K8sObjectUtils.getNamespace(e), K8sObjectUtils.getName(e)))
           .toList();
@@ -422,6 +437,19 @@ public class RequestBuilderFactory {
     return imageBuild -> {
       String projName = K8sObjectUtils.getNamespace(imageBuild);
       Optional<String> usernameOpt = UsernameUtils.getUsername(imageBuild);
+
+      if (usernameOpt.isPresent()) {
+        String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());
+        return List.of(new Request(projName, roleName));
+      }
+      return List.of();
+    };
+  }
+
+  public Function<V1alpha1FileServer, List<Request>> fileServerToAipubUserRoles() {
+    return fileServer -> {
+      String projName = K8sObjectUtils.getNamespace(fileServer);
+      Optional<String> usernameOpt = UsernameUtils.getUsername(fileServer);
 
       if (usernameOpt.isPresent()) {
         String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());

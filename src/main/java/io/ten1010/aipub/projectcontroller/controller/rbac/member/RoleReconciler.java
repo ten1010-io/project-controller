@@ -55,6 +55,9 @@ public class RoleReconciler extends AbstractReconciler {
 
   @Override
   protected Result reconcileInternal(Request request) throws ApiException {
+    if (this.reconciliationService.isNamespaceAllowlisted(request.getNamespace())) {
+      return new Result(false);
+    }
     Optional<ProjectNameAndRole> projNameOpt = this.roleNameResolver.resolveProjectName(
         request.getName());
     if (projNameOpt.isEmpty()) {

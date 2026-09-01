@@ -7,7 +7,11 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.kubernetes.client.informer.cache.Cache;
+import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
+import io.ten1010.aipub.projectcontroller.domain.k8s.LabelConstants;
+import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ObjectMapperFactory;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.mutating.dto.V1AdmissionReview;
@@ -15,6 +19,7 @@ import io.ten1010.aipub.projectcontroller.mutating.dto.V1AdmissionReviewRequest;
 import io.ten1010.aipub.projectcontroller.mutating.dto.V1Kind;
 import io.ten1010.aipub.projectcontroller.mutating.dto.V1UserInfo;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +35,8 @@ class UserOwnerReviewHandlerTest {
     this.mockAnalyzer = mock(UserInfoAnalyzer.class);
     this.handler = new UserOwnerReviewHandler(
         this.mockAnalyzer,
-        Set.of("aipub.ten1010.io/v1alpha1/Commit"));
+        Set.of("aipub.ten1010.io/v1alpha1/Commit"),
+        new NamespaceAllowlistResolver(new Cache<>()));
     this.mapper = new ObjectMapperFactory().createObjectMapper();
   }
 
@@ -109,6 +115,99 @@ class UserOwnerReviewHandlerTest {
     assertThat(this.handler.canHandle(review)).isFalse();
   }
 
+  // Namespace CREATE 는 request.namespace 가 자신의 이름으로 채워지지만 ownerReference 는 붙이지 않는다
+  @Test
+  void canHandle_createNamespaceWithSelfNamespace_returnsFalse() {
+    V1AdmissionReview review = createReview("CREATE", "test-ns", "", "v1", "Namespace");
+    assertThat(this.handler.canHandle(review)).isFalse();
+  }
+
+  // cluster-scoped ClusterVolume 은 request.namespace 가 비어 오지만 ownerReference 주입 대상이다
+  @Test
+  void canHandle_createClusterVolume_returnsTrue() {
+    V1AdmissionReview review = createReview(
+        "CREATE", null, "aipub.ten1010.io", "v1alpha1", "ClusterVolume");
+    assertThat(this.handler.canHandle(review)).isTrue();
+  }
+
+  @Test
+  void canHandle_updateClusterVolume_returnsFalse() {
+    V1AdmissionReview review = createReview(
+        "UPDATE", null, "aipub.ten1010.io", "v1alpha1", "ClusterVolume");
+    assertThat(this.handler.canHandle(review)).isFalse();
+  }
+
+  // ClusterVolume 외의 cluster-scoped 리소스는 그대로 제외된다
+  @Test
+  void canHandle_createOtherClusterScopedResource_returnsFalse() {
+    V1AdmissionReview review = createReview(
+        "CREATE", null, "project.aipub.ten1010.io", "v1alpha1", "Project");
+    assertThat(this.handler.canHandle(review)).isFalse();
+  }
+
+  // 같은 이름의 다른 그룹 kind 는 대상이 아니다
+  @Test
+  void canHandle_createClusterVolumeOfOtherGroup_returnsFalse() {
+    V1AdmissionReview review = createReview(
+        "CREATE", null, "example.com", "v1alpha1", "ClusterVolume");
+    assertThat(this.handler.canHandle(review)).isFalse();
+  }
+
+  @Test
+  void handle_clusterVolumeByMemberUser_addsOwnerReference() {
+    V1AdmissionReview review = createReview(
+        "CREATE", null, "aipub.ten1010.io", "v1alpha1", "ClusterVolume");
+
+    V1alpha1AipubUser aipubUser = createAipubUser("testuser", "user-uid-123");
+    UserInfoAnalysis analysis = new UserInfoAnalysis(
+        "oidc:testuser",
+        List.of("oidc:aipub-member", "system:authenticated"),
+        aipubUser);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse()).isNotNull();
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(review.getResponse().getPatch()).isNotNull();
+    assertThat(review.getResponse().getPatchType()).isEqualTo("JSONPatch");
+  }
+
+  // 백엔드 SA 등 비멤버가 만든 ClusterVolume 은 무변경 통과된다
+  @Test
+  void handle_clusterVolumeByNonMemberUser_allowsWithoutPatch() {
+    V1AdmissionReview review = createReview(
+        "CREATE", null, "aipub.ten1010.io", "v1alpha1", "ClusterVolume");
+
+    UserInfoAnalysis analysis = new UserInfoAnalysis(
+        "system:serviceaccount:aipub:aipub-backend",
+        List.of("system:serviceaccounts", "system:authenticated"), null);
+    when(this.mockAnalyzer.analyzeV2(any())).thenReturn(analysis);
+
+    this.handler.handle(review);
+
+    assertThat(review.getResponse()).isNotNull();
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(review.getResponse().getPatch()).isNull();
+  }
+
+  // config 로 제외한 GVK 는 cluster-scoped 경로에서도 무변경 통과된다
+  @Test
+  void handle_exceptedClusterVolumeGvk_allowsWithoutPatch() {
+    UserOwnerReviewHandler exceptingHandler = new UserOwnerReviewHandler(
+        this.mockAnalyzer,
+        Set.of("aipub.ten1010.io/v1alpha1/ClusterVolume"),
+        new NamespaceAllowlistResolver(new Cache<>()));
+    V1AdmissionReview review = createReview(
+        "CREATE", null, "aipub.ten1010.io", "v1alpha1", "ClusterVolume");
+
+    exceptingHandler.handle(review);
+
+    assertThat(review.getResponse()).isNotNull();
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(review.getResponse().getPatch()).isNull();
+  }
+
   @Test
   void handle_exceptedGvk_allowsWithoutPatch() {
     V1AdmissionReview review = createReview(
@@ -153,6 +252,23 @@ class UserOwnerReviewHandlerTest {
     assertThat(review.getResponse().getAllowed()).isTrue();
     assertThat(review.getResponse().getPatch()).isNotNull();
     assertThat(review.getResponse().getPatchType()).isEqualTo("JSONPatch");
+  }
+
+  @Test
+  void handle_allowlistedNamespace_allowsWithoutPatch() {
+    Cache<V1Namespace> namespaceCache = new Cache<>();
+    namespaceCache.add(new V1Namespace().metadata(new V1ObjectMeta()
+        .name("kubevirt")
+        .labels(Map.of(LabelConstants.ALLOWLISTED_KEY, "true"))));
+    UserOwnerReviewHandler allowlistAwareHandler = new UserOwnerReviewHandler(
+        this.mockAnalyzer, Set.of(), new NamespaceAllowlistResolver(namespaceCache));
+    V1AdmissionReview review = createReview("CREATE", "kubevirt", "apps", "v1", "Deployment");
+
+    allowlistAwareHandler.handle(review);
+
+    assertThat(review.getResponse()).isNotNull();
+    assertThat(review.getResponse().getAllowed()).isTrue();
+    assertThat(review.getResponse().getPatch()).isNull();
   }
 
   @Test

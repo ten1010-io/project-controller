@@ -13,6 +13,7 @@ import io.ten1010.aipub.projectcontroller.controller.RequestHelper;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceNameResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.NodeUtils;
@@ -31,11 +32,13 @@ public class PodReconciler extends AbstractReconciler {
   private final Indexer<V1alpha1Project> projectIndexer;
   private final CoreV1Api coreV1Api;
   private final PodNodesResolver podNodesResolver;
+  private final NamespaceAllowlistResolver namespaceAllowlistResolver;
 
   public PodReconciler(
       SharedInformerFactory sharedInformerFactory,
       K8sApiProvider k8sApiProvider,
-      PodNodesResolver podNodesResolver) {
+      PodNodesResolver podNodesResolver,
+      NamespaceAllowlistResolver namespaceAllowlistResolver) {
     this.keyResolver = new KeyResolver();
     this.namespaceNameResolver = new NamespaceNameResolver();
     this.podIndexer = sharedInformerFactory
@@ -49,6 +52,7 @@ public class PodReconciler extends AbstractReconciler {
         .getIndexer();
     this.coreV1Api = new CoreV1Api(k8sApiProvider.getApiClient());
     this.podNodesResolver = podNodesResolver;
+    this.namespaceAllowlistResolver = namespaceAllowlistResolver;
   }
 
   @Override
@@ -59,6 +63,13 @@ public class PodReconciler extends AbstractReconciler {
       return new Result(false);
     }
     V1Pod pod = podOpt.get();
+
+    // allowlist 네임스페이스의 파드는 project-managed 노드에 있어도 절대 삭제하지 않는다. owner
+    // kind가 등록된 워크로드 타입이 아닐 때 파드를 삭제하는 UnsupportedControllerException 분기보다
+    // 먼저 검사해야 한다.
+    if (this.namespaceAllowlistResolver.isAllowlisted(K8sObjectUtils.getNamespace(pod))) {
+      return new Result(false);
+    }
 
     Optional<String> nodeNameOpt = WorkloadUtils.getNodeName(pod);
     if (nodeNameOpt.isEmpty()) {

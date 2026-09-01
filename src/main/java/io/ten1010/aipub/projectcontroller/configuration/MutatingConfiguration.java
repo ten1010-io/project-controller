@@ -7,11 +7,13 @@ import io.ten1010.aipub.projectcontroller.controller.workload.WorkloadController
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ArtifactService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageHubService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.RepositoryService;
+import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
 import io.ten1010.aipub.projectcontroller.domain.k8s.SubjectResolver;
 import io.ten1010.aipub.projectcontroller.mutating.AdmissionReviewController;
 import io.ten1010.aipub.projectcontroller.mutating.RequestContentCachingFilter;
 import io.ten1010.aipub.projectcontroller.mutating.service.AdmissionReviewService;
+import io.ten1010.aipub.projectcontroller.mutating.service.ClusterVolumeChildLabelSynchronizer;
 import io.ten1010.aipub.projectcontroller.mutating.service.CompositeReviewHandler;
 import io.ten1010.aipub.projectcontroller.mutating.service.DeploymentReviewHandler;
 import io.ten1010.aipub.projectcontroller.mutating.service.ImageReviewReviewHandler;
@@ -89,8 +91,10 @@ public class MutatingConfiguration {
 
   @Bean
   public ProjectReviewHandler projectReviewHandler(AipubProperties aipubProperties,
-      SubjectResolver subjectResolver, SharedInformerFactory sharedInformerFactory) {
-    return new ProjectReviewHandler(aipubProperties, subjectResolver, sharedInformerFactory);
+      SubjectResolver subjectResolver, SharedInformerFactory sharedInformerFactory,
+      NamespaceAllowlistResolver namespaceAllowlistResolver) {
+    return new ProjectReviewHandler(aipubProperties, subjectResolver, sharedInformerFactory,
+        namespaceAllowlistResolver);
   }
 
   @Bean
@@ -115,15 +119,16 @@ public class MutatingConfiguration {
   @Qualifier("aipubReviewHandlers")
   public List<ReviewHandler> aipubReviewHandlers(
       UserInfoAnalyzer userInfoAnalyzer, AipubProperties aipubProperties,
-      ApiResourceDiscovery apiResourceDiscovery, ApiClient apiClient) {
+      ApiResourceDiscovery apiResourceDiscovery, ApiClient apiClient,
+      NamespaceAllowlistResolver namespaceAllowlistResolver) {
     Set<String> exceptGvkSet = aipubProperties.getAddOwnerExceptGvkList().stream()
         .map(String::trim)
         .filter(s -> !s.isEmpty())
         .collect(Collectors.toSet());
     UserOwnerReviewHandler userOwnerReviewHandler = new UserOwnerReviewHandler(
-        userInfoAnalyzer, exceptGvkSet);
+        userInfoAnalyzer, exceptGvkSet, namespaceAllowlistResolver);
     UserLabelReviewHandler userLabelReviewHandler = new UserLabelReviewHandler(
-        userInfoAnalyzer, apiResourceDiscovery, apiClient);
+        userInfoAnalyzer, apiResourceDiscovery, apiClient, namespaceAllowlistResolver);
     return List.of(userOwnerReviewHandler, userLabelReviewHandler);
   }
 
@@ -134,9 +139,17 @@ public class MutatingConfiguration {
   }
 
   @Bean
+  public ClusterVolumeChildLabelSynchronizer clusterVolumeChildLabelSynchronizer(
+      ApiClient apiClient, NamespaceAllowlistResolver namespaceAllowlistResolver) {
+    return new ClusterVolumeChildLabelSynchronizer(apiClient, namespaceAllowlistResolver);
+  }
+
+  @Bean
   public WorkloadLabelReviewHandler workloadLabelReviewHandler(
-      ApiResourceDiscovery apiResourceDiscovery, ApiClient apiClient) {
-    return new WorkloadLabelReviewHandler(apiResourceDiscovery, apiClient);
+      ApiResourceDiscovery apiResourceDiscovery, ApiClient apiClient,
+      NamespaceAllowlistResolver namespaceAllowlistResolver) {
+    return new WorkloadLabelReviewHandler(apiResourceDiscovery, apiClient,
+        namespaceAllowlistResolver);
   }
 
   @Bean

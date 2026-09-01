@@ -44,6 +44,7 @@ import io.ten1010.aipub.projectcontroller.controller.workload.WorkloadController
 import io.ten1010.aipub.projectcontroller.controller.workload.WorkloadControllerNodesResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sObjectType;
+import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.informer.owned.OwnedObjectInformerManager;
@@ -239,8 +240,10 @@ public class ControllerConfiguration {
   @Bean
   public Controller podController(SharedInformerFactory sharedInformerFactory,
       K8sApiProvider k8sApiProvider,
-      PodNodesResolver podNodesResolver) {
-    return new PodControllerFactory(sharedInformerFactory, k8sApiProvider, podNodesResolver)
+      PodNodesResolver podNodesResolver,
+      NamespaceAllowlistResolver namespaceAllowlistResolver) {
+    return new PodControllerFactory(sharedInformerFactory, k8sApiProvider, podNodesResolver,
+        namespaceAllowlistResolver)
         .createController();
   }
 
