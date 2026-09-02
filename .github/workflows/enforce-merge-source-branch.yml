@@ -1,18 +1,19 @@
 name: Enforce Merge Source Branch
 
-# main/develop로 향하는 PR의 소스(head) 브랜치가 브랜치 전략에 맞는 패턴인지 검사한다.
+# main/develop/released/*로 향하는 PR의 소스(head) 브랜치가 브랜치 전략에 맞는 패턴인지 검사한다.
 # 참고: 이 조직(ten1010-io)은 현재 GitHub Free 플랜이라 private 저장소에서
 # branch protection/rulesets(Required status check)을 설정할 수 없다. 그래서
 # 지금은 이 체크가 머지 버튼을 강제로 막지는 못하고, PR 화면에 초록/빨강으로
 # 표시되어 리뷰어가 육안으로 판단하는 시각적 신호로만 동작한다. GitHub Team
-# 이상으로 업그레이드되면 이 워크플로우의 job을 main/develop의 Required status
-# check로 등록해 실제 강제가 가능해진다.
+# 이상으로 업그레이드되면 이 워크플로우의 job을 main/develop/released/*의 Required
+# status check로 등록해 실제 강제가 가능해진다.
 on:
   pull_request:
     types: [opened, synchronize, reopened, edited]
     branches:
       - main
       - develop
+      - 'released/**'
 
 jobs:
   check-source-branch:
@@ -41,12 +42,24 @@ jobs:
               ;;
             develop)
               case "$HEAD" in
-                hotfix/*|feature/*|feat/*|fix/*|chore/*|docs/*)
+                hotfix/*|feature/*|feat/*|fix/*|chore/*|docs/*|refactor/*)
                   echo "OK: '${HEAD}' -> develop 은 허용된 패턴입니다."
                   exit 0
                   ;;
                 *)
-                  echo "::error::develop 은 hotfix/*, feature/*, feat/*, fix/*, chore/*, docs/* 브랜치에서만 머지할 수 있습니다 (현재 소스: ${HEAD})"
+                  echo "::error::develop 은 hotfix/*, feature/*, feat/*, fix/*, chore/*, docs/*, refactor/* 브랜치에서만 머지할 수 있습니다 (현재 소스: ${HEAD})"
+                  exit 1
+                  ;;
+              esac
+              ;;
+            released/*)
+              case "$HEAD" in
+                hotfix/*)
+                  echo "OK: '${HEAD}' -> ${BASE} 은 허용된 패턴입니다."
+                  exit 0
+                  ;;
+                *)
+                  echo "::error::released/* 는 hotfix/* 브랜치에서만 머지할 수 있습니다 (현재 소스: ${HEAD})"
                   exit 1
                   ;;
               esac
@@ -56,3 +69,29 @@ jobs:
               exit 0
               ;;
           esac
+
+  check-cutover-tag:
+    # develop -> main 컷오버 PR에 한해, docs/branch-strategy.md 2.1절 정책(컷오버 전 main에
+    # 버전 태그를 먼저 찍는다)이 지켜졌는지 검사한다. hotfix -> main 은 대상 아님(컷오버가 아니라
+    # 일반 긴급 수정 머지이므로).
+    if: github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'develop'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Verify current main has been tagged before cutover
+        run: |
+          git fetch origin main --tags
+          MAIN_SHA=$(git rev-parse origin/main)
+          TAGS=$(git tag --points-at "$MAIN_SHA")
+
+          if [ -z "$TAGS" ]; then
+            echo "::error::develop -> main 컷오버 전에는 현재 main(${MAIN_SHA})에 버전 태그(예: v5.0.0)를 먼저 찍어야 합니다. docs/branch-strategy.md 2.1절 참고."
+            exit 1
+          else
+            echo "OK: main(${MAIN_SHA})에 태그가 이미 존재합니다: ${TAGS}"
+          fi
