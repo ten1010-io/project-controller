@@ -8,6 +8,7 @@ import io.kubernetes.client.extended.workqueue.WorkQueue;
 import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.openapi.models.V1ClusterRole;
 import io.kubernetes.client.openapi.models.V1Node;
+import io.kubernetes.client.openapi.models.V1PersistentVolume;
 import io.ten1010.aipub.projectcontroller.controller.ControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.watch.DefaultControllerWatch;
 import io.ten1010.aipub.projectcontroller.controller.watch.OnUpdateFilterFactory;
@@ -55,12 +56,15 @@ public class ClusterRoleControllerFactory implements ControllerFactory {
             this.sharedInformerFactory.getExistingSharedIndexInformer(V1Node.class)::hasSynced)
         .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
             V1alpha1AipubUser.class)::hasSynced)
+        .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
+            V1PersistentVolume.class)::hasSynced)
         .watch(this::createClusterRoleWatch)
         .watch(this::createProjectWatch)
         .watch(this::createNodeGroupWatch)
         .watch(this::createResourceSetWatch)
         .watch(this::createNodeWatch)
         .watch(this::createAipubUserWatch)
+        .watch(this::createPersistentVolumeWatch)
         .withReconciler(new ClusterRoleReconciler(this.sharedInformerFactory, this.k8sApiProvider,
             this.reconciliationService))
         .build();
@@ -110,6 +114,15 @@ public class ClusterRoleControllerFactory implements ControllerFactory {
         V1alpha1AipubUser.class);
     watch.setOnUpdateFilter(this.onUpdateFilterFactory.alwaysFalseFilter());
     watch.setRequestBuilder(this.requestBuilderFactory.aipubUserToProjectRoles(false));
+    return watch;
+  }
+
+  private ControllerWatch<V1PersistentVolume> createPersistentVolumeWatch(
+      WorkQueue<Request> workQueue) {
+    DefaultControllerWatch<V1PersistentVolume> watch = new DefaultControllerWatch<>(workQueue,
+        V1PersistentVolume.class);
+    watch.setOnUpdateFilter(this.onUpdateFilterFactory.persistentVolumeClaimAndPhaseFilter());
+    watch.setRequestBuilder(this.requestBuilderFactory.persistentVolumeToProjectRoles(false));
     return watch;
   }
 

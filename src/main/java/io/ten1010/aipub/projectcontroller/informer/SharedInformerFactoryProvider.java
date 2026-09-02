@@ -14,6 +14,8 @@ import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1NamespaceList;
 import io.kubernetes.client.openapi.models.V1Node;
 import io.kubernetes.client.openapi.models.V1NodeList;
+import io.kubernetes.client.openapi.models.V1PersistentVolume;
+import io.kubernetes.client.openapi.models.V1PersistentVolumeList;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.openapi.models.V1ResourceQuota;
@@ -75,6 +77,7 @@ public class SharedInformerFactoryProvider {
     registerResourceSetInformer(informerFactory);
     registerNamespaceInformer(informerFactory);
     registerNodeInformer(informerFactory);
+    registerPersistentVolumeInformer(informerFactory);
     registerClusterRoleInformer(informerFactory);
     registerClusterRoleBindingInformer(informerFactory);
     registerRoleInformer(informerFactory);
@@ -198,6 +201,19 @@ public class SharedInformerFactoryProvider {
           Map<String, String> labels = K8sObjectUtils.getLabels(obj);
           return LabelUtils.getLabelStrings(labels);
         }));
+  }
+
+  /** PV resourceNames 산정용. claimRef 와 phase 가 PV 안에 있어 PVC 인포머는 필요 없다. */
+  private void registerPersistentVolumeInformer(SharedInformerFactory informerFactory) {
+    ApiClient apiClient = this.k8sApiProvider.getApiClient();
+    informerFactory.sharedIndexInformerFor(
+        (CallGeneratorParams params) -> new CoreV1Api(apiClient).listPersistentVolume()
+            .resourceVersion(params.resourceVersion)
+            .watch(params.watch)
+            .timeoutSeconds(params.timeoutSeconds)
+            .buildCall(null),
+        V1PersistentVolume.class,
+        V1PersistentVolumeList.class);
   }
 
   private void registerClusterRoleInformer(SharedInformerFactory informerFactory) {

@@ -9,6 +9,7 @@ import io.kubernetes.client.openapi.models.V1Deployment;
 import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1Node;
+import io.kubernetes.client.openapi.models.V1PersistentVolume;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1ReplicaSet;
 import io.kubernetes.client.openapi.models.V1ResourceQuota;
@@ -34,6 +35,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1SftpServer;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.AipubUserUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.NodeUtils;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.PersistentVolumeUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.ProjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.RoleUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.WorkloadUtils;
@@ -343,6 +345,14 @@ public class OnUpdateFilterFactory {
     return (oldObj, newObj) ->
         !K8sObjectUtils.getOwnerReferences(oldObj).equals(K8sObjectUtils.getOwnerReferences(newObj))
             || !K8sObjectUtils.getLabels(oldObj).equals(K8sObjectUtils.getLabels(newObj));
+  }
+
+  /** resourceNames 산정 입력(claimRef, phase)이 바뀔 때만 리컨실한다. 나머지는 권한과 무관. */
+  public BiPredicate<V1PersistentVolume, V1PersistentVolume> persistentVolumeClaimAndPhaseFilter() {
+    return (oldObj, newObj) -> !Objects.equals(
+        PersistentVolumeUtils.getClaimRef(oldObj), PersistentVolumeUtils.getClaimRef(newObj))
+        || !Objects.equals(
+        PersistentVolumeUtils.getPhase(oldObj), PersistentVolumeUtils.getPhase(newObj));
   }
 
 }

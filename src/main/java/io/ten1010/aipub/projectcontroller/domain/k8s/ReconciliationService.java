@@ -14,6 +14,7 @@ import io.kubernetes.client.openapi.models.V1Node;
 import io.kubernetes.client.openapi.models.V1NodeSelectorRequirement;
 import io.kubernetes.client.openapi.models.V1NodeSelectorRequirementBuilder;
 import io.kubernetes.client.openapi.models.V1NodeSelectorTerm;
+import io.kubernetes.client.openapi.models.V1PersistentVolume;
 import io.kubernetes.client.openapi.models.V1NodeSelectorTermBuilder;
 import io.kubernetes.client.openapi.models.V1OwnerReference;
 import io.kubernetes.client.openapi.models.V1Pod;
@@ -407,7 +408,8 @@ public class ReconciliationService {
       List<V1alpha1NodeGroup> bindingNodeGroups,
       List<V1Node> bindingNodes,
       List<V1alpha1ResourceSet> bindingResourceSets,
-      List<V1alpha1AipubUser> boundAipubUsers) {
+      List<V1alpha1AipubUser> boundAipubUsers,
+      List<V1PersistentVolume> readablePersistentVolumes) {
     List<V1PolicyRule> reconciled = new ArrayList<>();
 
     V1PolicyRule projectApiRule = switch (projectRoleEnum) {
@@ -476,14 +478,24 @@ public class ReconciliationService {
     };
     reconciled.add(storageClassesApiRule);
 
-    V1PolicyRule persistentVolumesApiRule = switch (projectRoleEnum) {
-      case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
-          .withApiGroups("")
-          .withResources("persistentvolumes")
-          .withVerbs("get", "list")
-          .build();
-    };
-    reconciled.add(persistentVolumesApiRule);
+    // list 는 resourceNames 로 좁힐 수 없어 주지 않는다 — 주면 클러스터 전체 PV 가 열린다.
+    // 정렬 필수: reconcileExistingRole 이 List.equals(순서 비교)로 갱신 여부를 판단한다.
+    List<String> persistentVolumes = readablePersistentVolumes.stream()
+        .map(K8sObjectUtils::getName)
+        .distinct()
+        .sorted()
+        .toList();
+    if (!persistentVolumes.isEmpty()) {
+      V1PolicyRule persistentVolumesApiRule = switch (projectRoleEnum) {
+        case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+            .withApiGroups("")
+            .withResources("persistentvolumes")
+            .withResourceNames(persistentVolumes)
+            .withVerbs("get")
+            .build();
+      };
+      reconciled.add(persistentVolumesApiRule);
+    }
 
     V1PolicyRule ingressClassesApiRule = switch (projectRoleEnum) {
       case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()

@@ -9,12 +9,14 @@ import io.kubernetes.client.openapi.models.V1DaemonSet;
 import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1Node;
+import io.kubernetes.client.openapi.models.V1PersistentVolume;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1ResourceQuota;
 import io.kubernetes.client.openapi.models.V1Secret;
 import io.ten1010.aipub.projectcontroller.controller.BoundObjectResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.AipubUserRoleNameResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ImageRegistrySecretNameResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceNameResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ProjectRoleEnum;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ResourceQuotaNameResolver;
@@ -33,6 +35,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ResourceSet;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1SftpServer;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.AipubUserUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.PersistentVolumeUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.UsernameUtils;
 import io.ten1010.aipub.projectcontroller.informer.IndexerConstants;
 import java.util.List;
@@ -45,6 +48,7 @@ public class RequestBuilderFactory {
   private final SharedInformerFactory sharedInformerFactory;
   private final BoundObjectResolver boundObjectResolver;
   private final NamespaceNameResolver namespaceNameResolver;
+  private final KeyResolver keyResolver;
   private final RoleNameResolver roleNameResolver;
   private final AipubUserRoleNameResolver aipubUserRoleNameResolver;
   private final ResourceQuotaNameResolver quotaNameResolver;
@@ -54,6 +58,7 @@ public class RequestBuilderFactory {
     this.sharedInformerFactory = sharedInformerFactory;
     this.boundObjectResolver = new BoundObjectResolver(sharedInformerFactory);
     this.namespaceNameResolver = new NamespaceNameResolver();
+    this.keyResolver = new KeyResolver();
     this.roleNameResolver = new RoleNameResolver();
     this.aipubUserRoleNameResolver = new AipubUserRoleNameResolver();
     this.quotaNameResolver = new ResourceQuotaNameResolver();
@@ -340,6 +345,30 @@ public class RequestBuilderFactory {
       return podsBoundToNode.stream()
           .map(pod -> new Request(K8sObjectUtils.getNamespace(pod), K8sObjectUtils.getName(pod)))
           .toList();
+    };
+  }
+
+  /**
+   * PV 변경 → 영향받는 프로젝트 역할 ClusterRole. 바인딩된 PV 는 claimRef.namespace 의 프로젝트
+   * 하나만, 주인 없는 PV 는 모든 프로젝트에 들어가므로 전체를 큐에 넣는다. Available → Bound
+   * 전이는 onUpdate 가 old/new 양쪽을 합집합으로 큐잉해 이전 대상들도 함께 갱신된다.
+   */
+  public Function<V1PersistentVolume, List<Request>> persistentVolumeToProjectRoles(
+      boolean namespacedRole) {
+    Function<V1alpha1Project, List<Request>> projectToRoles = projectToProjectRoles(namespacedRole);
+    Indexer<V1alpha1Project> projectIndexer = this.sharedInformerFactory
+        .getExistingSharedIndexInformer(V1alpha1Project.class)
+        .getIndexer();
+    return persistentVolume -> {
+      String claimRefNamespace = PersistentVolumeUtils.getClaimRefNamespace(persistentVolume);
+      if (claimRefNamespace == null) {
+        return projectIndexer.list().stream()
+            .flatMap(project -> projectToRoles.apply(project).stream())
+            .toList();
+      }
+      String projName = this.namespaceNameResolver.resolveProjectName(claimRefNamespace);
+      V1alpha1Project project = projectIndexer.getByKey(this.keyResolver.resolveKey(projName));
+      return project == null ? List.of() : projectToRoles.apply(project);
     };
   }
 
