@@ -3,7 +3,9 @@ package io.ten1010.aipub.projectcontroller.controller;
 import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.models.V1Node;
+import io.kubernetes.client.openapi.models.V1PersistentVolume;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
+import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceNameResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUser;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageHub;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1NodeGroup;
@@ -13,6 +15,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ResourceSet;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.LabelUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.NodeGroupUtils;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.PersistentVolumeUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.ProjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.ResourceSetUtils;
 import io.ten1010.aipub.projectcontroller.informer.IndexerConstants;
@@ -25,15 +28,18 @@ import java.util.Set;
 public class BoundObjectResolver {
 
   private final KeyResolver keyResolver;
+  private final NamespaceNameResolver namespaceNameResolver;
   private final Indexer<V1alpha1Project> projectIndexer;
   private final Indexer<V1alpha1AipubUser> aipubUserIndexer;
   private final Indexer<V1alpha1NodeGroup> nodeGroupIndexer;
   private final Indexer<V1alpha1ImageHub> imageHubIndexer;
   private final Indexer<V1Node> nodeIndexer;
   private final Indexer<V1alpha1ResourceSet> resourceSetIndexer;
+  private final Indexer<V1PersistentVolume> persistentVolumeIndexer;
 
   public BoundObjectResolver(SharedInformerFactory sharedInformerFactory) {
     this.keyResolver = new KeyResolver();
+    this.namespaceNameResolver = new NamespaceNameResolver();
     this.projectIndexer = sharedInformerFactory
         .getExistingSharedIndexInformer(V1alpha1Project.class)
         .getIndexer();
@@ -51,6 +57,9 @@ public class BoundObjectResolver {
         .getIndexer();
     this.resourceSetIndexer = sharedInformerFactory
         .getExistingSharedIndexInformer(V1alpha1ResourceSet.class)
+        .getIndexer();
+    this.persistentVolumeIndexer = sharedInformerFactory
+        .getExistingSharedIndexInformer(V1PersistentVolume.class)
         .getIndexer();
   }
 
@@ -143,6 +152,24 @@ public class BoundObjectResolver {
     List<V1alpha1NodeGroup> allBoundNodeGroups = new ArrayList<>(getDirectlyBoundNodeGroups(node));
     allBoundNodeGroups.addAll(getBoundNodeGroupsByNodeSelector(node));
     return K8sObjectUtils.distinctByKey(this.keyResolver, allBoundNodeGroups);
+  }
+
+  /** 프로젝트 네임스페이스의 PVC 에 바인딩된 PV. claimRef.namespace 가 유일한 소유 축이다. */
+  public List<V1PersistentVolume> getAllBoundPersistentVolumes(V1alpha1Project project) {
+    String nsName = this.namespaceNameResolver.resolveNamespaceName(K8sObjectUtils.getName(project));
+    return this.persistentVolumeIndexer.list().stream()
+        .filter(pv -> nsName.equals(PersistentVolumeUtils.getClaimRefNamespace(pv)))
+        .toList();
+  }
+
+  /**
+   * 주인 없는 PV. 프로젝트 소속과 무관하게 모든 멤버가 봐야 한다 — PVC 생성 폼의
+   * "기존 PV 연결"(정적 바인딩)이 Available PV 목록에서 고르는 방식이다.
+   */
+  public List<V1PersistentVolume> getAllUnclaimedPersistentVolumes() {
+    return this.persistentVolumeIndexer.list().stream()
+        .filter(PersistentVolumeUtils::isUnclaimed)
+        .toList();
   }
 
   public List<V1alpha1ResourceSet> getAllBoundResourceSets(V1alpha1Project project) {

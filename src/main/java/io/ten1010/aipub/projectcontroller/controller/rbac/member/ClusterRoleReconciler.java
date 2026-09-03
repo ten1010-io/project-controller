@@ -11,6 +11,7 @@ import io.kubernetes.client.openapi.models.V1ClusterRole;
 import io.kubernetes.client.openapi.models.V1ClusterRoleBuilder;
 import io.kubernetes.client.openapi.models.V1Node;
 import io.kubernetes.client.openapi.models.V1OwnerReference;
+import io.kubernetes.client.openapi.models.V1PersistentVolume;
 import io.kubernetes.client.openapi.models.V1PolicyRule;
 import io.ten1010.aipub.projectcontroller.controller.AbstractReconciler;
 import io.ten1010.aipub.projectcontroller.controller.BoundObjectResolver;
@@ -29,6 +30,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ResourceSet;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.NodeUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.RoleUtils;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -107,9 +109,13 @@ public class ClusterRoleReconciler extends AbstractReconciler {
         projectOpt.get());
     List<V1alpha1AipubUser> boundAipubUsers = this.boundObjectResolver.getAllBoundAipubUsers(
         projectOpt.get());
+    // 프로젝트에 바인딩된 PV + 아직 주인 없는 PV 만 조회 대상이다.
+    List<V1PersistentVolume> readablePersistentVolumes = new ArrayList<>(
+        this.boundObjectResolver.getAllBoundPersistentVolumes(projectOpt.get()));
+    readablePersistentVolumes.addAll(this.boundObjectResolver.getAllUnclaimedPersistentVolumes());
     List<V1PolicyRule> reconciledRules = this.reconciliationService.reconcileClusterRoleRules(
         projectOpt.get(), projRoleEnum, boundNodeGroups, boundNodes, boundNodesResourceSets,
-        boundAipubUsers);
+        boundAipubUsers, readablePersistentVolumes);
     V1AggregationRule reconciledAggregationRule = this.reconciliationService.reconcileClusterRoleAggregationRule(
         projectOpt.get(), projRoleEnum);
 
