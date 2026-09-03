@@ -352,6 +352,11 @@ public class RequestBuilderFactory {
    * PV 변경 → 영향받는 프로젝트 역할 ClusterRole. 바인딩된 PV 는 claimRef.namespace 의 프로젝트
    * 하나만, 주인 없는 PV 는 모든 프로젝트에 들어가므로 전체를 큐에 넣는다. Available → Bound
    * 전이는 onUpdate 가 old/new 양쪽을 합집합으로 큐잉해 이전 대상들도 함께 갱신된다.
+   *
+   * <p>어느 프로젝트의 조회 집합에도 없는 PV 는 큐잉하지 않는다. 판정은
+   * {@link PersistentVolumeUtils#isUnclaimed} 와 정확히 같은 조건이어야 한다 — 느슨하면
+   * ClusterRole 을 바꾸지도 못하는 리컨실이 프로젝트 수만큼 돌고, 이 컨트롤러는 워커가 1개라
+   * 그 뒤에 줄 선 권한 관련 리컨실(예: 멤버 제외)이 직렬로 밀린다.
    */
   public Function<V1PersistentVolume, List<Request>> persistentVolumeToProjectRoles(
       boolean namespacedRole) {
@@ -362,6 +367,12 @@ public class RequestBuilderFactory {
     return persistentVolume -> {
       String claimRefNamespace = PersistentVolumeUtils.getClaimRefNamespace(persistentVolume);
       if (claimRefNamespace == null) {
+        // Available 이 아닌 PV(Pending·Released·Failed)와 namespace 없는 claimRef 는 조회
+        // 대상이 아니다. 정적 PV 를 대량 등록하면 전부 Pending 으로 태어나므로, 여기서
+        // 걸러야 등록 배치가 전 프로젝트 리컨실로 번지지 않는다.
+        if (!PersistentVolumeUtils.isUnclaimed(persistentVolume)) {
+          return List.of();
+        }
         return projectIndexer.list().stream()
             .flatMap(project -> projectToRoles.apply(project).stream())
             .toList();
