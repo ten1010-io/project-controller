@@ -11,6 +11,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ProjectRoleEnum;
 import io.ten1010.aipub.projectcontroller.domain.k8s.SubjectResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectBinding;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectMember;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.ProjectUtils;
@@ -95,6 +96,12 @@ public class ProjectReviewHandler extends AbstractReviewHandler<V1alpha1Project>
         this.projectIndexer.getByKey(projectKey));
     if (existingProjectOpt.isPresent()) {
       V1alpha1Project existingProject = existingProjectOpt.get();
+      // backend-api 는 admin 그룹이 없어 manager 검사에 걸리므로, imageHubs 정리만 예외로 허용한다.
+      if (isBindingTrustedServiceAccount(userInfo)
+          && onlyImageHubBindingChanged(existingProject, proj)) {
+        V1AdmissionReviewUtils.allow(review);
+        return;
+      }
       if (!isProjectManager(userInfo, existingProject)) {
         V1AdmissionReviewUtils.reject(review, HttpStatus.FORBIDDEN.value(), "Forbidden");
         return;
@@ -127,6 +134,25 @@ public class ProjectReviewHandler extends AbstractReviewHandler<V1alpha1Project>
     }
 
     return false;
+  }
+
+  private boolean isBindingTrustedServiceAccount(V1UserInfo userInfo) {
+    return this.aipubProperties.getBindingTrustedServiceAccounts()
+        .contains(userInfo.getUsername());
+  }
+
+  private boolean onlyImageHubBindingChanged(V1alpha1Project existing,
+      V1alpha1Project requested) {
+    if (!ProjectUtils.getSpecMembers(existing).equals(ProjectUtils.getSpecMembers(requested))
+        || !ProjectUtils.getSpecQuota(existing).equals(ProjectUtils.getSpecQuota(requested))) {
+      return false;
+    }
+    V1alpha1ProjectBinding existingBinding = ProjectUtils.getSpecBinding(existing)
+        .orElseGet(V1alpha1ProjectBinding::new);
+    V1alpha1ProjectBinding requestedBinding = ProjectUtils.getSpecBinding(requested)
+        .orElseGet(V1alpha1ProjectBinding::new);
+    return Objects.equals(existingBinding.getNodes(), requestedBinding.getNodes())
+        && Objects.equals(existingBinding.getNodeGroups(), requestedBinding.getNodeGroups());
   }
 
   private boolean isReservedName(String name) {
