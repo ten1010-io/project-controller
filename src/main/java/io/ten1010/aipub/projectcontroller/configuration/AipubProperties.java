@@ -26,6 +26,11 @@ public class AipubProperties {
   /** aipub-backend-gateway 머신 전용 포트(mTLS) 접속에 쓰는 인증 재료. */
   private MtlsProperty mtls = new MtlsProperty();
   private List<String> reservedNamespace = new ArrayList<>();
+  /**
+   * project의 {@code spec.binding.imageHubs} 변경만 허용하는 서비스계정 username 목록. 삭제된
+   * ImageHub 이름을 project에서 걷어내는 backend-api 용도이며, 그 외 spec 변경은 여전히 거부된다.
+   */
+  private List<String> bindingTrustedServiceAccounts = new ArrayList<>();
   private List<String> addOwnerExceptGvkList = new ArrayList<>();
   /**
    * project controller가 reconcile/mutating 대상에서 제외할 워크로드의 라벨 셀렉터 목록.
