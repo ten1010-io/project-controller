@@ -7,11 +7,11 @@ import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.ApiException;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotSecretStore;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotService;
+import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotUtils;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotUsernameResolver;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryAccess;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryRobot;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryRobotCreated;
-import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryRobotListOptions;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryRobotPermission;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.impl.AipubBackendResponseException;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
@@ -83,7 +83,7 @@ public class ImageRegistryRobotReconciler extends AbstractReconciler {
   @Override
   protected Result reconcileInternal(Request request) throws ApiException {
     String username = this.usernameResolver.resolve(request.getName());
-    Optional<ImageRegistryRobot> robotOpt = findByUsername(username);
+    Optional<ImageRegistryRobot> robotOpt = ImageRegistryRobotUtils.findByUsername(this.robotService, username);
 
     String projKey = this.keyResolver.resolveKey(request.getName());
     Optional<V1alpha1Project> projectOpt = Optional.ofNullable(
@@ -162,17 +162,6 @@ public class ImageRegistryRobotReconciler extends AbstractReconciler {
       return;
     }
     this.secretStore.put(created.getRobotId(), created.getSecret());
-  }
-
-  private Optional<ImageRegistryRobot> findByUsername(String username) {
-    ImageRegistryRobotListOptions options = new ImageRegistryRobotListOptions();
-    options.setPageOffset(0);
-    options.setPageSize(100);
-    List<ImageRegistryRobot> robots = this.robotService.listImageRegistryRobots(options);
-    return robots.stream()
-        .filter(e -> Objects.nonNull(e.getUsername()))
-        .filter(e -> e.getUsername().equals(username))
-        .findFirst();
   }
 
   private List<V1alpha1ImageHub> resolveBoundImageHubs(V1alpha1Project project) {

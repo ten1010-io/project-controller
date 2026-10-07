@@ -20,6 +20,9 @@ public abstract class ListOptionsUtils {
   public static void applyImageRegistryRobotListOptions(Map<String, String> queryParams,
       ImageRegistryRobotListOptions options) {
     applyListOptions(queryParams, options);
+    if (options.getQ() != null) {
+      queryParams.put("q", options.getQ());
+    }
   }
 
   public static void applyRepositoryListOptions(Map<String, String> queryParams,
