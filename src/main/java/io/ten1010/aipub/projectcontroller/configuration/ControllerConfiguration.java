@@ -50,6 +50,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.informer.owned.OwnedObjectInformerManager;
+import io.ten1010.aipub.projectcontroller.leaderelection.LeaderElectionRunner;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,10 +63,16 @@ import org.springframework.context.annotation.Configuration;
 public class ControllerConfiguration {
 
   @Bean
+  public LeaderElectionRunner leaderElectionRunner(K8sApiProvider k8sApiProvider) {
+    return new LeaderElectionRunner(k8sApiProvider.getApiClient());
+  }
+
+  @Bean
   public ControllerManager controllerManager(
       SharedInformerFactory sharedInformerFactory, List<Controller> controllers,
       List<WorkloadControllerFactory<?>> workloadControllerFactories,
-      OwnedObjectInformerManager ownedObjectInformerManager) {
+      OwnedObjectInformerManager ownedObjectInformerManager,
+      LeaderElectionRunner leaderElectionRunner) {
     ControllerManagerBuilder builder = ControllerBuilder.controllerManagerBuilder(
         sharedInformerFactory);
     controllers.forEach(builder::addController);
@@ -79,8 +86,14 @@ public class ControllerConfiguration {
     // 소유권 인포머를 시작해야 초기 onAdd 이벤트가 유실되지 않는다
     ownedObjectInformerManager.start();
 
+    // ⚠️ 인포머는 리더가 아닌 파드에서도 돌아야 한다. 어드미션 웹훅 핸들러가 이 캐시를 읽는데
+    // failurePolicy 가 Fail 이라, 캐시가 비면 파드·네임스페이스 생성이 거부된다.
+    // ControllerManager.run() 도 같은 호출을 하지만 이미 시작된 인포머는 건너뛴다.
+    sharedInformerFactory.startAllRegisteredInformers();
+
+    // 쓰기를 하는 건 워크큐뿐이라 여기만 리더로 좁힌다
     ExecutorService executor = Executors.newSingleThreadExecutor();
-    executor.execute(controllerManager);
+    executor.execute(() -> leaderElectionRunner.runWhenLeader(controllerManager));
 
     return controllerManager;
   }
