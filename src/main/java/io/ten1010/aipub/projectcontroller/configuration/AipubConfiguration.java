@@ -8,6 +8,7 @@ import io.ten1010.aipub.projectcontroller.domain.aipubbackend.AipubSubjectResolv
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ArtifactService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.DockerfileService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageHubService;
+import io.ten1010.aipub.projectcontroller.controller.namespaced.ImageRegistrySecretRequestQueue;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotSecretStore;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotUsernameResolver;
@@ -157,14 +158,15 @@ public class AipubConfiguration {
 
   @Bean
   public Controller imageRegistryRobotController(SharedInformerFactory sharedInformerFactory,
-      ImageRegistryRobotSecretStore imageRegistryRobotSecretStore) {
+      ImageRegistryRobotSecretStore imageRegistryRobotSecretStore,
+      ImageRegistrySecretRequestQueue imageRegistrySecretRequestQueue) {
     if (this.aipubEnabled) {
       Objects.requireNonNull(this.aipubBackendClient);
       ImageRegistryRobotService robotService = new ImageRegistryRobotServiceImpl(
           this.aipubBackendClient);
       ImageRegistryRobotUsernameResolver usernameResolver = new ImageRegistryRobotUsernameResolverImpl();
       return new ImageRegistryRobotControllerFactory(robotService, usernameResolver,
-          imageRegistryRobotSecretStore, sharedInformerFactory)
+          imageRegistryRobotSecretStore, sharedInformerFactory, imageRegistrySecretRequestQueue)
           .createController();
     }
     return new Controller() {

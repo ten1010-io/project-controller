@@ -8,6 +8,7 @@ import io.kubernetes.client.openapi.ApiException;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotSecretStore;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotUtils;
+import io.ten1010.aipub.projectcontroller.controller.namespaced.ImageRegistrySecretRequestQueue;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotUsernameResolver;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryAccess;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryRobot;
@@ -45,6 +46,7 @@ public class ImageRegistryRobotReconciler extends AbstractReconciler {
   private final ImageRegistryRobotService robotService;
   private final ImageRegistryRobotUsernameResolver usernameResolver;
   private final ImageRegistryRobotSecretStore secretStore;
+  private final ImageRegistrySecretRequestQueue secretRequestQueue;
   private final Indexer<V1alpha1Project> projectIndexer;
   private final Indexer<V1alpha1ImageHub> imageHubIndexer;
   private final KeyResolver keyResolver;
@@ -52,10 +54,12 @@ public class ImageRegistryRobotReconciler extends AbstractReconciler {
   public ImageRegistryRobotReconciler(
       ImageRegistryRobotService robotService, ImageRegistryRobotUsernameResolver usernameResolver,
       ImageRegistryRobotSecretStore secretStore,
+      ImageRegistrySecretRequestQueue secretRequestQueue,
       SharedInformerFactory sharedInformerFactory) {
     this.robotService = robotService;
     this.usernameResolver = usernameResolver;
     this.secretStore = secretStore;
+    this.secretRequestQueue = secretRequestQueue;
     this.projectIndexer = sharedInformerFactory
         .getExistingSharedIndexInformer(V1alpha1Project.class)
         .getIndexer();
@@ -136,6 +140,8 @@ public class ImageRegistryRobotReconciler extends AbstractReconciler {
       try {
         this.robotService.createImageRegistryRobot(newRobot)
             .ifPresent(created -> storeCreatedSecret(username, created));
+        // robot 이 생겼다는 신호가 k8s 에 없다. 여기서 깨우지 않으면 Secret 컨트롤러가 60초를 기다린다.
+        this.secretRequestQueue.enqueueByProjectName(request.getName());
       } catch (AipubBackendResponseException e) {
         if (isImageHubNotFound(e)) {
           return logImageHubNotFoundAndRequeue(e, request.getName(), boundImageHubs);
