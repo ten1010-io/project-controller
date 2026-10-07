@@ -78,6 +78,9 @@ public final class ProjectApiConstants {
   public static final String IMAGE_BUILD_RESOURCE_KIND = "ImageBuild";
   public static final String IMAGE_BUILD_RESOURCE_PLURAL = "imagebuilds";
 
+  public static final String CUEUE_RESOURCE_KIND = "Cueue";
+  public static final String CUEUE_RESOURCE_PLURAL = "cueues";
+
   private ProjectApiConstants() {
   }
 

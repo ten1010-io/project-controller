@@ -526,6 +526,24 @@ public class ReconciliationService {
     };
     reconciled.add(gpuConfigsApiRule);
 
+    // Cueue 는 Coaster 가 프로젝트와 같은 이름으로 만든다. Cluster scope 라 list 는 resourceNames 로
+    // 좁혀지지 않아 주면 전체 프로젝트 목록이 노출된다 — 프론트는 이름별 get 으로 충분하다.
+    V1PolicyRule cueuesApiRule = switch (projectRoleEnum) {
+      case PROJECT_MANAGER -> new V1PolicyRuleBuilder()
+          .withApiGroups(ProjectApiConstants.COASTER_GROUP)
+          .withResources(ProjectApiConstants.CUEUE_RESOURCE_PLURAL)
+          .withResourceNames(K8sObjectUtils.getName(project))
+          .withVerbs("get", "patch", "update")
+          .build();
+      case PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+          .withApiGroups(ProjectApiConstants.COASTER_GROUP)
+          .withResources(ProjectApiConstants.CUEUE_RESOURCE_PLURAL)
+          .withResourceNames(K8sObjectUtils.getName(project))
+          .withVerbs("get")
+          .build();
+    };
+    reconciled.add(cueuesApiRule);
+
     List<String> resourceSetNames = bindingResourceSets.stream()
         .map(K8sObjectUtils::getName)
         .toList();
@@ -1017,7 +1035,8 @@ public class ReconciliationService {
     return this.dockerConfigJsonResolver.resolveImageRegistryRobotId(project);
   }
 
-  public Map<String, String> reconcileNodeLabels(V1Node existing) {
+  public Map<String, String> reconcileNodeLabels(V1Node existing,
+      List<V1alpha1Project> boundProjects) {
     Map<String, String> existingLabels = K8sObjectUtils.getLabels(existing);
     Map<String, String> reconciled = new HashMap<>(existingLabels);
 
@@ -1037,6 +1056,18 @@ public class ReconciliationService {
       }
     }
 
+    // 바인딩이 풀린 프로젝트의 라벨이 남지 않도록 접두로 전량 걷어낸 뒤 다시 채운다.
+    reconciled.keySet().removeIf(key -> key.startsWith(LabelConstants.PROJECT_NAME_KEY_PREFIX));
+    // reconcileNodeAnnotations 의 bound-projects 와 같은 성격의 파생 상태라 게이트를 맞춘다.
+    if (!NodeUtils.isProjectManaged(existing)) {
+      return reconciled;
+    }
+
+    for (V1alpha1Project boundProject : boundProjects) {
+      reconciled.put(LabelConstants.PROJECT_NAME_KEY_PREFIX + K8sObjectUtils.getName(boundProject),
+          "");
+    }
+
     return reconciled;
   }
 
@@ -1048,12 +1079,34 @@ public class ReconciliationService {
     }
     Map<String, String> reconciled = new HashMap<>(existingLabels);
     reconciled.remove(LabelConstants.PROJECT_LABEL_KEY);
+    reconciled.remove(LabelConstants.CUEUE_PROVISIONING_ENABLED_KEY);
 
     if (project == null) {
       return reconciled;
     }
 
     reconciled.put(LabelConstants.PROJECT_LABEL_KEY, K8sObjectUtils.getName(project));
+    reconciled.put(LabelConstants.CUEUE_PROVISIONING_ENABLED_KEY,
+        LabelConstants.CUEUE_PROVISIONING_ENABLED_VALUE);
+    return reconciled;
+  }
+
+  public Map<String, String> reconcileNamespaceAnnotations(@Nullable V1Namespace namespace,
+      @Nullable V1alpha1Project project) {
+    Map<String, String> existingAnnotations = new HashMap<>();
+    if (namespace != null) {
+      existingAnnotations.putAll(K8sObjectUtils.getAnnotations(namespace));
+    }
+    Map<String, String> reconciled = new HashMap<>(existingAnnotations);
+    reconciled.remove(AnnotationConstants.CUEUE_NODE_SELECTOR_KEY);
+
+    if (project == null) {
+      return reconciled;
+    }
+
+    // 키 출처는 노드 라벨과 같다 — Coaster 가 이 키로 영향권 노드를 고른다.
+    reconciled.put(AnnotationConstants.CUEUE_NODE_SELECTOR_KEY,
+        LabelConstants.PROJECT_NAME_KEY_PREFIX + K8sObjectUtils.getName(project));
     return reconciled;
   }
 
