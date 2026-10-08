@@ -1,4 +1,4 @@
-# Cueue 모델·권한·프로비저닝 라벨 — QA 보고서
+# Cueue 권한·프로비저닝 라벨 — QA 보고서
 
 - Jira: [AIP-3419](https://ten1010.atlassian.net/browse/AIP-3419)
 - 브랜치: `feat/AIP-3419` (base `develop` a23eea8)

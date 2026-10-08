@@ -1,30 +1,10 @@
-# Cueue 모델·권한·프로비저닝 라벨 — 구현
+# Cueue 권한·프로비저닝 라벨 — 구현
 
 - Jira: [AIP-3419](https://ten1010.atlassian.net/browse/AIP-3419)
 - 브랜치: `feat/AIP-3419` (base `develop` a23eea8)
-- 규모: 17개 파일, +907 / -8
+- 규모: 11개 파일, +775 / -9
 
 ## 1. 변경 파일
-
-### 신규 — DTO (6)
-
-`src/main/java/io/ten1010/aipub/projectcontroller/domain/k8s/dto/`
-
-| 파일 | 내용 |
-|---|---|
-| `V1alpha1Cueue.java` | 최상위. `apiVersion`/`kind`/`metadata`/`spec`/`status` |
-| `V1alpha1CueueSpec.java` | `priority`(Integer) / `policy` / `pods` / `nodes` / `nodeSelector` |
-| `V1alpha1CueueStatus.java` | `observedGeneration` / `nodes` / `pods` / `conditions` |
-| `V1alpha1CueuePolicy.java` | enum — `FirstAllocating` / `FirstScheduling` |
-| `V1alpha1CueueSpecPod.java` | `name` / `namespace` / `uid` |
-| `V1alpha1CueueStatusPod.java` | `name` / `namespace` / `uid` / `enqueueTime` |
-
-`nodeSelector` 는 `io.kubernetes.client.openapi.models.V1LabelSelector`, `conditions` 는 `V1Condition`
-을 그대로 쓴다(client-java-api 27.0.0). 패턴은 기존 DTO 와 동일 — `@Data` 단독, 전 필드
-`@Nullable`(jspecify), 직렬화 애노테이션 없음, nested 는 부모 접두를 붙여 별도 파일.
-
-`V1alpha1CueueList` 는 만들지 않았고 `K8sApiProvider`·`SharedInformerFactoryProvider` 에도 등록하지
-않았다 — 이 컨트롤러는 Cueue 를 읽거나 리컨실하지 않는다.
 
 ### 신규 — 테스트 (3)
 
@@ -38,7 +18,7 @@
 
 | 파일 | 변경 |
 |---|---|
-| `domain/k8s/ProjectApiConstants.java` | `CUEUE_RESOURCE_KIND`, `CUEUE_RESOURCE_PLURAL` |
+| `domain/k8s/ProjectApiConstants.java` | `CUEUE_RESOURCE_PLURAL` |
 | `domain/k8s/LabelConstants.java` | `PROJECT_NAME_KEY_PREFIX`, `CUEUE_PROVISIONING_ENABLED_KEY/VALUE` |
 | `domain/k8s/AnnotationConstants.java` | `CUEUE_NODE_SELECTOR_KEY` |
 | `domain/k8s/ReconciliationService.java` | `cueuesApiRule`, `reconcileNodeLabels` 시그니처, `reconcileNamespaceLabels`, `reconcileNamespaceAnnotations` 신설 |

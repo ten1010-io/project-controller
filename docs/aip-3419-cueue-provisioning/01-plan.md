@@ -1,4 +1,4 @@
-# Cueue 모델·권한·프로비저닝 라벨 — 계획
+# Cueue 권한·프로비저닝 라벨 — 계획
 
 - Jira: [AIP-3419](https://ten1010.atlassian.net/browse/AIP-3419) (상위 에픽 AIP-1565)
 - 브랜치: `feat/AIP-3419` (base `develop`)
@@ -24,7 +24,7 @@ auto-enqueue).
 
 | # | 항목 | 비고 |
 |---|---|---|
-| 1 | Cueue DTO + 상수 | 모델 정의만. 리컨실·소유하지 않는다 |
+| 1 | `CUEUE_RESOURCE_PLURAL` 상수 | RBAC 룰이 쓰는 문자열. Cueue DTO 는 범위 밖(§3.3) |
 | 2 | 프로젝트 역할별 RBAC 규칙 | 매니저 `get`/`patch`/`update`, 멤버 `get` |
 | 3-1 | 노드에 프로젝트 바인딩 라벨 | `project-name.aipub.ten1010.io/<proj>: ""` |
 | 3-2 | 네임스페이스 라벨 + 어노테이션 | `provisioning-enabled` / `node-selector` |
@@ -32,6 +32,8 @@ auto-enqueue).
 
 **범위 밖**
 
+- **Cueue DTO (`V1alpha1Cueue` 외 nested 5종)** — 이 컨트롤러는 Cueue 객체를 읽지도 쓰지도 않는다.
+  RBAC 룰은 문자열 상수만 쓰고, 라벨·어노테이션 리컨실은 `V1Node`·`V1Namespace` 만 만진다. 상세는 §3.3.
 - `cueue.coaster.ten1010.io/auto-enqueue` 라벨 — 프로젝트별 on/off 운영 설정이라 Project 에서 파생할
   수 있는 값이 아니다. AIPub 어드민이 직접 설정한다(`aipub-admin` 그룹이 `cluster-admin` 에 바인딩돼
   있어 별도 권한 작업이 필요 없다). 컨트롤러는 읽지도 쓰지도 않는다.
@@ -69,24 +71,30 @@ auto-enqueue).
 트레이드오프: `project-managed=false` 인데 프로젝트에 바인딩된 노드는 라벨을 받지 못한다. 플랫폼이
 프로젝트 관리 대상이 아니라고 선언한 노드이므로 의도된 동작이다. 되돌리려면 게이트 3줄을 빼면 된다.
 
-### 3.3 인포머·`K8sApiProvider` 에 Cueue 를 등록하지 않는다
+### 3.3 Cueue DTO 를 만들지 않는다
 
-project-controller 는 Cueue 를 **읽지도 만들지도 않는다** — 모델 정의와 권한 부여만 한다. 이 리포에는
-스킴/ModelMapper 일괄 등록 지점이 없고 DTO 는 `K8sApiProvider` 와 `SharedInformerFactoryProvider` 에
-손으로 적는 구조라, 적지 않으면 그냥 존재하지 않는 것으로 동작한다. `V1alpha1CueueList` 도 만들지
-않았다.
+project-controller 는 Cueue 를 **읽지도 만들지도 않는다** — 전제 조건(라벨·어노테이션)을 깔고 권한을
+부여할 뿐이다. 그 두 가지에 Cueue 객체 모델이 쓰이지 않는다.
 
-### 3.4 `V1LabelSelector`·`V1Condition` 을 재사용한다
+- RBAC 룰은 apiGroup·resource 를 **문자열**로 받는다. `CUEUE_RESOURCE_PLURAL` 하나면 끝이다.
+- 라벨·어노테이션 리컨실이 만지는 객체는 `V1Node` 와 `V1Namespace` 뿐이다.
+- 이 리포에는 스킴/ModelMapper 일괄 등록 지점이 없어 DTO 는 `K8sApiProvider` 와
+  `SharedInformerFactoryProvider` 에 손으로 적어야 한다. 적지 않으면 역직렬화될 경로 자체가 없다 —
+  즉 DTO 를 만들어 두면 **참조처 0건의 dead code** 가 된다.
 
-`client-java-api:27.0.0` 의 두 타입이 Cueue CRD 스키마와 필드가 정확히 일치한다. 리포에 `RbacV1Subject`
-·`V1JobTemplateSpec` 재사용 선례가 있다.
+**초판에서는 DTO 6종을 만들었다가 걷어냈다.** 티켓 §1 이 "Cueue CRD 모델 추가" 를 요구사항으로
+적고 있었으나, 실제 요구사항은 라벨·어노테이션 리컨실과 RBAC 둘뿐이라는 판단이다. 미확정 설계를
+위해 dead code 를 선반영하지 않는다.
 
-### 3.5 `priority` 기본값에 관여하지 않는다
+필요해지는 시점은 분명하다 — **Cueue validating webhook 을 넣기로 결정할 때**다(매니저의
+`spec.nodes` 쓰기 차단 등). 그때 쓰임새에 맞춰 추가한다. CRD 스키마는 Confluence §1 과
+`kubernetes/examples/crd.yaml` 에 남아 있으므로 복원 비용은 낮다.
+
+### 3.4 `priority` 기본값에 관여하지 않는다
 
 CRD 스키마의 `default: 1` 은 apiserver 가 채우는 값이고, Confluence §3 필드표의 `3000` 은 FE 가 큐를
 만들거나 패치할 때 쓰는 값으로 **FE ↔ Coaster 사이의 약속**이다. 레이어가 달라 모순이 아니며 어느
-쪽도 project-controller 가 판단할 일이 아니다. DTO 는 `Integer` 로 매핑만 하고 기본값을 하드코딩하거나
-보정하지 않는다.
+쪽도 project-controller 가 판단할 일이 아니다. 이 컨트롤러는 `priority` 를 읽지도 쓰지도 않는다.
 
 ## 4. 알려진 함정
 
