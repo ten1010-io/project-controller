@@ -36,6 +36,8 @@ app:
       key-store-password: ""
       ca-certificate-file: /certificates/aipub-internal-ca.crt
     reserved-namespace: "aipub, project-controller"
+    # backend-api 가 삭제된 ImageHub 이름을 project binding 에서 걷어낼 때 쓰는 서비스계정.
+    binding-trusted-service-accounts: "system:serviceaccount:aipub:aipub-resources-manager"
     add-owner-except-gvk-list:
       - "aipub.ten1010.io/v1alpha1/Commit"
       - "aipub.ten1010.io/v1/Commit"
