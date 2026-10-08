@@ -22,16 +22,19 @@ public class ImageRegistrySecretReconcilerFactory implements ControllerFactory {
   private final RequestBuilderFactory requestBuilderFactory;
   private final K8sApiProvider k8sApiProvider;
   private final ReconciliationService reconciliationService;
+  private final ImageRegistrySecretRequestQueue secretRequestQueue;
 
   public ImageRegistrySecretReconcilerFactory(
       SharedInformerFactory sharedInformerFactory,
       K8sApiProvider k8sApiProvider,
-      ReconciliationService reconciliationService) {
+      ReconciliationService reconciliationService,
+      ImageRegistrySecretRequestQueue secretRequestQueue) {
     this.sharedInformerFactory = sharedInformerFactory;
     this.onUpdateFilterFactory = new OnUpdateFilterFactory();
     this.requestBuilderFactory = new RequestBuilderFactory(sharedInformerFactory);
     this.k8sApiProvider = k8sApiProvider;
     this.reconciliationService = reconciliationService;
+    this.secretRequestQueue = secretRequestQueue;
   }
 
   @Override
@@ -52,6 +55,8 @@ public class ImageRegistrySecretReconcilerFactory implements ControllerFactory {
   }
 
   private ControllerWatch<V1Secret> createSecretWatch(WorkQueue<Request> workQueue) {
+    // robot 컨트롤러가 robot 생성 직후 이 큐에 직접 넣는다 — Harbor 오브젝트라 k8s 이벤트가 없다
+    this.secretRequestQueue.bind(workQueue);
     DefaultControllerWatch<V1Secret> watch = new DefaultControllerWatch<>(workQueue,
         V1Secret.class);
     watch.setOnUpdateFilter(this.onUpdateFilterFactory.alwaysFalseFilter());

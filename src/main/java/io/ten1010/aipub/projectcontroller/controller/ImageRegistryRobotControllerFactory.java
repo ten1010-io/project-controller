@@ -7,6 +7,7 @@ import io.kubernetes.client.extended.controller.reconciler.Request;
 import io.kubernetes.client.extended.workqueue.WorkQueue;
 import io.kubernetes.client.informer.SharedInformerFactory;
 import io.ten1010.aipub.projectcontroller.controller.watch.DefaultControllerWatch;
+import io.ten1010.aipub.projectcontroller.controller.namespaced.ImageRegistrySecretRequestQueue;
 import io.ten1010.aipub.projectcontroller.controller.watch.OnUpdateFilterFactory;
 import io.ten1010.aipub.projectcontroller.controller.watch.RequestBuilderFactory;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageRegistryRobotSecretStore;
@@ -20,6 +21,7 @@ public class ImageRegistryRobotControllerFactory implements ControllerFactory {
   private final ImageRegistryRobotService robotService;
   private final ImageRegistryRobotUsernameResolver usernameResolver;
   private final ImageRegistryRobotSecretStore secretStore;
+  private final ImageRegistrySecretRequestQueue secretRequestQueue;
   private final SharedInformerFactory sharedInformerFactory;
   private final OnUpdateFilterFactory onUpdateFilterFactory;
   private final RequestBuilderFactory requestBuilderFactory;
@@ -28,10 +30,12 @@ public class ImageRegistryRobotControllerFactory implements ControllerFactory {
       ImageRegistryRobotService robotService,
       ImageRegistryRobotUsernameResolver usernameResolver,
       ImageRegistryRobotSecretStore secretStore,
-      SharedInformerFactory sharedInformerFactory) {
+      SharedInformerFactory sharedInformerFactory,
+      ImageRegistrySecretRequestQueue secretRequestQueue) {
     this.robotService = robotService;
     this.usernameResolver = usernameResolver;
     this.secretStore = secretStore;
+    this.secretRequestQueue = secretRequestQueue;
     this.sharedInformerFactory = sharedInformerFactory;
     this.onUpdateFilterFactory = new OnUpdateFilterFactory();
     this.requestBuilderFactory = new RequestBuilderFactory(sharedInformerFactory);
@@ -49,7 +53,7 @@ public class ImageRegistryRobotControllerFactory implements ControllerFactory {
         .watch(this::createProjectWatch)
         .watch(this::createImageHubWatch)
         .withReconciler(new ImageRegistryRobotReconciler(this.robotService, this.usernameResolver,
-            this.secretStore, this.sharedInformerFactory))
+            this.secretStore, this.secretRequestQueue, this.sharedInformerFactory))
         .build();
   }
 

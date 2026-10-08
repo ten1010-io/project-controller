@@ -1,7 +1,6 @@
 package io.ten1010.aipub.projectcontroller.domain.aipubbackend;
 
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryRobot;
-import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryRobotListOptions;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ImageRegistryRobotSecret;
 import io.ten1010.aipub.projectcontroller.domain.k8s.DockerConfigJsonResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ImageHubNotConnectedException;
@@ -9,7 +8,6 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import java.util.Base64;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -47,7 +45,7 @@ public class AipubDockerConfigJsonResolver implements DockerConfigJsonResolver {
   public Map<String, Object> resolve(V1alpha1Project project) {
     String username = this.imageRegistryRobotUsernameResolver.resolve(
         K8sObjectUtils.getName(project));
-    Optional<ImageRegistryRobot> robotOpt = findByUsername(username);
+    Optional<ImageRegistryRobot> robotOpt = ImageRegistryRobotUtils.findByUsername(this.imageRegistryRobotService, username);
     if (robotOpt.isEmpty()) {
       throw new ImageHubNotConnectedException(
           "Could not find image registry robot for " + username);
@@ -72,7 +70,7 @@ public class AipubDockerConfigJsonResolver implements DockerConfigJsonResolver {
   public Optional<String> resolveImageRegistryRobotId(V1alpha1Project project) {
     String username = this.imageRegistryRobotUsernameResolver.resolve(
         K8sObjectUtils.getName(project));
-    return findByUsername(username).map(ImageRegistryRobot::getId);
+    return ImageRegistryRobotUtils.findByUsername(this.imageRegistryRobotService, username).map(ImageRegistryRobot::getId);
   }
 
   /**
@@ -91,18 +89,6 @@ public class AipubDockerConfigJsonResolver implements DockerConfigJsonResolver {
     ImageRegistryRobotSecret secret = this.imageRegistryRobotService.refreshSecret(robotId);
     Objects.requireNonNull(secret.getSecret());
     return secret.getSecret();
-  }
-
-  private Optional<ImageRegistryRobot> findByUsername(String username) {
-    ImageRegistryRobotListOptions options = new ImageRegistryRobotListOptions();
-    options.setPageOffset(0);
-    options.setPageSize(100);
-    List<ImageRegistryRobot> robots = this.imageRegistryRobotService.listImageRegistryRobots(
-        options);
-    return robots.stream()
-        .filter(e -> Objects.nonNull(e.getUsername()))
-        .filter(e -> e.getUsername().equals(username))
-        .findFirst();
   }
 
 }
