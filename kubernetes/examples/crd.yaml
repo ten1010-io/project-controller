@@ -1837,3 +1837,175 @@ spec:
                       type: string
                     deleted:
                       type: string
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: cueues.coaster.ten1010.io
+spec:
+  group: coaster.ten1010.io
+  scope: Cluster
+  names:
+    kind: Cueue
+    plural: cueues
+    singular: cueue
+    shortNames:
+      - cq
+    categories:
+      - all
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Priority
+          type: integer
+          jsonPath: .spec.priority
+        - name: Policy
+          type: string
+          jsonPath: .spec.policy
+        - name: Head-Blocked
+          type: string
+          jsonPath: .status.conditions[?(@.type=="HeadBlocked")].status
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              properties:
+                priority:
+                  description: 큐 우선순위. 높을수록 먼저 (기본 1)
+                  type: integer
+                  default: 1
+                policy:
+                  description: >-
+                    큐 안 정책. FirstAllocating(우선할당, 기본): 배열 앞 Pod이 할당될 때까지 뒤 Pod이 기다린다.
+                    FirstScheduling(우선스케줄링): 배열 순서로 먼저 시도만 하고, 앞 Pod이 못 가도 뒤 Pod을 막지 않는다.
+                    큐 사이 정책(상위 priority 큐가 하위 큐·미소속 Pod을 status.nodes 범위에서 막는지)은 이 필드가 아니라
+                    스케줄러 설정 interQueuePolicy(기본 FirstScheduling)로 정한다.
+                  type: string
+                  enum:
+                    - FirstAllocating
+                    - FirstScheduling
+                  default: FirstAllocating
+                pods:
+                  description: >-
+                    할당 순서 배열. 외부 시스템이 정렬해 통째로 교체할 수 있다. 네임스페이스에
+                    cueue.coaster.ten1010.io/auto-enqueue="true" label 이 있으면 새 Pod 은 controller-manager 가
+                    접수 시각순으로 뒤에 넣고(기존 항목의 순서는 손대지 않는다), 할당·종료·삭제되었거나 uid가 다른
+                    참조는 controller-manager가 제거한다
+                  type: array
+                  x-kubernetes-list-type: atomic
+                  items:
+                    type: object
+                    required:
+                      - name
+                      - namespace
+                      - uid
+                    properties:
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                      uid:
+                        type: string
+                nodes:
+                  description: >-
+                    큐 영향권 노드 이름 목록. nodeSelector 와 합집합이며, 둘 다 비어 있으면 영향권이 없다
+                  type: array
+                  x-kubernetes-list-type: set
+                  items:
+                    type: string
+                nodeSelector:
+                  description: >-
+                    큐 영향권 노드를 고르는 label selector. 빈 객체({})는 모든 노드, 생략은 선택 없음.
+                    네임스페이스 annotation cueue.coaster.ten1010.io/node-selector 가 있으면 그 값으로 동기화된다
+                  type: object
+                  properties:
+                    matchLabels:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    matchExpressions:
+                      type: array
+                      items:
+                        type: object
+                        required:
+                          - key
+                          - operator
+                        properties:
+                          key:
+                            type: string
+                          operator:
+                            type: string
+                            enum:
+                              - In
+                              - NotIn
+                              - Exists
+                              - DoesNotExist
+                          values:
+                            type: array
+                            items:
+                              type: string
+            status:
+              type: object
+              properties:
+                observedGeneration:
+                  description: status.nodes 가 반영한 spec 의 generation
+                  type: integer
+                nodes:
+                  description: >-
+                    최종 영향권 노드 이름(spec.nodes ∪ spec.nodeSelector 매치 중 label
+                    cueue.coaster.ten1010.io/managed="true" 인 존재하는 노드만, 이름순).
+                    스케줄러가 블록킹 범위로 읽는다
+                  type: array
+                  items:
+                    type: string
+                pods:
+                  description: 아직 할당되지 않은 Pod (spec 순서). enqueueTime은 처음 나타난 시각
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                      uid:
+                        type: string
+                      enqueueTime:
+                        type: string
+                        format: date-time
+                conditions:
+                  type: array
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys:
+                    - type
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                        enum: [ "True", "False", "Unknown" ]
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                      observedGeneration:
+                        type: integer
+                      lastTransitionTime:
+                        type: string
+                        format: date-time

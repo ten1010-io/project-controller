@@ -53,10 +53,16 @@ public class OnUpdateFilterFactory {
     return (oldObj, newObj) -> false;
   }
 
+  /**
+   * annotation 비교가 빠지면 누가 cueue node-selector annotation 을 지워도 복구되지 않는다 —
+   * informer resync period 가 0 이라 주기적 재리컨실이 없다.
+   */
   public <T extends KubernetesObject> BiPredicate<T, T> projectNamespaceFilter() {
     return (oldObj, newObj) ->
         !K8sObjectUtils.getOwnerReferences(oldObj).equals(K8sObjectUtils.getOwnerReferences(newObj))
-            || !K8sObjectUtils.getLabels(oldObj).equals(K8sObjectUtils.getLabels(newObj));
+            || !K8sObjectUtils.getLabels(oldObj).equals(K8sObjectUtils.getLabels(newObj))
+            || !K8sObjectUtils.getAnnotations(oldObj)
+            .equals(K8sObjectUtils.getAnnotations(newObj));
   }
 
   public BiPredicate<V1Namespace, V1Namespace> namespaceAllowlistLabelFilter() {

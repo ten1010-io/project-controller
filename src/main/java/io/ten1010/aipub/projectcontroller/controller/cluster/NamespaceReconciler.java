@@ -73,30 +73,36 @@ public class NamespaceReconciler extends AbstractReconciler {
 
     Map<String, String> reconciledLabels = this.reconciliationService.reconcileNamespaceLabels(
         namespaceOpt.orElse(null), projectOpt.orElse(null));
+    Map<String, String> reconciledAnnotations =
+        this.reconciliationService.reconcileNamespaceAnnotations(
+            namespaceOpt.orElse(null), projectOpt.orElse(null));
     List<V1OwnerReference> reconciledReferences = this.reconciliationService.reconcileOwnerReferences(
         namespaceOpt.orElse(null),
         projectOpt.orElse(null));
 
     if (namespaceOpt.isPresent()) {
-      return reconcileExistingNamespace(namespaceOpt.get(), reconciledReferences, reconciledLabels);
+      return reconcileExistingNamespace(namespaceOpt.get(), reconciledReferences, reconciledLabels,
+          reconciledAnnotations);
     }
 
     if (projectOpt.isPresent() && !K8sObjectUtils.isTerminating(projectOpt.get())) {
       return reconcileNoExistingNamespace(request.getName(), reconciledReferences,
-          reconciledLabels);
+          reconciledLabels, reconciledAnnotations);
     }
 
     return new Result(false);
   }
 
   private Result reconcileNoExistingNamespace(String objName,
-      List<V1OwnerReference> reconciledReferences, Map<String, String> reconciledLabels)
+      List<V1OwnerReference> reconciledReferences, Map<String, String> reconciledLabels,
+      Map<String, String> reconciledAnnotations)
       throws ApiException {
     V1Namespace namespace = new V1NamespaceBuilder()
         .withNewMetadata()
         .withName(objName)
         .withOwnerReferences(reconciledReferences)
         .withLabels(reconciledLabels)
+        .withAnnotations(reconciledAnnotations)
         .endMetadata()
         .build();
     createNamespace(namespace);
@@ -104,17 +110,20 @@ public class NamespaceReconciler extends AbstractReconciler {
   }
 
   private Result reconcileExistingNamespace(V1Namespace namespace,
-      List<V1OwnerReference> reconciledReferences, Map<String, String> reconciledLabels)
+      List<V1OwnerReference> reconciledReferences, Map<String, String> reconciledLabels,
+      Map<String, String> reconciledAnnotations)
       throws ApiException {
     if (Set.copyOf(K8sObjectUtils.getOwnerReferences(namespace))
         .equals(Set.copyOf(reconciledReferences))
-        && (K8sObjectUtils.getLabels(namespace).equals(reconciledLabels))) {
+        && K8sObjectUtils.getLabels(namespace).equals(reconciledLabels)
+        && K8sObjectUtils.getAnnotations(namespace).equals(reconciledAnnotations)) {
       return new Result(false);
     }
     V1Namespace edited = new V1NamespaceBuilder(namespace)
         .editMetadata()
         .withOwnerReferences(reconciledReferences)
         .withLabels(reconciledLabels)
+        .withAnnotations(reconciledAnnotations)
         .endMetadata()
         .build();
     updateNamespace(K8sObjectUtils.getName(namespace), edited);

@@ -56,7 +56,8 @@ public class NodeReconciler extends AbstractReconciler {
 
     List<V1alpha1Project> boundProjects = this.boundObjectResolver.getAllBoundProjects(node);
     List<V1alpha1NodeGroup> boundNodeGroups = this.boundObjectResolver.getAllBoundNodeGroups(node);
-    Map<String, String> reconciledLabels = this.reconciliationService.reconcileNodeLabels(node);
+    Map<String, String> reconciledLabels = this.reconciliationService.reconcileNodeLabels(node,
+        boundProjects);
     Map<String, String> reconciledAnnotations = this.reconciliationService.reconcileNodeAnnotations(
         node, boundProjects, boundNodeGroups);
     List<V1Taint> reconciledTaints = this.reconciliationService.reconcileTaints(node);
