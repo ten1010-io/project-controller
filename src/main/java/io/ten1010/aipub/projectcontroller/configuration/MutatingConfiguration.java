@@ -10,6 +10,7 @@ import io.ten1010.aipub.projectcontroller.domain.aipubbackend.RepositoryService;
 import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
 import io.ten1010.aipub.projectcontroller.domain.k8s.SubjectResolver;
+import io.ten1010.aipub.projectcontroller.leaderelection.LeadershipState;
 import io.ten1010.aipub.projectcontroller.mutating.AdmissionReviewController;
 import io.ten1010.aipub.projectcontroller.mutating.RequestContentCachingFilter;
 import io.ten1010.aipub.projectcontroller.mutating.service.AdmissionReviewService;
@@ -134,14 +135,17 @@ public class MutatingConfiguration {
 
   @Bean
   public UserLabelSynchronizer userLabelSynchronizer(
-      ApiResourceDiscovery apiResourceDiscovery, ApiClient apiClient) {
-    return new UserLabelSynchronizer(apiResourceDiscovery, apiClient);
+      ApiResourceDiscovery apiResourceDiscovery, ApiClient apiClient,
+      LeadershipState leadershipState) {
+    return new UserLabelSynchronizer(apiResourceDiscovery, apiClient, leadershipState);
   }
 
   @Bean
   public ClusterVolumeChildLabelSynchronizer clusterVolumeChildLabelSynchronizer(
-      ApiClient apiClient, NamespaceAllowlistResolver namespaceAllowlistResolver) {
-    return new ClusterVolumeChildLabelSynchronizer(apiClient, namespaceAllowlistResolver);
+      ApiClient apiClient, NamespaceAllowlistResolver namespaceAllowlistResolver,
+      LeadershipState leadershipState) {
+    return new ClusterVolumeChildLabelSynchronizer(apiClient, namespaceAllowlistResolver,
+        leadershipState);
   }
 
   @Bean

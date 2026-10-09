@@ -6,6 +6,7 @@ import io.ten1010.aipub.projectcontroller.informer.InformerRegistrar;
 import io.ten1010.aipub.projectcontroller.informer.SharedInformerFactoryProvider;
 import io.ten1010.aipub.projectcontroller.informer.owned.OwnedObjectInformerManager;
 import io.ten1010.aipub.projectcontroller.informer.owned.OwnedObjectRoleResweeper;
+import io.ten1010.aipub.projectcontroller.leaderelection.LeadershipState;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,8 +29,8 @@ public class InformerConfiguration {
 
   @Bean
   public OwnedObjectRoleResweeper ownedObjectRoleResweeper(
-      OwnedObjectInformerManager ownedObjectInformerManager) {
-    return new OwnedObjectRoleResweeper(ownedObjectInformerManager);
+      OwnedObjectInformerManager ownedObjectInformerManager, LeadershipState leadershipState) {
+    return new OwnedObjectRoleResweeper(ownedObjectInformerManager, leadershipState);
   }
 
 }
