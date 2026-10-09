@@ -14,26 +14,37 @@ webhooks:
         port: 8080
     failurePolicy: Fail
     matchPolicy: Equivalent
+    # 시스템 네임스페이스 제외 목록 (AIP-3362).
+    # 운영 설치에서 실제로 쓰이는 값의 원천은 aipub-installer 의 씨드다 —
+    #   group_vars/all/aipub.yml : aipub_system_namespaces
+    #     -> config.yaml : project_controller.system_namespaces
+    #     -> project-controller 차트 values 의 webhook.excludedNamespaces
+    # 이 파일은 개발/참고용 매니페스트이므로 목록을 바꿀 때 그 씨드와 함께 갱신한다.
     namespaceSelector:
       matchExpressions:
         - key: kubernetes.io/metadata.name
           operator: NotIn
           values:
+            - default
             - kube-system
             - kube-public
             - kube-node-lease
             - kube-flannel
             - aipub
+            - aipub-monitoring
+            - aipub-promstack
+            - aipub-efk
+            - aipub-linkerd
+            - aipub-volume-clusters
             - coaster
             - harbor
             - ingress-nginx
             - keycloak
             - linkerd
             - metallb
+            - network-operator
             - project-controller
-            - aipub-promstack
             - trident
-            - aipub-efk
     objectSelector: { }
     reinvocationPolicy: IfNeeded
     # 소유권 대상 타입(OwnershipPolicy.OWNED_TARGETS)의 CREATE 를 인터셉트해 소유자 레이블을 찍는다.
