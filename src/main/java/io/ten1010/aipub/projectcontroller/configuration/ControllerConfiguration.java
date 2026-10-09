@@ -52,6 +52,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.informer.owned.OwnedObjectInformerManager;
 import io.ten1010.aipub.projectcontroller.leaderelection.LeaderElectionRunner;
+import io.ten1010.aipub.projectcontroller.leaderelection.LeadershipState;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,8 +65,14 @@ import org.springframework.context.annotation.Configuration;
 public class ControllerConfiguration {
 
   @Bean
-  public LeaderElectionRunner leaderElectionRunner(K8sApiProvider k8sApiProvider) {
-    return new LeaderElectionRunner(k8sApiProvider.getApiClient());
+  public LeadershipState leadershipState() {
+    return new LeadershipState();
+  }
+
+  @Bean
+  public LeaderElectionRunner leaderElectionRunner(K8sApiProvider k8sApiProvider,
+      LeadershipState leadershipState) {
+    return new LeaderElectionRunner(k8sApiProvider.getApiClient(), leadershipState);
   }
 
   @Bean
@@ -92,7 +99,8 @@ public class ControllerConfiguration {
     // ControllerManager.run() 도 같은 호출을 하지만 이미 시작된 인포머는 건너뛴다.
     sharedInformerFactory.startAllRegisteredInformers();
 
-    // 쓰기를 하는 건 워크큐뿐이라 여기만 리더로 좁힌다
+    // 워크큐는 여기서 통째로 리더에 묶인다. 스스로 스케줄을 잡고 도는 작업은 이 바깥이라
+    // 레플리카마다 돌므로, 쓰는 쪽은 각자 LeadershipState 를 보고 건너뛴다
     ExecutorService executor = Executors.newSingleThreadExecutor();
     executor.execute(() -> leaderElectionRunner.runWhenLeader(controllerManager));
 

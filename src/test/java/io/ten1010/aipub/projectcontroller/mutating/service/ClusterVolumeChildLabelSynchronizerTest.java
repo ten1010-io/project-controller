@@ -8,6 +8,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -17,6 +19,7 @@ import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.ten1010.aipub.projectcontroller.domain.k8s.LabelConstants;
+import io.ten1010.aipub.projectcontroller.leaderelection.LeadershipState;
 import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ObjectMapperFactory;
 import java.net.URLEncoder;
@@ -60,6 +63,7 @@ class ClusterVolumeChildLabelSynchronizerTest {
   private ApiClient mockApiClient;
   private ObjectMapper mapper;
   private ClusterVolumeChildLabelSynchronizer synchronizer;
+  private LeadershipState leadershipState;
   private List<PatchCall> patches;
 
   @BeforeEach
@@ -73,8 +77,11 @@ class ClusterVolumeChildLabelSynchronizerTest {
     namespaceCache.add(new V1Namespace().metadata(new V1ObjectMeta()
         .name("allowlisted-ns")
         .labels(Map.of(LabelConstants.ALLOWLISTED_KEY, "true"))));
+    // 리더가 아니면 sync() 가 즉시 반환한다 — 리더로 두지 않으면 아래 테스트가 전부 무의미해진다
+    this.leadershipState = new LeadershipState();
+    this.leadershipState.markLeader();
     this.synchronizer = new ClusterVolumeChildLabelSynchronizer(this.mockApiClient,
-        new NamespaceAllowlistResolver(namespaceCache));
+        new NamespaceAllowlistResolver(namespaceCache), this.leadershipState);
   }
 
   private Response buildResponse(int code, String body) {
@@ -168,6 +175,21 @@ class ClusterVolumeChildLabelSynchronizerTest {
         CV_LIST_PATH, listJson(List.of(k8sObject(CV, null, cvLabels, false))),
         PVC_LIST_PATH, listJson(claims),
         PV_LIST_PATH, listJson(volumes)));
+  }
+
+  @Test
+  @DisplayName("리더가 아니면 전량 스캔 자체를 시작하지 않는다")
+  void sync_notLeader_doesNotTouchCluster() throws Exception {
+    Cache<V1Namespace> emptyCache = new Cache<>();
+    ClusterVolumeChildLabelSynchronizer notLeader = new ClusterVolumeChildLabelSynchronizer(
+        this.mockApiClient, new NamespaceAllowlistResolver(emptyCache), new LeadershipState());
+
+    notLeader.sync();
+
+    // LIST 만 해도 레플리카 수만큼 apiserver 를 때린다
+    verify(this.mockApiClient, never()).buildCall(
+        anyString(), anyString(), anyString(), anyList(), anyList(), any(),
+        anyMap(), anyMap(), anyMap(), any(String[].class), any());
   }
 
   @Test
