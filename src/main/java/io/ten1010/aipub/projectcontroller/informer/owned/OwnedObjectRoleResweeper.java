@@ -1,5 +1,6 @@
 package io.ten1010.aipub.projectcontroller.informer.owned;
 
+import io.ten1010.aipub.projectcontroller.leaderelection.LeadershipState;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 
@@ -15,13 +16,21 @@ public class OwnedObjectRoleResweeper {
   private static final long RESWEEP_INTERVAL_MS = 600_000; // 10분
 
   private final OwnedObjectInformerManager ownedObjectInformerManager;
+  private final LeadershipState leadershipState;
 
-  public OwnedObjectRoleResweeper(OwnedObjectInformerManager ownedObjectInformerManager) {
+  public OwnedObjectRoleResweeper(OwnedObjectInformerManager ownedObjectInformerManager,
+      LeadershipState leadershipState) {
     this.ownedObjectInformerManager = ownedObjectInformerManager;
+    this.leadershipState = leadershipState;
   }
 
   @Scheduled(fixedDelay = RESWEEP_INTERVAL_MS, initialDelay = RESWEEP_INTERVAL_MS)
   public void resweep() {
+    // 워크큐를 비우는 건 리더뿐이다. 리더가 아닌 파드에서 재큐잉하면 아무도 안 꺼내는 큐에 쌓이기만 한다
+    if (!this.leadershipState.isLeader()) {
+      log.debug("Skipping personal role resweep because this pod is not the leader");
+      return;
+    }
     try {
       this.ownedObjectInformerManager.resweepPersonalRoles();
     } catch (Exception e) {

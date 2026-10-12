@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kubernetes.client.openapi.ApiClient;
 import io.ten1010.aipub.projectcontroller.domain.k8s.LabelConstants;
+import io.ten1010.aipub.projectcontroller.leaderelection.LeadershipState;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ObjectMapperFactory;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -56,6 +57,7 @@ class UserLabelSynchronizerTest {
   private static final String OPERATIONS_PREFIX = "/apis/aipub.ten1010.io/v1alpha1/operations";
 
   private UserLabelSynchronizer synchronizer;
+  private LeadershipState leadershipState;
   private ApiClient mockApiClient;
   private ApiResourceDiscovery mockDiscovery;
   private ObjectMapper mapper;
@@ -65,7 +67,11 @@ class UserLabelSynchronizerTest {
     this.mockApiClient = mock(ApiClient.class);
     this.mockDiscovery = mock(ApiResourceDiscovery.class);
     when(this.mockApiClient.getBasePath()).thenReturn("https://localhost:6443");
-    this.synchronizer = new UserLabelSynchronizer(this.mockDiscovery, this.mockApiClient);
+    // 리더가 아니면 sync() 가 즉시 반환한다 — 리더로 두지 않으면 아래 테스트가 전부 무의미해진다
+    this.leadershipState = new LeadershipState();
+    this.leadershipState.markLeader();
+    this.synchronizer = new UserLabelSynchronizer(this.mockDiscovery, this.mockApiClient,
+        this.leadershipState);
     this.mapper = new ObjectMapperFactory().createObjectMapper();
   }
 
@@ -221,6 +227,21 @@ class UserLabelSynchronizerTest {
   private void verifyGetCount(String path, int expectedCount) throws Exception {
     verify(this.mockApiClient, times(expectedCount)).buildCall(
         anyString(), eq(path), eq("GET"),
+        anyList(), anyList(), isNull(),
+        anyMap(), anyMap(), anyMap(),
+        any(String[].class), isNull());
+  }
+
+  @Test
+  void sync_notLeader_doesNotTouchCluster() throws Exception {
+    UserLabelSynchronizer notLeader = new UserLabelSynchronizer(
+        this.mockDiscovery, this.mockApiClient, new LeadershipState());
+
+    notLeader.sync();
+
+    // 전량 스캔 자체가 시작되면 안 된다 — LIST 만 해도 레플리카 수만큼 apiserver 를 때린다
+    verify(this.mockApiClient, never()).buildCall(
+        anyString(), anyString(), eq("GET"),
         anyList(), anyList(), isNull(),
         anyMap(), anyMap(), anyMap(),
         any(String[].class), isNull());

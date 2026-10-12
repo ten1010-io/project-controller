@@ -6,6 +6,7 @@ import io.kubernetes.client.openapi.ApiClient;
 import io.ten1010.aipub.projectcontroller.domain.k8s.LabelConstants;
 import io.ten1010.aipub.projectcontroller.domain.k8s.NamespaceAllowlistResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ObjectMapperFactory;
+import io.ten1010.aipub.projectcontroller.leaderelection.LeadershipState;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ProjectApiConstants;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -65,11 +66,13 @@ public class ClusterVolumeChildLabelSynchronizer {
   private final NamespaceAllowlistResolver namespaceAllowlistResolver;
   private final ObjectMapper mapper;
   private final ScheduledExecutorService scheduler;
+  private final LeadershipState leadershipState;
 
   public ClusterVolumeChildLabelSynchronizer(ApiClient apiClient,
-      NamespaceAllowlistResolver namespaceAllowlistResolver) {
+      NamespaceAllowlistResolver namespaceAllowlistResolver, LeadershipState leadershipState) {
     this.apiClient = apiClient;
     this.namespaceAllowlistResolver = namespaceAllowlistResolver;
+    this.leadershipState = leadershipState;
     this.mapper = new ObjectMapperFactory().createObjectMapper();
     this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
       Thread t = new Thread(r, "clustervolume-child-label-synchronizer");
@@ -86,6 +89,11 @@ public class ClusterVolumeChildLabelSynchronizer {
   }
 
   void sync() {
+    // 전량 스캔해서 patch 하는 작업이라 레플리카마다 돌면 같은 오브젝트에 중복 쓰기가 된다
+    if (!this.leadershipState.isLeader()) {
+      log.debug("{} Skipping sync cycle because this pod is not the leader", LOG_PREFIX);
+      return;
+    }
     long startNanos = System.nanoTime();
     log.debug("{} Sync cycle started", LOG_PREFIX);
     try {

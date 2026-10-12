@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kubernetes.client.openapi.ApiClient;
 import io.ten1010.aipub.projectcontroller.domain.k8s.LabelConstants;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ObjectMapperFactory;
+import io.ten1010.aipub.projectcontroller.leaderelection.LeadershipState;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -52,10 +53,13 @@ public class UserLabelSynchronizer {
   private final ApiClient apiClient;
   private final ObjectMapper mapper;
   private final ScheduledExecutorService scheduler;
+  private final LeadershipState leadershipState;
 
-  public UserLabelSynchronizer(ApiResourceDiscovery apiResourceDiscovery, ApiClient apiClient) {
+  public UserLabelSynchronizer(ApiResourceDiscovery apiResourceDiscovery, ApiClient apiClient,
+      LeadershipState leadershipState) {
     this.apiResourceDiscovery = apiResourceDiscovery;
     this.apiClient = apiClient;
+    this.leadershipState = leadershipState;
     this.mapper = new ObjectMapperFactory().createObjectMapper();
     this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
       Thread t = new Thread(r, "user-label-synchronizer");
@@ -72,6 +76,11 @@ public class UserLabelSynchronizer {
   }
 
   void sync() {
+    // 전량 스캔해서 patch 하는 작업이라 레플리카마다 돌면 같은 오브젝트에 중복 쓰기가 된다
+    if (!this.leadershipState.isLeader()) {
+      log.debug("{} Skipping sync cycle because this pod is not the leader", LOG_PREFIX);
+      return;
+    }
     long startNanos = System.nanoTime();
     log.debug("{} Sync cycle started", LOG_PREFIX);
     try {

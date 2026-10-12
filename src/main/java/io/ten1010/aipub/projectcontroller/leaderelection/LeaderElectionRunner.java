@@ -43,17 +43,21 @@ public class LeaderElectionRunner {
   private final ApiClient apiClient;
   private final String namespace;
   private final String identity;
+  private final LeadershipState leadershipState;
 
-  public LeaderElectionRunner(ApiClient apiClient) {
+  public LeaderElectionRunner(ApiClient apiClient, LeadershipState leadershipState) {
     this(apiClient,
         resolveNamespace(System.getenv(NAMESPACE_ENV), SERVICE_ACCOUNT_NAMESPACE_PATH),
-        resolveIdentity(System.getenv(IDENTITY_ENV), LeaderElectionRunner::hostname));
+        resolveIdentity(System.getenv(IDENTITY_ENV), LeaderElectionRunner::hostname),
+        leadershipState);
   }
 
-  LeaderElectionRunner(ApiClient apiClient, String namespace, String identity) {
+  LeaderElectionRunner(ApiClient apiClient, String namespace, String identity,
+      LeadershipState leadershipState) {
     this.apiClient = Objects.requireNonNull(apiClient);
     this.namespace = Objects.requireNonNull(namespace);
     this.identity = Objects.requireNonNull(identity);
+    this.leadershipState = Objects.requireNonNull(leadershipState);
   }
 
   /**
@@ -76,6 +80,8 @@ public class LeaderElectionRunner {
       elector.run(
           () -> {
             log.info("Acquired leader lease, starting controllers [identity={}]", this.identity);
+            // leaderWork 가 블로킹하므로 그 전에 세운다. 스스로 도는 주기 작업이 이걸 보고 쓰기를 시작한다
+            this.leadershipState.markLeader();
             leaderWork.run();
           },
           () -> log.error("Lost leader lease [identity={}]", this.identity));
