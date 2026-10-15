@@ -32,6 +32,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Operation;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ResourceSet;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1SftpServer;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1WorkloadGroup;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.AipubUserUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.NodeUtils;
@@ -348,6 +349,12 @@ public class OnUpdateFilterFactory {
   }
 
   public BiPredicate<V1alpha1FileServer, V1alpha1FileServer> fileServerFilter() {
+    return (oldObj, newObj) ->
+        !K8sObjectUtils.getOwnerReferences(oldObj).equals(K8sObjectUtils.getOwnerReferences(newObj))
+            || !K8sObjectUtils.getLabels(oldObj).equals(K8sObjectUtils.getLabels(newObj));
+  }
+
+  public BiPredicate<V1alpha1WorkloadGroup, V1alpha1WorkloadGroup> workloadGroupFilter() {
     return (oldObj, newObj) ->
         !K8sObjectUtils.getOwnerReferences(oldObj).equals(K8sObjectUtils.getOwnerReferences(newObj))
             || !K8sObjectUtils.getLabels(oldObj).equals(K8sObjectUtils.getLabels(newObj));

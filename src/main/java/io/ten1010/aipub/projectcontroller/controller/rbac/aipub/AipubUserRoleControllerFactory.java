@@ -24,6 +24,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageBuild;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Operation;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1SftpServer;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1WorkloadGroup;
 import io.ten1010.aipub.projectcontroller.informer.owned.OwnedObjectInformerManager;
 
 public class AipubUserRoleControllerFactory implements ControllerFactory {
@@ -77,6 +78,8 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
             V1alpha1ImageBuild.class)::hasSynced)
         .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
             V1alpha1FileServer.class)::hasSynced)
+        .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(
+            V1alpha1WorkloadGroup.class)::hasSynced)
         .watch(this::createRoleWatch)
         .watch(this::createProjectWatch)
         .watch(this::createAipubUserWatch)
@@ -89,6 +92,7 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
         .watch(this::createSftpServerWatch)
         .watch(this::createImageBuildWatch)
         .watch(this::createFileServerWatch)
+        .watch(this::createWorkloadGroupWatch)
         .withReconciler(new AipubUserRoleReconciler(this.sharedInformerFactory, this.k8sApiProvider,
             this.reconciliationService, this.ownedObjectInformerManager))
         .build();
@@ -191,6 +195,15 @@ public class AipubUserRoleControllerFactory implements ControllerFactory {
         V1alpha1FileServer.class);
     watch.setOnUpdateFilter(this.onUpdateFilterFactory.fileServerFilter());
     watch.setRequestBuilder(this.requestBuilderFactory.fileServerToAipubUserRoles());
+    return watch;
+  }
+
+  private ControllerWatch<V1alpha1WorkloadGroup> createWorkloadGroupWatch(
+      WorkQueue<Request> workQueue) {
+    DefaultControllerWatch<V1alpha1WorkloadGroup> watch = new DefaultControllerWatch<>(workQueue,
+        V1alpha1WorkloadGroup.class);
+    watch.setOnUpdateFilter(this.onUpdateFilterFactory.workloadGroupFilter());
+    watch.setRequestBuilder(this.requestBuilderFactory.workloadGroupToAipubUserRoles());
     return watch;
   }
 

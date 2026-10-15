@@ -757,6 +757,11 @@ public class ReconciliationService {
             .withResources(ProjectApiConstants.FILE_SERVER_RESOURCE_PLURAL)
             .withVerbs("*")
             .build();
+        V1PolicyRule workloadGroupApiRule = new V1PolicyRuleBuilder()
+            .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
+            .withResources(ProjectApiConstants.WORKLOAD_GROUP_RESOURCE_PLURAL)
+            .withVerbs("*")
+            .build();
         //todo --
 
         yield List.of(
@@ -776,7 +781,8 @@ public class ReconciliationService {
             resourceQuotaApiRule,
             commitApiRule,
             imageBuildApiRule,
-            fileServerApiRule
+            fileServerApiRule,
+            workloadGroupApiRule
         );
       }
 
@@ -877,6 +883,12 @@ public class ReconciliationService {
             .withResources(ProjectApiConstants.FILE_SERVER_RESOURCE_PLURAL)
             .withVerbs(BASIC_VERBS)
             .build();
+        // WorkloadGroup 도 같은 계약 — 수정/삭제는 생성자 본인의 AipubUser Role 에만 붙는다.
+        V1PolicyRule workloadGroupApiRule = new V1PolicyRuleBuilder()
+            .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
+            .withResources(ProjectApiConstants.WORKLOAD_GROUP_RESOURCE_PLURAL)
+            .withVerbs(BASIC_VERBS)
+            .build();
         //todo --
 
         yield List.of(
@@ -896,7 +908,8 @@ public class ReconciliationService {
             resourceQuotaApiRule,
             commitApiRule,
             imageBuildApiRule,
-            fileServerApiRule
+            fileServerApiRule,
+            workloadGroupApiRule
         );
       }
     };

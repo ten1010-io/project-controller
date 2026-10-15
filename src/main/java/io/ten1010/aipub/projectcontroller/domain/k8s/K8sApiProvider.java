@@ -26,6 +26,8 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ResourceSet;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ResourceSetList;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1SftpServer;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1SftpServerList;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1WorkloadGroup;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1WorkloadGroupList;
 import lombok.Getter;
 
 @Getter
@@ -44,6 +46,7 @@ public class K8sApiProvider {
   private final GenericKubernetesApi<V1alpha1SftpServer, V1alpha1SftpServerList> sftpServerApi;
   private final GenericKubernetesApi<V1alpha1ImageBuild, V1alpha1ImageBuildList> imageBuildApi;
   private final GenericKubernetesApi<V1alpha1FileServer, V1alpha1FileServerList> fileServerApi;
+  private final GenericKubernetesApi<V1alpha1WorkloadGroup, V1alpha1WorkloadGroupList> workloadGroupApi;
 
   public K8sApiProvider(ApiClient apiClient) {
     this.apiClient = apiClient;
@@ -59,6 +62,7 @@ public class K8sApiProvider {
     this.sftpServerApi = createSftpServerApi(apiClient);
     this.imageBuildApi = createImageBuildApi(apiClient);
     this.fileServerApi = createFileServerApi(apiClient);
+    this.workloadGroupApi = createWorkloadGroupApi(apiClient);
   }
 
   private static GenericKubernetesApi<V1alpha1Project, V1alpha1ProjectList> createProjectApi(
@@ -197,6 +201,18 @@ public class K8sApiProvider {
         ProjectApiConstants.AIPUB_GROUP,
         ProjectApiConstants.VERSION_V1ALPHA1,
         ProjectApiConstants.FILE_SERVER_RESOURCE_PLURAL,
+        apiClient
+    );
+  }
+
+  private static GenericKubernetesApi<V1alpha1WorkloadGroup, V1alpha1WorkloadGroupList> createWorkloadGroupApi(
+      ApiClient apiClient) {
+    return new GenericKubernetesApi<>(
+        V1alpha1WorkloadGroup.class,
+        V1alpha1WorkloadGroupList.class,
+        ProjectApiConstants.AIPUB_GROUP,
+        ProjectApiConstants.VERSION_V1ALPHA1,
+        ProjectApiConstants.WORKLOAD_GROUP_RESOURCE_PLURAL,
         apiClient
     );
   }
