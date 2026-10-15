@@ -42,6 +42,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ProjectMember;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ResourceSet;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1SftpServer;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1WorkloadGroup;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.LabelUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.NodeGroupUtils;
@@ -91,6 +92,7 @@ public class SharedInformerFactoryProvider {
     registerSftpServerInformer(informerFactory);
     registerImageBuildInformer(informerFactory);
     registerFileServerInformer(informerFactory);
+    registerWorkloadGroupInformer(informerFactory);
     registerPodInformer(informerFactory);
     this.registrars.forEach(e -> e.registerInformer(informerFactory));
 
@@ -393,6 +395,16 @@ public class SharedInformerFactoryProvider {
     SharedIndexInformer<V1alpha1FileServer> informer = informerFactory.sharedIndexInformerFor(
         this.k8sApiProvider.getFileServerApi(),
         V1alpha1FileServer.class,
+        DEFAULT_RESYNC_PERIOD);
+    informer.addIndexers(Map.of(
+        IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,
+        obj -> List.of(K8sObjectUtils.getNamespace(obj))));
+  }
+
+  private void registerWorkloadGroupInformer(SharedInformerFactory informerFactory) {
+    SharedIndexInformer<V1alpha1WorkloadGroup> informer = informerFactory.sharedIndexInformerFor(
+        this.k8sApiProvider.getWorkloadGroupApi(),
+        V1alpha1WorkloadGroup.class,
         DEFAULT_RESYNC_PERIOD);
     informer.addIndexers(Map.of(
         IndexerConstants.NAMESPACE_TO_OBJECTS_INDEXER_NAME,

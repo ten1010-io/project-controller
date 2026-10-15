@@ -33,6 +33,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Operation;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ResourceSet;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1SftpServer;
+import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1WorkloadGroup;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.AipubUserUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.PersistentVolumeUtils;
@@ -490,6 +491,19 @@ public class RequestBuilderFactory {
     return fileServer -> {
       String projName = K8sObjectUtils.getNamespace(fileServer);
       Optional<String> usernameOpt = UsernameUtils.getUsername(fileServer);
+
+      if (usernameOpt.isPresent()) {
+        String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());
+        return List.of(new Request(projName, roleName));
+      }
+      return List.of();
+    };
+  }
+
+  public Function<V1alpha1WorkloadGroup, List<Request>> workloadGroupToAipubUserRoles() {
+    return workloadGroup -> {
+      String projName = K8sObjectUtils.getNamespace(workloadGroup);
+      Optional<String> usernameOpt = UsernameUtils.getUsername(workloadGroup);
 
       if (usernameOpt.isPresent()) {
         String roleName = this.aipubUserRoleNameResolver.resolveRoleName(usernameOpt.get());
