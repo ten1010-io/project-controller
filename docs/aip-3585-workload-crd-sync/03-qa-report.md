@@ -37,7 +37,7 @@
 | `workspaces` 문서 버전 | `v1` → **`v1beta1`** (클러스터와 일치) |
 | 손대지 않은 6개 문서 | diff hunk 가 전부 operations·workspaces 범위 안 — 무변경 |
 | `kubectl apply --dry-run=client` | 8건 전부 통과 |
-| `kubectl apply --dry-run=server` (kind-local) | 통과 — apiserver 가 스키마를 받아들임 |
+| `kubectl apply --server-side --dry-run=server` (kind-local) | 8건 전부 통과 — apiserver 가 스키마를 받아들임 |
 
 ## 4. 컨벤션 체크리스트
 
@@ -62,7 +62,50 @@
 이번 변경은 리컨실 경로에 닿지 않는다 — 추가한 필드를 읽는 코드가 0건이고, RBAC 룰·라벨 동기화는
 워크로드 CR 에서 이름만 꺼내 쓴다. 기존 멱등성 테스트 전수 통과(317/317)로 회귀 없음을 확인했다.
 
-## 6. 남은 확인 (사람이 클러스터에서)
+## 6. kind 실기동 검증 (2026-10-22 · `kind-local`)
+
+`aipub-load-prober` 의 `script/kind/setup.sh` 로 갱신 CRD 를 적용한 뒤(= cluster10 배포본과
+프로그램 대조 **완전 일치** 확인) 실제 apiserver 에 오브젝트를 만들어 봤다.
+
+### 6.1 모델 ↔ apiserver 왕복 (핵심)
+
+apiserver 가 **실제로 저장한** JSON 을 꺼내 인포머와 같은 Gson(`io.kubernetes.client.openapi.JSON`)
+으로 이 브랜치의 DTO 에 역직렬화했다. 손으로 쓴 픽스처가 아니라 저장분이라 defaulting 까지 포함된다.
+
+```
+WS expose.type      = INFERENCE
+WS expose.inference = V1beta1WorkspacePortExpose.Inference(host=smoke-infer, path=/v1)
+WS suspendOption    = V1beta1WorkspaceSuspendOption(commit=Commit(enabled=true,
+                        repository=harbor.example.com/team-a/ws-snapshots, applyImage=true))
+WS tools[0].type    = vscode
+OP expose.type      = INFERENCE
+OP expose.inference = V1alpha1OperationPortExpose.Inference(host=smoke-op-infer, path=/v1)
+RESULT: PASS
+```
+
+### 6.2 생성 스모크
+
+| 케이스 | 기대 | 결과 |
+|---|---|---|
+| Workspace — INFERENCE + `suspendOption.commit` + `tools[vscode]` | 생성 | PASS (실제 생성·되읽기) |
+| Operation — INFERENCE expose | 생성 | PASS |
+| ServiceExposure — `rules[].inference` | 생성 | PASS |
+| `seed-workspaces.sh` 와 같은 모양의 시드 바디 | 생성 | PASS — 새 검증을 전부 비켜간다 |
+| `examples/crd.yaml` 8-doc server-side apply | 통과 | PASS |
+
+### 6.3 새 검증이 실제로 거절하는가 (음성 케이스)
+
+| 케이스 | apiserver 응답 |
+|---|---|
+| `type: INFERENCE` 인데 `inference` 누락 | `expose.inference must be set when expose.type is INFERENCE` |
+| `inference` + `tcp` 동시 지정 | `expose.tcp and expose.http must not be set when expose.type is INFERENCE` |
+| 포트 이름 `vscode` | `port names ssh, ttyd, jupyter, filebrowser, vscode are reserved ...` |
+| 포트 번호 `17682` | `ports 22(ssh), 17681(ttyd), 17682(vscode), 18888(jupyter), 18080(filebrowser) are reserved ...` |
+| `securityContext.runAsNonRoot: true` | `Workspace main container runs as root (uid 0); runAsNonRoot must not be true.` |
+
+스모크 오브젝트 3건은 검증 후 삭제했다(잔여 0).
+
+## 7. 남은 확인 (운영 클러스터에서)
 
 - [ ] 배포 후 `Workspace` 인포머가 INFERENCE 포트를 가진 CR 을 받아도 에러 없이 동기화되는지
       (Gson 은 모르는 필드를 무시하므로 이전 빌드도 죽지는 않았다 — 조용히 누락됐을 뿐이다)
