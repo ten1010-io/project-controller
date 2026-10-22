@@ -14,26 +14,37 @@ webhooks:
         port: 8080
     failurePolicy: Fail
     matchPolicy: Equivalent
+    # 시스템 네임스페이스 제외 목록. 운영 설치의 실제 값은 aipub-installer 씨드에서 온다 —
+    #   ansible/aipub_vars/defaults/aipub-java.yml : aipub_java_system_namespaces
+    #     -> scripts/aipub/java/templates/values.yaml.j2 : infra.projectController.systemNamespaces
+    #     -> charts/aipub/charts/project-controller : webhook.excludedNamespaces
+    # 이 파일은 개발/참고용이라 런타임에 쓰이지 않는다. 목록을 바꾸려면 씨드부터 고친다.
     namespaceSelector:
       matchExpressions:
         - key: kubernetes.io/metadata.name
           operator: NotIn
           values:
+            - default
             - kube-system
             - kube-public
             - kube-node-lease
             - kube-flannel
+            - cilium-secrets
             - aipub
+            - aipub-monitoring
+            - aipub-promstack
+            - aipub-efk
+            - aipub-linkerd
+            - aipub-cluster-volumes
             - coaster
             - harbor
             - ingress-nginx
             - keycloak
             - linkerd
             - metallb
+            - network-operator
             - project-controller
-            - aipub-promstack
             - trident
-            - aipub-efk
     objectSelector: { }
     reinvocationPolicy: IfNeeded
     rules:
