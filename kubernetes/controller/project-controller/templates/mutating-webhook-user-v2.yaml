@@ -14,12 +14,11 @@ webhooks:
         port: 8080
     failurePolicy: Fail
     matchPolicy: Equivalent
-    # 시스템 네임스페이스 제외 목록 (AIP-3362).
-    # 운영 설치에서 실제로 쓰이는 값의 원천은 aipub-installer 의 씨드다 —
-    #   group_vars/all/aipub.yml : aipub_system_namespaces
-    #     -> config.yaml : project_controller.system_namespaces
-    #     -> project-controller 차트 values 의 webhook.excludedNamespaces
-    # 이 파일은 개발/참고용 매니페스트이므로 목록을 바꿀 때 그 씨드와 함께 갱신한다.
+    # 시스템 네임스페이스 제외 목록. 운영 설치의 실제 값은 aipub-installer 씨드에서 온다 —
+    #   ansible/aipub_vars/defaults/aipub-java.yml : aipub_java_system_namespaces
+    #     -> scripts/aipub/java/templates/values.yaml.j2 : infra.projectController.systemNamespaces
+    #     -> charts/aipub/charts/project-controller : webhook.excludedNamespaces
+    # 이 파일은 개발/참고용이라 런타임에 쓰이지 않는다. 목록을 바꾸려면 씨드부터 고친다.
     namespaceSelector:
       matchExpressions:
         - key: kubernetes.io/metadata.name
@@ -30,12 +29,13 @@ webhooks:
             - kube-public
             - kube-node-lease
             - kube-flannel
+            - cilium-secrets
             - aipub
             - aipub-monitoring
             - aipub-promstack
             - aipub-efk
             - aipub-linkerd
-            - aipub-volume-clusters
+            - aipub-cluster-volumes
             - coaster
             - harbor
             - ingress-nginx
@@ -90,6 +90,14 @@ webhooks:
         operations: [ "CREATE" ]
         resources: [ "*" ]
         scope: "Namespaced"
+      # 사용자가 만든 Namespace 에도 소유자 라벨을 찍어 시스템 네임스페이스와 구분한다.
+      # Namespace 의 namespaceSelector 는 자기 자신의 라벨로 평가되므로 위 제외 목록이
+      # 시스템 네임스페이스 생성에 그대로 적용된다.
+      - apiGroups: [ "" ]
+        apiVersions: [ "v1" ]
+        operations: [ "CREATE" ]
+        resources: [ "namespaces" ]
+        scope: "Cluster"
       # cluster-scoped ClusterVolume 의 CREATE 를 인터셉트해 생성자 AipubUser
       # ownerReference 를 붙인다 (AipubUser 삭제 시 GC 로 함께 정리). cluster-scoped 리소스에는
       # namespaceSelector 가 평가되지 않으므로 위 제외 목록과 무관하게 모든 생성이 경유한다 —
