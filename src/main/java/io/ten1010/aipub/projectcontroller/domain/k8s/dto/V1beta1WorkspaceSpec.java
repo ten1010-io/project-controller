@@ -13,6 +13,8 @@ public class V1beta1WorkspaceSpec {
   @Nullable
   Boolean suspend;
   @Nullable
+  V1beta1WorkspaceSuspendOption suspendOption;
+  @Nullable
   V1beta1WorkspaceSsh ssh;
   @Nullable
   List<V1beta1WorkspaceTool> tools;

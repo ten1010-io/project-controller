@@ -14,6 +14,8 @@ public class V1beta1WorkspacePortExpose {
   Tcp tcp;
   @Nullable
   Http http;
+  @Nullable
+  Inference inference;
 
   @Data
   public static class Tcp {
@@ -32,6 +34,16 @@ public class V1beta1WorkspacePortExpose {
     String path;
     @Nullable
     Boolean tls;
+
+  }
+
+  @Data
+  public static class Inference {
+
+    @Nullable
+    String host;
+    @Nullable
+    String path;
 
   }
 

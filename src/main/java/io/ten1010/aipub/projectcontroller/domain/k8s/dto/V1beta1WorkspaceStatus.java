@@ -19,6 +19,8 @@ public class V1beta1WorkspaceStatus {
   @Nullable
   V1beta1WorkspaceSshStatus ssh;
   @Nullable
+  V1beta1WorkspaceSuspendCommitStatus suspendCommit;
+  @Nullable
   List<V1beta1WorkspaceToolStatus> tools;
   @Nullable
   List<V1beta1WorkspacePortStatus> ports;
