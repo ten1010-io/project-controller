@@ -105,6 +105,27 @@ RESULT: PASS
 
 스모크 오브젝트 3건은 검증 후 삭제했다(잔여 0).
 
+### 6.4 프론트 생성 플로우 실측 (`aipub-load-prober` 브라우저 프로브)
+
+갱신 CRD 위에서 프론트 핀 `bab74e36`(= cluster10 `main-bab74e3`)의 **실제 생성 UI** 를 돌렸다.
+`./k6/run.sh local-quick BROWSER_CREATE=true`.
+
+| 항목 | 결과 |
+|---|---|
+| checks | **779 / 779 (100%)** |
+| `http_req_failed` | **0.00%** (0/778) |
+| 생성 경로 | `imagereview L1/L2 2xx` → `tcpportvalidation 2xx` → **`workload submit 2xx`** → **`workload create success`** |
+| 편집 경로 | `workload patch 2xx` |
+| **project-controller 에러** | **0건** (프로브 구간 15:35~15:39) |
+
+컨트롤러 ERROR 5건은 전부 **15:30:21, CRD 교체 순간**이다 — reflector 의 watch 스트림이 끊겼고
+2초 뒤 re-list 로 복구했다(`Watch expired, will re-list-watch soon` → `Start listing and watching...`).
+CRD 를 교체하면 나는 정상 증상이고, 인포머가 새 스키마로 정상 재구독했다는 증거이기도 하다.
+
+임계값 미달은 `tt_usable{page:projects-list}` p(95)=3.25s(기준 3s) 하나인데, 프로파일 머리말이
+명시하듯 **로컬 kind 의 절대치는 의미가 없다**(4-CPU/8GB · amd64 에뮬레이션). 생성 플로우와
+무관하고 CRD 변경으로 달라질 지표가 아니다.
+
 ## 7. 남은 확인 (운영 클러스터에서)
 
 - [ ] 배포 후 `Workspace` 인포머가 INFERENCE 포트를 가진 CR 을 받아도 에러 없이 동기화되는지
