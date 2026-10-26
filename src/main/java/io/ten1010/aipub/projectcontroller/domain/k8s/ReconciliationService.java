@@ -588,6 +588,32 @@ public class ReconciliationService {
     reconciled.add(nodeGpuUsagesApiRule);
     //todo --
 
+    // InfiniBand - 프로젝트 바인딩 네트워크는 이름이 프로젝트 이름과 같다. Cluster scope 라 list 는
+    // resourceNames 로 좁혀지지 않아 주면 전 프로젝트의 배정이 노출된다 - 프론트는 이름으로 get 한다.
+    V1PolicyRule ibNetworksApiRule = switch (projectRoleEnum) {
+      case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+          .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
+          .withResources(ProjectApiConstants.IB_NETWORK_RESOURCE_PLURAL)
+          .withResourceNames(K8sObjectUtils.getName(project))
+          .withVerbs("get")
+          .build();
+    };
+    reconciled.add(ibNetworksApiRule);
+
+    // SriovNodeState 는 이름이 노드 이름과 같다. 장치 막대는 노드 하나의 CR 로 계산되므로 바인딩 노드만 준다.
+    // 바인딩 노드가 없으면 규칙을 넣지 않는다 - 빈 resourceNames 는 전체 허용이라 전 노드가 열린다.
+    if (!nodes.isEmpty()) {
+      V1PolicyRule sriovNodeStatesApiRule = switch (projectRoleEnum) {
+        case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+            .withApiGroups(ProjectApiConstants.AIPUB_GROUP)
+            .withResources(ProjectApiConstants.SRIOV_NODE_STATE_RESOURCE_PLURAL)
+            .withResourceNames(nodes)
+            .withVerbs("get")
+            .build();
+      };
+      reconciled.add(sriovNodeStatesApiRule);
+    }
+
     if (projectRoleEnum == ProjectRoleEnum.PROJECT_MANAGER) {
       List<String> memberNames = boundAipubUsers.stream()
           .map(K8sObjectUtils::getName)
