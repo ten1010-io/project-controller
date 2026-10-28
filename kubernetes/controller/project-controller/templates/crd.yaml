@@ -23,6 +23,11 @@ spec:
           required:
             - metadata
             - spec
+          # 생성 시에만 검사한다. UPDATE 까지 걸면 기존 긴 이름 project 의 finalizer 제거가 막혀 삭제가 교착된다.
+          x-kubernetes-validations:
+            - rule: "oldSelf.hasValue() || size(self.metadata.name) <= 40"
+              optionalOldSelf: true
+              message: "metadata.name must be no more than 40 characters"
           properties:
             metadata:
               type: object
