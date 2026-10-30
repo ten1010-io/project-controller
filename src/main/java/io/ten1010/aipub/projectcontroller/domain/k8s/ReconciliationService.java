@@ -586,6 +586,20 @@ public class ReconciliationService {
           .build();
     };
     reconciled.add(nodeGpuUsagesApiRule);
+
+    // NodeGPU 는 Cluster scope 이고 이름이 노드 이름과 같다. 바인딩 노드만 get 으로 준다.
+    // 바인딩 노드가 없으면 규칙을 넣지 않는다 - 빈 resourceNames 는 전체 허용이라 전 노드가 열린다.
+    if (!nodes.isEmpty()) {
+      V1PolicyRule nodeGpusApiRule = switch (projectRoleEnum) {
+        case PROJECT_MANAGER, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
+            .withApiGroups(ProjectApiConstants.COASTER_GROUP)
+            .withResources(ProjectApiConstants.NODE_GPU_RESOURCE_PLURAL)
+            .withResourceNames(nodes)
+            .withVerbs("get")
+            .build();
+      };
+      reconciled.add(nodeGpusApiRule);
+    }
     //todo --
 
     // InfiniBand - 프로젝트 바인딩 네트워크는 이름이 프로젝트 이름과 같다. Cluster scope 라 list 는
