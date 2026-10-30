@@ -85,9 +85,10 @@ public final class ProjectApiConstants {
 
   public static final String IB_NETWORK_RESOURCE_KIND = "IBNetwork";
   public static final String IB_NETWORK_RESOURCE_PLURAL = "ibnetworks";
+  public static final String IB_NETWORK_SHARED_NAME = "shared";
 
-  public static final String SRIOV_NODE_STATE_RESOURCE_KIND = "SriovNodeState";
-  public static final String SRIOV_NODE_STATE_RESOURCE_PLURAL = "sriovnodestates";
+  public static final String NETWORK_NODE_RESOURCE_KIND = "NetworkNode";
+  public static final String NETWORK_NODE_RESOURCE_PLURAL = "networknodes";
 
   private ProjectApiConstants() {
   }
