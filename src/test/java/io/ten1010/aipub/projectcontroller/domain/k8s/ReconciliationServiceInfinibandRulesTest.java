@@ -19,8 +19,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * IBNetwork·SriovNodeState 는 Cluster scope 라 list 를 주면 resourceNames 가 무시돼 전 프로젝트의 배정과 전 노드의 장치 상태가
- * 노출된다. 이름으로 좁힌 get 만 준다 - IBNetwork 는 프로젝트 이름, SriovNodeState 는 노드 이름이다.
+ * IBNetwork·NetworkNode 는 Cluster scope 라 list 를 주면 resourceNames 가 무시돼 전 네트워크와 전 노드의 장치 상태가
+ * 노출된다. 이름으로 좁힌 get 만 준다 - IBNetwork 는 프로젝트 이름과 공용 네트워크(shared), NetworkNode 는 노드 이름이다.
  */
 class ReconciliationServiceInfinibandRulesTest {
 
@@ -97,24 +97,24 @@ class ReconciliationServiceInfinibandRulesTest {
   }
 
   @Test
-  void bothRoles_grantGetOnOwnIbNetwork() {
+  void bothRoles_grantGetOnOwnAndSharedIbNetworks() {
     for (ProjectRoleEnum projectRoleEnum : ProjectRoleEnum.values()) {
       V1PolicyRule rule = findRule(
           reconcile(projectRoleEnum, "node1"),
           ProjectApiConstants.IB_NETWORK_RESOURCE_PLURAL).orElseThrow();
 
       assertThat(rule.getApiGroups()).containsExactly(ProjectApiConstants.AIPUB_GROUP);
-      assertThat(rule.getResourceNames()).containsExactly("proj1");
+      assertThat(rule.getResourceNames()).containsExactly("proj1", "shared");
       assertThat(rule.getVerbs()).containsExactly("get");
     }
   }
 
   @Test
-  void bothRoles_grantGetOnBindingNodeSriovNodeStates() {
+  void bothRoles_grantGetOnBindingNodeNetworkNodes() {
     for (ProjectRoleEnum projectRoleEnum : ProjectRoleEnum.values()) {
       V1PolicyRule rule = findRule(
           reconcile(projectRoleEnum, "node1", "node2"),
-          ProjectApiConstants.SRIOV_NODE_STATE_RESOURCE_PLURAL).orElseThrow();
+          ProjectApiConstants.NETWORK_NODE_RESOURCE_PLURAL).orElseThrow();
 
       assertThat(rule.getApiGroups()).containsExactly(ProjectApiConstants.AIPUB_GROUP);
       assertThat(rule.getResourceNames()).containsExactly("node1", "node2");
@@ -129,7 +129,7 @@ class ReconciliationServiceInfinibandRulesTest {
 
       for (String resource : List.of(
           ProjectApiConstants.IB_NETWORK_RESOURCE_PLURAL,
-          ProjectApiConstants.SRIOV_NODE_STATE_RESOURCE_PLURAL)) {
+          ProjectApiConstants.NETWORK_NODE_RESOURCE_PLURAL)) {
         V1PolicyRule rule = findRule(rules, resource).orElseThrow();
 
         assertThat(rule.getVerbs()).containsExactly("get");
@@ -139,13 +139,32 @@ class ReconciliationServiceInfinibandRulesTest {
   }
 
   @Test
-  void noBindingNode_omitsSriovNodeStateRule() {
+  void noBindingNode_omitsNetworkNodeRule() {
     for (ProjectRoleEnum projectRoleEnum : ProjectRoleEnum.values()) {
       List<V1PolicyRule> rules = reconcile(projectRoleEnum);
 
       // 빈 resourceNames 는 RBAC 에서 전체 허용이라 규칙 자체를 넣지 않는다.
-      assertThat(findRule(rules, ProjectApiConstants.SRIOV_NODE_STATE_RESOURCE_PLURAL)).isEmpty();
+      assertThat(findRule(rules, ProjectApiConstants.NETWORK_NODE_RESOURCE_PLURAL)).isEmpty();
       assertThat(findRule(rules, ProjectApiConstants.IB_NETWORK_RESOURCE_PLURAL)).isPresent();
+    }
+  }
+
+  @Test
+  void projectNamedShared_grantsSingleName() {
+    this.project.getMetadata().setName("shared");
+    for (ProjectRoleEnum projectRoleEnum : ProjectRoleEnum.values()) {
+      V1PolicyRule rule = findRule(
+          reconcile(projectRoleEnum, "node1"),
+          ProjectApiConstants.IB_NETWORK_RESOURCE_PLURAL).orElseThrow();
+
+      assertThat(rule.getResourceNames()).containsExactly("shared");
+    }
+  }
+
+  @Test
+  void neverGrantsRemovedSriovNodeStates() {
+    for (ProjectRoleEnum projectRoleEnum : ProjectRoleEnum.values()) {
+      assertThat(findRule(reconcile(projectRoleEnum, "node1"), "sriovnodestates")).isEmpty();
     }
   }
 
