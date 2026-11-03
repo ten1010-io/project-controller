@@ -33,6 +33,9 @@ public abstract class ListOptionsUtils {
   public static void applyArtifactListOptions(Map<String, String> queryParams,
       ArtifactListOptions options) {
     applyListOptions(queryParams, options);
+    if (options.getWithScanOverview() != null) {
+      queryParams.put("withScanOverview", String.valueOf(options.getWithScanOverview()));
+    }
   }
 
 }

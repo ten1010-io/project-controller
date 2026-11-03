@@ -6,6 +6,7 @@ import io.kubernetes.client.openapi.models.V1OwnerReference;
 import io.kubernetes.client.openapi.models.V1OwnerReferenceBuilder;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ArtifactService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.ImageHubService;
+import io.ten1010.aipub.projectcontroller.domain.aipubbackend.PagingUtils;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.RepositoryService;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.Artifact;
 import io.ten1010.aipub.projectcontroller.domain.aipubbackend.dto.ArtifactListOptions;
@@ -134,10 +135,13 @@ public class ImageReviewReviewHandler extends AbstractReviewHandler<V1alpha1Imag
       return;
     }
 
+    String hubId = ImageHubUtils.getSpecId(imageHub);
     V1alpha1ImageReviewStatus status = new V1alpha1ImageReviewStatus();
     if (targetRepo == null) {
-      List<Repository> repositories = this.repositoryService.listNamespacedRepositories(
-          ImageHubUtils.getSpecId(imageHub), new RepositoryListOptions());
+      List<Repository> repositories = PagingUtils.listAllPages(
+          "repositories of hub " + hubId,
+          (pageOffset, pageSize) -> this.repositoryService.listNamespacedRepositories(
+              hubId, repositoryListOptions(pageOffset, pageSize)));
       List<V1alpha1ReviewRepository> reviewRepositories = repositories.stream()
           .map(e -> {
             V1alpha1ReviewRepository repository = new V1alpha1ReviewRepository();
@@ -148,8 +152,10 @@ public class ImageReviewReviewHandler extends AbstractReviewHandler<V1alpha1Imag
       status.setRepositories(reviewRepositories);
       status.setArtifacts(null);
     } else {
-      List<Artifact> artifacts = this.artifactService.listArtifacts(
-          ImageHubUtils.getSpecId(imageHub), targetRepo, new ArtifactListOptions());
+      List<Artifact> artifacts = PagingUtils.listAllPages(
+          "artifacts of " + hubId + "/" + targetRepo,
+          (pageOffset, pageSize) -> this.artifactService.listArtifacts(
+              hubId, targetRepo, artifactListOptions(pageOffset, pageSize)));
       List<V1alpha1ReviewArtifact> reviewArtifacts = artifacts.stream()
           .map(artifact -> {
             List<String> tags;
@@ -188,6 +194,22 @@ public class ImageReviewReviewHandler extends AbstractReviewHandler<V1alpha1Imag
         .build();
 
     V1AdmissionReviewUtils.allow(review, jsonPatch);
+  }
+
+  private static RepositoryListOptions repositoryListOptions(int pageOffset, int pageSize) {
+    RepositoryListOptions options = new RepositoryListOptions();
+    options.setPageOffset(pageOffset);
+    options.setPageSize(pageSize);
+    return options;
+  }
+
+  // 이미지 선택에는 digest·tag 만 쓴다. 스캔 요약은 Harbor 가 조회마다 취약점 전체에서 다시 계산해 비싸다.
+  private static ArtifactListOptions artifactListOptions(int pageOffset, int pageSize) {
+    ArtifactListOptions options = new ArtifactListOptions();
+    options.setPageOffset(pageOffset);
+    options.setPageSize(pageSize);
+    options.setWithScanOverview(false);
+    return options;
   }
 
 }
