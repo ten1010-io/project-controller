@@ -63,5 +63,11 @@ webhooks:
         operations: [ "CREATE" ]
         resources: [ "jobs", "cronjobs" ]
         scope: "Namespaced"
+      # ServiceExposure 가 라벨을 못 받으면 그 아래 EPP Pod 가 Operation 대신 ServiceExposure 로 낙인된다.
+      - apiGroups: [ "aipub.ten1010.io" ]
+        apiVersions: [ "*" ]
+        operations: [ "CREATE" ]
+        resources: [ "serviceexposures" ]
+        scope: "Namespaced"
     sideEffects: None
     timeoutSeconds: 10
